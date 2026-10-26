@@ -11,6 +11,24 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // Bootstrap 4 (required with BootstrapVue 2) relies on @import and old
+        // Sass built-ins, and Vite 3 uses the legacy JS API. None of these
+        // warnings is actionable without leaving Bootstrap 4, so keep builds quiet.
+        quietDeps: true,
+        silenceDeprecations: [
+          "import",
+          "legacy-js-api",
+          "global-builtin",
+          "color-functions",
+          "if-function",
+          "abs-percent",
+        ],
+      },
+    },
+  },
   build: {
     rollupOptions: {
       output: {
