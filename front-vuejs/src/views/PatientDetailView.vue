@@ -33,11 +33,12 @@
           <DetailItem label="CPF" :value="maskCpf(patient.cpf)" />
           <DetailItem label="RG" :value="maskRg(patient.rg)" />
         </dl>
-        <dl class="patient-grid patient-grid--row2">
+        <dl class="patient-grid patient-grid--with-age">
           <DetailItem
             label="Data de nascimento"
             :value="isoToBr(patient.birth_date)"
           />
+          <DetailItem label="Idade" :value="patientAge(patient)" />
           <DetailItem label="Sexo biológico" :value="formatSex(patient.sex)" />
           <DetailItem label="Celular" :value="maskPhone(patient.phone)" />
           <DetailItem label="E-mail" :value="patient.email" />
@@ -83,7 +84,14 @@ import PageState from "@/components/PageState.vue";
 import { usePatient } from "@/composables/usePatient";
 import { focusHeadingIfParked } from "@/utils/routeFocus";
 import type { Patient } from "@/services/patientService";
-import { formatSex, isoToBr, maskCpf, maskPhone, maskRg } from "@/utils/format";
+import {
+  formatSex,
+  isoToBr,
+  maskCpf,
+  maskPhone,
+  maskRg,
+  patientAge,
+} from "@/utils/format";
 
 export default defineComponent({
   name: "PatientDetailView",
@@ -118,6 +126,7 @@ export default defineComponent({
     maskPhone,
     isoToBr,
     formatSex,
+    patientAge,
     onDeleted(): void {
       this.$router.push({ name: "patients.index" });
     },
@@ -137,6 +146,23 @@ export default defineComponent({
 
   dl {
     margin: 0;
+  }
+}
+
+// Like .patient-grid--row2 (main.scss) plus a narrow "Idade" column.
+.patient-grid--with-age {
+  grid-template-columns: 200px 140px 200px 200px minmax(0, 1fr);
+}
+
+@media (max-width: 1099.98px) {
+  .patient-grid--with-age {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .patient-grid--with-age {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -133,27 +133,27 @@ textarea.form-control {
   box-shadow: 0 6px 16px rgba(13, 29, 90, 0.18);
   opacity: 1;
 
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 4px;
-    width: 100%;
-    animation: app-toast-progress 4000ms linear forwards;
-  }
-
   .app-toast__body {
     padding: 0;
   }
 }
 
-.app-toast--success::after {
-  background: #8de3b9;
-}
+// Progress bar (its duration is set inline by notify()).
+.app-toast__progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  width: 100%;
+  animation: app-toast-progress 4000ms linear forwards;
 
-.app-toast--error::after {
-  background: #f9a59c;
+  .app-toast--success & {
+    background: #8de3b9;
+  }
+
+  .app-toast--error & {
+    background: #f9a59c;
+  }
 }
 
 .app-toast__content {
@@ -206,6 +206,24 @@ textarea.form-control {
   font-size: 16px;
   font-weight: 700;
   line-height: 20px;
+}
+
+.app-toast__action {
+  align-self: center;
+  padding: 4px 6px;
+  color: $blue;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+
+  &:hover,
+  &:focus-visible {
+    color: $blue-dark;
+    text-decoration: underline;
+  }
 }
 
 .app-toast__close {
@@ -326,7 +344,9 @@ textarea.form-control {
   }
 }
 
-// BootstrapVue pauses auto-hide on hover; keep the progress bar in sync.
-.app-toast.toast:hover::after {
+// BootstrapVue pauses auto-hide on hover (action toasts also pause on focus);
+// keep the progress bar in sync.
+.app-toast.toast:hover .app-toast__progress,
+.app-toast.is-paused .app-toast__progress {
   animation-play-state: paused;
 }

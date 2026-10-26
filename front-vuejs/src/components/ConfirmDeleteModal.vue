@@ -21,8 +21,8 @@
 
     <p class="mb-0">
       Atenção! Ao excluir este paciente,
-      <strong>essa ação não poderá ser desfeita</strong>. Deseja realmente
-      continuar?
+      <strong>ele será movido para a lixeira</strong> e poderá ser restaurado
+      depois. Deseja realmente continuar?
     </p>
 
     <template #modal-footer>
@@ -48,6 +48,7 @@ import type { BvModalEvent } from "bootstrap-vue";
 import { patientService, type Patient } from "@/services/patientService";
 import { getErrorMessage, isNotFound } from "@/services/api";
 import { notify } from "@/utils/notify";
+import { restorePatient } from "@/utils/restore";
 
 /**
  * Confirmation dialog that performs the delete itself.
@@ -85,7 +86,14 @@ export default defineComponent({
       this.busy = true;
       try {
         await patientService.remove(patient.id);
-        notify(this.$root, "success", "Paciente excluído com sucesso!");
+        const root = this.$root;
+        notify(root, "success", "Paciente excluído com sucesso!", {
+          action: {
+            label: "Desfazer",
+            ariaLabel: `Desfazer exclusão de ${patient.name}`,
+            handler: () => void restorePatient(root, patient),
+          },
+        });
         this.busy = false;
         // The opener (the row's delete button) is about to disappear: send focus
         // to the page heading instead of letting it fall back to <body>.

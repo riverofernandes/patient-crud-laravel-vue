@@ -11,7 +11,11 @@ import {
   TablePlugin,
   ToastPlugin,
   TooltipPlugin,
+  BIconArrowDownUp,
+  BIconArrowCounterclockwise,
   BIconCalendar,
+  BIconCaretDownFill,
+  BIconCaretUpFill,
   BIconCheck,
   BIconChevronLeft,
   BIconChevronRight,
@@ -19,6 +23,7 @@ import {
   BIconPencilFill,
   BIconPeople,
   BIconSearch,
+  BIconTrash,
   BIconTrashFill,
   BIconX,
 } from "bootstrap-vue";
@@ -45,7 +50,11 @@ import "./styles/main.scss";
 
 // Register only the icons we use (keeps the bundle small).
 const icons = {
+  BIconArrowDownUp,
+  BIconArrowCounterclockwise,
   BIconCalendar,
+  BIconCaretDownFill,
+  BIconCaretUpFill,
   BIconCheck,
   BIconChevronLeft,
   BIconChevronRight,
@@ -53,6 +62,7 @@ const icons = {
   BIconPencilFill,
   BIconPeople,
   BIconSearch,
+  BIconTrash,
   BIconTrashFill,
   BIconX,
 };

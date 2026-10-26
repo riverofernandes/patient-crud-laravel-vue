@@ -14,10 +14,17 @@ export interface Patient {
   description: string | null;
   created_at: string;
   updated_at: string;
+  /** Full years (America/Sao_Paulo); optional until every API serves it. */
+  age?: number | null;
+  /** ISO-8601, only filled for patients in the trash. */
+  deleted_at?: string | null;
 }
 
 /** Editable fields sent on POST/PUT. */
-export type PatientPayload = Omit<Patient, "id" | "created_at" | "updated_at">;
+export type PatientPayload = Omit<
+  Patient,
+  "id" | "created_at" | "updated_at" | "age" | "deleted_at"
+>;
 
 export interface PaginationMeta {
   current_page: number;
@@ -33,10 +40,22 @@ export interface Paginated<T> {
   meta: PaginationMeta;
 }
 
+export type SortField = "name" | "birth_date" | "created_at";
+export type SortDirection = "asc" | "desc";
+
 export interface ListParams {
   search?: string;
   page?: number;
   per_page?: number;
+  sort?: SortField;
+  direction?: SortDirection;
+  /** "only" lists the trash (soft-deleted patients). */
+  trashed?: "only";
+}
+
+export interface CpfAvailability {
+  available: boolean;
+  message?: string;
 }
 
 const RESOURCE = "/patients";
@@ -48,6 +67,9 @@ export const patientService = {
       per_page: params.per_page ?? 10,
     };
     if (params.search) query.search = params.search;
+    if (params.sort) query.sort = params.sort;
+    if (params.direction) query.direction = params.direction;
+    if (params.trashed) query.trashed = params.trashed;
     const { data } = await api.get<Paginated<Patient>>(RESOURCE, {
       params: query,
     });
@@ -74,5 +96,26 @@ export const patientService = {
 
   async remove(id: number | string): Promise<void> {
     await api.delete(`${RESOURCE}/${id}`);
+  },
+
+  async restore(id: number | string): Promise<Patient> {
+    const { data } = await api.post<{ data: Patient }>(
+      `${RESOURCE}/${id}/restore`
+    );
+    return data.data;
+  },
+
+  /** Whether a CPF can be used (`ignore` = the patient being edited). */
+  async checkCpf(
+    cpf: string,
+    options: { ignore?: number | string; signal?: AbortSignal } = {}
+  ): Promise<CpfAvailability> {
+    const params: Record<string, string> = { cpf };
+    if (options.ignore !== undefined) params.ignore = String(options.ignore);
+    const { data } = await api.get<CpfAvailability>(
+      `${RESOURCE}/cpf-availability`,
+      { params, signal: options.signal }
+    );
+    return data;
   },
 };

@@ -3,7 +3,7 @@
     <a class="skip-link" href="#main-content">Pular para o conteúdo</a>
 
     <aside class="app-sidebar" aria-label="Menu principal">
-      <nav>
+      <nav class="app-sidebar__nav">
         <router-link
           to="/"
           class="app-sidebar__link"
@@ -12,6 +12,15 @@
           title="Pacientes"
         >
           <b-icon-people aria-hidden="true" />
+        </router-link>
+        <router-link
+          :to="{ name: 'patients.trash' }"
+          class="app-sidebar__link"
+          :class="{ 'is-active': isTrashSection }"
+          aria-label="Pacientes excluídos"
+          title="Pacientes excluídos"
+        >
+          <b-icon-trash aria-hidden="true" />
         </router-link>
       </nav>
     </aside>
@@ -53,7 +62,10 @@ export default defineComponent({
   computed: {
     isPatientsSection(): boolean {
       const name = this.$route.name ?? "";
-      return name.startsWith("patients.");
+      return name.startsWith("patients.") && !this.isTrashSection;
+    },
+    isTrashSection(): boolean {
+      return this.$route.name === "patients.trash";
     },
   },
 });
@@ -94,6 +106,12 @@ export default defineComponent({
   width: $sidebar-width;
   padding-top: 88px;
   background: $navy;
+}
+
+.app-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .app-sidebar__link {
