@@ -25,6 +25,12 @@ updates:
       # Keep Node typings on the LTS lines the project runs on (20/22).
       - dependency-name: "@types/node"
         versions: ["21.x", ">= 23"]
+      # Vue Test Utils 2 only supports Vue 3.
+      - dependency-name: "@vue/test-utils"
+        update-types: ["version-update:semver-major"]
+      # ESLint 9+ requires migrating to the flat config format.
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
@@ -37,6 +43,9 @@ updates:
       # Keep Node typings on the LTS lines the project runs on (20/22).
       - dependency-name: "@types/node"
         versions: ["21.x", ">= 23"]
+      # TypeScript majors are adopted deliberately, not via automated bumps.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       playwright:
         patterns: ["@playwright/*"]
