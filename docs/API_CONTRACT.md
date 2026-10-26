@@ -51,6 +51,10 @@ Body: todos os campos editáveis (substituição completa). `200 { "data": Patie
 ### `DELETE /patients/{id}`
 Soft delete. `204` sem corpo · `404`
 
+### `GET /health`
+Verifica a aplicação e a conexão com o banco. Não passa pelo rate limit.
+`200 { "status": "ok" }` · `503 { "status": "unavailable", "message": "Banco de dados indisponível." }`
+
 ## Erro de validação (422)
 Formato padrão do Laravel, mensagens em pt-BR:
 ```json
@@ -61,4 +65,6 @@ Formato padrão do Laravel, mensagens em pt-BR:
 ```
 
 ## CORS
-Liberado para `http://localhost:5173` (front em dev) em `api/*`.
+Liberado em `api/*` para as origens de `CORS_ALLOWED_ORIGINS` (separadas por vírgula). Padrão:
+`http://localhost:5173,http://127.0.0.1:5173` (front em dev); o compose de produção usa a porta do front
+(`http://localhost:8080`).

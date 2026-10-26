@@ -1,5 +1,7 @@
 # Cadastro de Pacientes — Laravel + Vue 2
 
+[![CI](https://github.com/riverofernandes/patient-crud-laravel-vue/actions/workflows/ci.yml/badge.svg)](https://github.com/riverofernandes/patient-crud-laravel-vue/actions/workflows/ci.yml)
+
 Aplicação fullstack com CRUD completo de pacientes, desenvolvida para o desafio
 [eyecarehealth/bi-tech-interview](https://github.com/eyecarehealth/bi-tech-interview).
 
@@ -26,6 +28,8 @@ e sobe o Vite.
 |-----------|----------------------------------|
 | Front-end | http://localhost:5173            |
 | API       | http://localhost:8000/api        |
+| Docs da API (OpenAPI) | http://localhost:8000/docs |
+| Health check | http://localhost:8000/api/health |
 
 Acompanhar os logs: `docker compose logs -f api web` · Parar: `docker compose down` (com `-v` apaga o banco).
 
@@ -41,6 +45,31 @@ O front recebe automaticamente `VITE_API_URL=http://localhost:${API_PORT}/api`. 
 inclua a nova origem em `CORS_ALLOWED_ORIGINS` no `php-laravel/.env` (por padrão são liberadas
 `http://localhost:5173` e `http://127.0.0.1:5173`). O MySQL não é exposto no host (veja o comentário no
 `docker-compose.yml` para habilitar).
+
+> Já tinha o projeto rodando antes desta versão? Rode `docker compose exec api composer install`
+> depois de atualizar, pois o container só instala dependências quando `vendor/` não existe.
+
+## Ambiente de produção (Docker)
+
+`docker-compose.prod.yml` sobe imagens imutáveis, sem bind mount e com debug desligado:
+
+- **API:** `php-laravel/Dockerfile` (target `prod`): nginx + php-fpm sob supervisord, usuário sem
+  privilégios, `composer install --no-dev`, opcache e caches de config/rotas/views.
+- **Front:** `front-vuejs/Dockerfile`: build do Vite servido por nginx, com fallback de rotas do SPA,
+  gzip, cache longo para `/assets` e headers de segurança.
+
+```bash
+APP_KEY=base64:$(openssl rand -base64 32) SEED_ON_START=true docker compose -f docker-compose.prod.yml up -d --build
+```
+
+| Serviço   | URL                       |
+|-----------|---------------------------|
+| Front-end | http://localhost:8080     |
+| API       | http://localhost:8000/api |
+
+Variáveis: `APP_KEY` (obrigatória), `API_PORT`, `WEB_PORT`, `DB_PASSWORD`, `SEED_ON_START` (popula o
+banco na subida). O projeto de produção usa outro nome (`patients-prod`), então não conflita com o
+banco de desenvolvimento.
 
 ## Rodando o front-end fora do Docker (opcional)
 
@@ -68,6 +97,35 @@ cd front-vuejs && npm run build    # type-check (vue-tsc) + build de produção
 
 Os testes do back-end usam SQLite em memória e nunca tocam o banco MySQL do container.
 
+### Testes E2E
+
+Testes de ponta a ponta com Playwright em [`e2e/`](e2e/README.md): listagem, busca, paginação,
+cadastro, detalhes, edição, exclusão, layout mobile e auditoria de acessibilidade com axe (WCAG 2.1 AA)
+em todas as telas. Cada teste cria e apaga os próprios pacientes via API. Com a stack de dev no ar:
+
+```bash
+cd e2e && npm ci && npx playwright install chromium
+```
+
+```bash
+cd e2e && npx playwright test
+```
+
+Se a API subiu em outra porta, informe a URL: `E2E_API_URL=http://localhost:8001/api npx playwright test`.
+Relatório: `npx playwright show-report`.
+
+### Integração contínua
+
+O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda a cada push e PR na `main`:
+testes e pint do back-end, lint, testes e build do front-end e, por fim, a suíte E2E contra a stack do
+`docker compose`. O Dependabot mantém as dependências de Composer, npm, Docker e Actions atualizadas.
+
+### Acessibilidade
+
+As telas passam sem violações na auditoria axe (WCAG 2.1 AA), em desktop e em 375px: contraste,
+rótulos e erros ligados aos campos, foco movido para o título a cada navegação, link "pular para o
+conteúdo" e modal com foco preso e devolvido.
+
 ## Postman
 
 Coleção: [`php-laravel/postman/patients.postman_collection.json`](php-laravel/postman/patients.postman_collection.json).
@@ -80,7 +138,14 @@ npx newman run php-laravel/postman/patients.postman_collection.json
 
 ## API
 
-Contrato completo em [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md).
+Contrato completo em [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md). Documentação interativa gerada
+com [Scribe](https://scribe.knuckles.wtf) em `/docs`, com a especificação OpenAPI em `/docs.openapi` e
+uma coleção Postman gerada em `/docs.postman`. A documentação é versionada; para regenerar após mudar
+a API:
+
+```bash
+docker compose exec api php artisan scribe:generate
+```
 
 | Método | Rota                  | Descrição                                                        |
 |--------|-----------------------|------------------------------------------------------------------|
@@ -89,6 +154,7 @@ Contrato completo em [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md).
 | POST   | `/api/patients`       | Cria (201)                                                       |
 | PUT    | `/api/patients/{id}`  | Atualiza (substituição completa)                                 |
 | DELETE | `/api/patients/{id}`  | **Soft delete** (204) — o registro permanece com `deleted_at`    |
+| GET    | `/api/health`         | Health check com verificação do banco (200 / 503)                |
 
 Validação via FormRequest com mensagens em pt-BR: CPF com dígitos verificadores e único entre pacientes
 ativos (o CPF de um paciente excluído pode ser reutilizado), data de nascimento não futura, sexo `M`/`F`,
@@ -109,8 +175,12 @@ protótipos em [`images/`](images); a tela de detalhes não tinha protótipo e f
 ## Estrutura
 
 ```
-docker-compose.yml          MySQL + API + front
+docker-compose.yml          MySQL + API + front (desenvolvimento)
+docker-compose.prod.yml     imagens de produção (nginx + php-fpm, front com nginx)
+.github/workflows/ci.yml    CI: back-end, front-end e E2E
 docs/API_CONTRACT.md        contrato da API
+docs/ROADMAP.md             plano de evolução
+e2e/                        testes E2E e de acessibilidade (Playwright + axe)
 php-laravel/
   app/Http/Controllers/PatientController.php
   app/Http/Requests/PatientRequest.php   validação + normalização de máscaras

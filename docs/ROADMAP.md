@@ -19,13 +19,13 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
 
 | # | Item | Valor | Esforço | Como |
 |---|------|-------|---------|------|
-| 1.1 | **CI no GitHub Actions** | Selo verde no README; nenhum push quebra o projeto | P | Workflow com jobs `api` (composer install, `php artisan test`, `pint --test`) e `web` (`npm ci`, lint, `npm test`, build) |
-| 1.2 | **Testes E2E com Playwright** | Critério de desempate do desafio; cobre o fluxo real | M | Pasta `e2e/` na raiz: cadastrar → buscar → ver → editar → excluir, com dados criados e limpos pelo próprio teste; job no CI subindo o `docker compose` |
+| 1.1 | ✅ **CI no GitHub Actions** | Selo verde no README; nenhum push quebra o projeto | P | Workflow com jobs `api` (composer install, `php artisan test`, `pint --test`) e `web` (`npm ci`, lint, `npm test`, build) |
+| 1.2 | ✅ **Testes E2E com Playwright** | Critério de desempate do desafio; cobre o fluxo real | M | Pasta `e2e/` na raiz: cadastrar → buscar → ver → editar → excluir, com dados criados e limpos pelo próprio teste; job no CI subindo o `docker compose` |
 | 1.3 | **Testes de componentes no front** | Hoje só os utilitários têm teste | M | `@vue/test-utils` v1: `PatientForm` (obrigatórios, erros 422), `ConfirmDeleteModal`, `PatientListView` (busca com debounce, paginação) |
 | 1.4 | **Cobertura de testes** | Mostra o quanto do código está protegido | P | `php artisan test --coverage` (PCOV no Dockerfile) e `vitest --coverage`; badge no README |
 | 1.5 | **Análise estática** | Pega erros antes de rodar | P | Larastan (PHPStan) nível 6+ no back; `vue-tsc` já roda no build |
-| 1.6 | **Dependabot / Renovate** | Dependências atualizadas com segurança | P | `.github/dependabot.yml` para composer, npm e Docker |
-| 1.7 | **Ajustes de acessibilidade pendentes** | Leitor de tela anuncia o botão do calendário como "Nenhuma data selecionada" | P | `label-*` do `b-form-datepicker` em pt-BR; revisar contraste e foco com axe |
+| 1.6 | ✅ **Dependabot / Renovate** | Dependências atualizadas com segurança | P | `.github/dependabot.yml` para composer, npm e Docker |
+| 1.7 | ✅ **Ajustes de acessibilidade pendentes** | Leitor de tela anuncia o botão do calendário como "Nenhuma data selecionada" | P | `label-*` do `b-form-datepicker` em pt-BR; revisar contraste e foco com axe |
 
 ## Fase 2 — Funcionalidades do cadastro
 
@@ -67,10 +67,10 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
 
 | # | Item | Valor | Esforço | Como |
 |---|------|-------|---------|------|
-| 5.1 | **Documentação OpenAPI** | API autodocumentada, complementa o Postman | P | Scribe gerando a doc a partir dos FormRequests e Resources, publicada em `/docs` |
+| 5.1 | ✅ **Documentação OpenAPI** | API autodocumentada, complementa o Postman | P | Scribe gerando a doc a partir dos FormRequests e Resources, publicada em `/docs` |
 | 5.2 | **Camada de serviço / actions** | Regras fora do controller, mais fáceis de testar | M | `CreatePatient`, `UpdatePatient`, `DeletePatient` como Actions; controller só orquestra |
-| 5.3 | **Front em modo produção** | Hoje o container roda o Vite de desenvolvimento | P | Dockerfile multi-stage (build → nginx) e `docker-compose.prod.yml`; `APP_DEBUG=false` |
-| 5.4 | **Observabilidade** | Saber quando algo quebra em produção | P | Sentry no back e no front; logs estruturados em JSON; endpoint `/api/health` |
+| 5.3 | ✅ **Front em modo produção** | Hoje o container roda o Vite de desenvolvimento | P | Dockerfile multi-stage (build → nginx) e `docker-compose.prod.yml`; `APP_DEBUG=false` |
+| 5.4 | 🟡 **Observabilidade** (health check feito) | Saber quando algo quebra em produção | P | Sentry no back e no front; logs estruturados em JSON; endpoint `/api/health` |
 | 5.5 | **Cache e performance** | Listagem rápida com muitos registros | M | Índice FULLTEXT ou Meilisearch/Scout para busca por nome; Redis para cache |
 | 5.6 | **Deploy com demo pública** | Avaliador testa sem instalar nada | M | Render/Fly.io/Railway com deploy automático pelo CI a partir da `main` |
 | 5.7 | **Migração para Vue 3** | Vue 2 está sem suporte desde 31/12/2023 | G | Vue 3 + Vite atual + Pinia, trocando BootstrapVue por Bootstrap-Vue-Next ou Vuetify 3 (fora do escopo do desafio, que exige Vue 2) |
@@ -79,7 +79,7 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
 
 ## Ordem recomendada
 
-1. **Sprint 1 — vitrine do desafio (2–3 dias):** 1.1 CI · 1.2 E2E · 1.7 acessibilidade · 5.1 OpenAPI · 5.3 front em produção · 5.6 demo pública
+1. ✅ **Sprint 1 — vitrine do desafio (2–3 dias):** concluída, exceto a demo pública (adiada) — 1.1 CI · 1.2 E2E · 1.7 acessibilidade · 5.1 OpenAPI · 5.3 front em produção · 5.6 demo pública
 2. **Sprint 2 — cadastro completo (3–4 dias):** 2.1 lixeira · 2.2 ordenação · 2.4 itens por página · 2.5 idade · 2.7 CPF em tempo real · 1.3 testes de componentes
 3. **Sprint 3 — segurança (4–5 dias):** 3.1 autenticação · 3.2 perfis · 3.3 auditoria · 1.5 Larastan
 4. **Sprint 4+ — produto clínico:** 4.1 agendamento · 4.2 prontuário · 4.5 linha do tempo · 4.3 receita em PDF
