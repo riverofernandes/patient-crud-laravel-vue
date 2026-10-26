@@ -1,0 +1,57 @@
+# Production-like stack: immutable images, no bind mounts, debug off.
+# Usage: APP_KEY=base64:... docker compose -f docker-compose.prod.yml up -d --build
+name: patients-prod
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: patients
+      MYSQL_USER: patients
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  api:
+    build:
+      context: ./php-laravel
+      target: prod
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      APP_KEY: ${APP_KEY:?set APP_KEY, e.g. APP_KEY=base64:$(openssl rand -base64 32)}
+      APP_URL: http://localhost:${API_PORT:-8000}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: patients
+      DB_USERNAME: patients
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      CORS_ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-8080}
+      SEED_ON_START: ${SEED_ON_START:-false}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./front-vuejs
+      args:
+        # Baked into the bundle and resolved by the browser.
+        VITE_API_URL: http://localhost:${API_PORT:-8000}/api
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+
+volumes:
+  mysql-data:
