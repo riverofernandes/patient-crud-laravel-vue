@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Pacientes API",
-    "description": "CRUD de pacientes (Laravel): listagem com ordenação, lixeira, restauração e verificação de CPF. Contrato: docs/API_CONTRACT.md. Execute em ordem (Runner/newman).",
+    "description": "CRUD de pacientes (Laravel): listagem com filtros e ordenação, exportação CSV, lixeira, restauração, histórico de alterações e verificação de CPF. Contrato: docs/API_CONTRACT.md. Execute em ordem (Runner/newman).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -16,6 +16,14 @@
     {
       "key": "cpf",
       "value": "62518953060"
+    },
+    {
+      "key": "cpfMasked",
+      "value": ""
+    },
+    {
+      "key": "cpfPartial",
+      "value": ""
     }
   ],
   "item": [
@@ -120,7 +128,61 @@
       }
     },
     {
-      "name": "Buscar pacientes (nome ou CPF)",
+      "name": "Listar com filtros (sexo e faixa etária)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const j = pm.response.json();",
+              "pm.test('Only F aged 18-60', function () { j.data.forEach(p => { pm.expect(p.sex).to.eql('F'); pm.expect(p.age).to.be.within(18, 60); }); });",
+              "pm.test('Filters kept in pagination links', function () { if (j.links.next) { ['sex=F', 'age_min=18', 'age_max=60'].forEach(s => pm.expect(j.links.next).to.include(s)); } });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients?sex=F&age_min=18&age_max=60&per_page=5",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ],
+          "query": [
+            {
+              "key": "sex",
+              "value": "F"
+            },
+            {
+              "key": "age_min",
+              "value": "18"
+            },
+            {
+              "key": "age_max",
+              "value": "60"
+            },
+            {
+              "key": "per_page",
+              "value": "5"
+            }
+          ]
+        },
+        "description": "Filtros `sex` (M|F) e `age_min`/`age_max` (anos completos, 0–150; inválido é ignorado), combináveis com busca, ordenação e lixeira."
+      }
+    },
+    {
+      "name": "Buscar pacientes (nome ou CPF completo)",
       "event": [
         {
           "listen": "test",
@@ -220,6 +282,159 @@
             }
           }
         }
+      }
+    },
+    {
+      "name": "Buscar por CPF completo (com máscara)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Finds the patient by full CPF', function () { const d = pm.response.json().data; pm.expect(d.map(x => x.id)).to.include(Number(pm.collectionVariables.get('patientId'))); });"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const c = pm.collectionVariables.get('cpf');",
+              "pm.collectionVariables.set('cpfMasked', `${c.slice(0, 3)}.${c.slice(3, 6)}.${c.slice(6, 9)}-${c.slice(9)}`);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients?search={{cpfMasked}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ],
+          "query": [
+            {
+              "key": "search",
+              "value": "{{cpfMasked}}"
+            }
+          ]
+        },
+        "description": "O CPF é criptografado; a busca usa um hash (blind index) e só encontra o CPF completo (11 dígitos, com ou sem máscara)."
+      }
+    },
+    {
+      "name": "Buscar por CPF parcial (sem resultado)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Partial CPF does not match', function () { const d = pm.response.json().data; pm.expect(d.map(x => x.id)).to.not.include(Number(pm.collectionVariables.get('patientId'))); });"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('cpfPartial', pm.collectionVariables.get('cpf').slice(0, 6));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients?search={{cpfPartial}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ],
+          "query": [
+            {
+              "key": "search",
+              "value": "{{cpfPartial}}"
+            }
+          ]
+        },
+        "description": "CPF parcial não é buscável (o CPF é armazenado criptografado)."
+      }
+    },
+    {
+      "name": "Exportar pacientes (CSV)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('CSV headers', function () {",
+              "  pm.expect(pm.response.headers.get('Content-Type')).to.eql('text/csv; charset=UTF-8');",
+              "  pm.expect(pm.response.headers.get('Content-Disposition')).to.match(/^attachment; filename=\"pacientes-\\d{8}-\\d{4}\\.csv\"$/);",
+              "});",
+              "const text = pm.response.text().replace(/^\\uFEFF/, ''); // text() may drop the BOM; the raw bytes are checked below",
+              "pm.test('BOM, separator, CRLF and header', function () {",
+              "  const raw = pm.response.stream; pm.expect([raw[0], raw[1], raw[2]]).to.eql([0xEF, 0xBB, 0xBF]);",
+              "  pm.expect(text.split('\\r\\n')[0]).to.eql('Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição');",
+              "});",
+              "pm.test('Formatted row for the patient', function () {",
+              "  const row = text.split('\\r\\n')[1];",
+              "  pm.expect(row).to.include(pm.collectionVariables.get('cpfMasked'));",
+              "  pm.expect(row).to.include(';Feminino;(11) 92853-5718;');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/export?search={{cpf}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "export"
+          ],
+          "query": [
+            {
+              "key": "search",
+              "value": "{{cpf}}"
+            }
+          ]
+        },
+        "description": "Mesmos filtros e ordenação da listagem, sem paginação. UTF-8 com BOM, separador `;`, CRLF; valores formatados."
       }
     },
     {
@@ -598,6 +813,55 @@
       }
     },
     {
+      "name": "Exportar lixeira (CSV)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has the Excluído em column', function () {",
+              "  const lines = pm.response.text().replace(/^\\uFEFF/, '').split('\\r\\n');",
+              "  pm.expect(lines[0]).to.eql('Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição;Excluído em');",
+              "  pm.expect(lines[1]).to.match(/;\\d{2}\\/\\d{2}\\/\\d{4} \\d{2}:\\d{2}$/);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/export?trashed=only&search={{cpf}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "export"
+          ],
+          "query": [
+            {
+              "key": "trashed",
+              "value": "only"
+            },
+            {
+              "key": "search",
+              "value": "{{cpf}}"
+            }
+          ]
+        },
+        "description": "Com `trashed=only`, o CSV traz a coluna extra `Excluído em`."
+      }
+    },
+    {
       "name": "Restaurar paciente",
       "event": [
         {
@@ -667,6 +931,83 @@
           ]
         },
         "description": "Só pacientes na lixeira podem ser restaurados."
+      }
+    },
+    {
+      "name": "Histórico do paciente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "const j = pm.response.json();",
+              "pm.test('Paginated payload', function () { pm.expect(j).to.have.keys('data', 'links', 'meta'); });",
+              "pm.test('Newest first: restored, deleted, updated, created', function () { pm.expect(j.data.map(a => a.event)).to.eql(['restored', 'deleted', 'updated', 'created']); });",
+              "pm.test('Update records only changed fields', function () { const u = j.data[2]; pm.expect(u.changes).to.not.have.property('cpf'); pm.expect(u.changes.name).to.eql({ old: 'Maria da Silva', new: 'Maria da Silva Souza' }); });",
+              "pm.test('Created has every field with old null, user_id null', function () { const c = j.data[3]; pm.expect(c.changes.cpf).to.eql({ old: null, new: pm.collectionVariables.get('cpf') }); pm.expect(c.user_id).to.eql(null); });",
+              "pm.test('Deleted/restored have empty changes object', function () { pm.expect(j.data[0].changes).to.eql({}); pm.expect(j.data[1].changes).to.eql({}); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}/audits",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}",
+            "audits"
+          ]
+        },
+        "description": "Histórico de alterações (mais recente primeiro), paginado; funciona também para pacientes na lixeira."
+      }
+    },
+    {
+      "name": "Histórico de paciente inexistente (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404', function () { pm.response.to.have.status(404); });",
+              "pm.test('Message', function () { pm.expect(pm.response.json().message).to.eql('Paciente não encontrado.'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/999999999/audits",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "999999999",
+            "audits"
+          ]
+        },
+        "description": "404 quando o id não existe."
       }
     },
     {
