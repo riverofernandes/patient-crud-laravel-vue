@@ -12,17 +12,28 @@
     </header>
 
     <div class="app-card">
-      <div class="search-field" role="search">
-        <label for="trash-search" class="sr-only"
-          >Buscar por nome do paciente ou CPF</label
-        >
-        <b-icon-search class="search-field__icon" aria-hidden="true" />
-        <b-form-input
-          id="trash-search"
-          v-model="search"
-          type="search"
-          placeholder="Buscar por nome do paciente ou CPF"
-          autocomplete="off"
+      <div class="list-toolbar">
+        <div class="search-field" role="search">
+          <label for="trash-search" class="sr-only"
+            >Buscar por nome do paciente ou CPF</label
+          >
+          <b-icon-search class="search-field__icon" aria-hidden="true" />
+          <b-form-input
+            id="trash-search"
+            v-model="search"
+            type="search"
+            placeholder="Buscar por nome do paciente ou CPF"
+            autocomplete="off"
+            aria-describedby="trash-search-help"
+          />
+          <p id="trash-search-help" class="search-field__help">
+            CPF: informe os 11 dígitos
+          </p>
+        </div>
+        <ExportCsvButton
+          class="list-toolbar__export"
+          :params="exportParams"
+          :disabled="isEmptyResult"
         />
       </div>
 
@@ -133,8 +144,10 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import AppBreadcrumb from "@/components/AppBreadcrumb.vue";
+import ExportCsvButton from "@/components/ExportCsvButton.vue";
 import {
   patientService,
+  type ExportParams,
   type PaginationMeta,
   type Patient,
 } from "@/services/patientService";
@@ -148,7 +161,7 @@ const PER_PAGE = 10;
 
 export default defineComponent({
   name: "PatientTrashView",
-  components: { AppBreadcrumb },
+  components: { AppBreadcrumb, ExportCsvButton },
   data() {
     return {
       search: "",
@@ -187,6 +200,13 @@ export default defineComponent({
     currentPage(): number {
       const page = Number(this.$route.query.page);
       return Number.isInteger(page) && page > 0 ? page : 1;
+    },
+    /** Exports the trash with the current search. */
+    exportParams(): ExportParams {
+      return { search: this.activeSearch || undefined, trashed: "only" };
+    },
+    isEmptyResult(): boolean {
+      return !this.loading && !!this.meta && this.meta.total === 0;
     },
   },
   watch: {
@@ -304,6 +324,11 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 @import "@/styles/patient-table";
+
+.list-toolbar__export {
+  flex: 0 0 auto;
+  margin-bottom: 16px;
+}
 
 .page-subtitle {
   margin: 4px 0 0;

@@ -2,6 +2,30 @@
 // blocks, so ::v-deep reaches into BootstrapVue's table/pagination markup).
 @import "variables";
 
+// Search box + page actions (filters / export) on one row; stacked on mobile.
+.list-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+
+  .search-field {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .list-toolbar {
+    flex-direction: column;
+    gap: 0;
+    align-items: stretch;
+
+    .search-field {
+      margin-bottom: 12px;
+    }
+  }
+}
+
 .search-field {
   position: relative;
   margin-bottom: 16px;
@@ -13,6 +37,13 @@
       cursor: pointer;
     }
   }
+}
+
+.search-field__help {
+  margin: 4px 0 0;
+  color: $text-muted;
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .search-field__icon {

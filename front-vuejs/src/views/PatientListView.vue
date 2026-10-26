@@ -14,19 +14,52 @@
     </header>
 
     <div class="app-card">
-      <div class="search-field" role="search">
-        <label for="patient-search" class="sr-only"
-          >Buscar por nome do paciente ou CPF</label
-        >
-        <b-icon-search class="search-field__icon" aria-hidden="true" />
-        <b-form-input
-          id="patient-search"
-          v-model="search"
-          type="search"
-          placeholder="Buscar por nome do paciente ou CPF"
-          autocomplete="off"
-        />
+      <div class="list-toolbar">
+        <div class="search-field" role="search">
+          <label for="patient-search" class="sr-only"
+            >Buscar por nome do paciente ou CPF</label
+          >
+          <b-icon-search class="search-field__icon" aria-hidden="true" />
+          <b-form-input
+            id="patient-search"
+            v-model="search"
+            type="search"
+            placeholder="Buscar por nome do paciente ou CPF"
+            autocomplete="off"
+            aria-describedby="patient-search-help"
+          />
+          <p id="patient-search-help" class="search-field__help">
+            CPF: informe os 11 dígitos
+          </p>
+        </div>
+        <div class="list-toolbar__actions">
+          <b-button
+            variant="outline-primary"
+            class="filters-toggle"
+            :class="{ 'is-open': filtersOpen }"
+            aria-controls="patient-filters"
+            :aria-expanded="filtersOpen ? 'true' : 'false'"
+            @click="filtersOpen = !filtersOpen"
+          >
+            <b-icon-funnel aria-hidden="true" class="mr-1" />
+            Filtros
+            <template v-if="filterCount > 0">
+              <span class="filters-toggle__badge" aria-hidden="true">{{
+                filterCount
+              }}</span>
+              <span class="sr-only">{{ filterCountLabel }}</span>
+            </template>
+          </b-button>
+          <ExportCsvButton :params="exportParams" :disabled="isEmptyResult" />
+        </div>
       </div>
+
+      <PatientFilters
+        v-show="filtersOpen"
+        id="patient-filters"
+        :value="filters"
+        @change="applyFilters"
+      />
 
       <div v-if="error" class="state-box" role="alert">
         <p class="state-box__title">Não foi possível carregar os pacientes</p>
@@ -58,13 +91,7 @@
           <template #empty>
             <div class="state-box">
               <p class="state-box__title">Nenhum paciente encontrado</p>
-              <p class="mb-0">
-                {{
-                  activeSearch
-                    ? "Tente buscar por outro nome ou CPF."
-                    : 'Clique em "Novo paciente" para cadastrar o primeiro.'
-                }}
-              </p>
+              <p class="mb-0">{{ emptyMessage }}</p>
             </div>
           </template>
 
@@ -190,9 +217,12 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal.vue";
+import ExportCsvButton from "@/components/ExportCsvButton.vue";
+import PatientFilters from "@/components/PatientFilters.vue";
 import {
   patientService,
   type PaginationMeta,
+  type ExportParams,
   type Patient,
   type SortDirection,
 } from "@/services/patientService";
@@ -200,6 +230,12 @@ import { getErrorMessage } from "@/services/api";
 import { isoToBr, maskCpf, maskPhone, patientAge } from "@/utils/format";
 import { debounce } from "@/utils/debounce";
 import { PATIENT_RESTORED_EVENT } from "@/utils/restore";
+import {
+  activeFilterCount,
+  filtersFromQuery,
+  filtersToQuery,
+  type PatientFilterValues,
+} from "@/utils/filters";
 
 export const PER_PAGE_OPTIONS = [10, 25, 50] as const;
 const DEFAULT_PER_PAGE = 10;
@@ -214,11 +250,12 @@ interface ListQuery {
   perPage: number;
   sort: SortKey;
   direction: SortDirection;
+  filters: PatientFilterValues;
 }
 
 export default defineComponent({
   name: "PatientListView",
-  components: { ConfirmDeleteModal },
+  components: { ConfirmDeleteModal, ExportCsvButton, PatientFilters },
   data() {
     return {
       search: "",
@@ -229,6 +266,7 @@ export default defineComponent({
       requestId: 0,
       patientToDelete: null as Patient | null,
       perPageOptions: [...PER_PAGE_OPTIONS],
+      filtersOpen: false,
     };
   },
   computed: {
@@ -254,6 +292,46 @@ export default defineComponent({
     },
     direction(): SortDirection {
       return this.$route.query.direction === "desc" ? "desc" : "asc";
+    },
+    filters(): PatientFilterValues {
+      return filtersFromQuery(this.$route.query);
+    },
+    filterCount(): number {
+      return activeFilterCount(this.filters);
+    },
+    /** Completes the toggle's accessible name: "Filtros (2 ativos)". */
+    filterCountLabel(): string {
+      const n = this.filterCount;
+      return ` (${n} ${n === 1 ? "ativo" : "ativos"})`;
+    },
+    /** Filter params for the API, only the active ones. */
+    filterParams(): Pick<ExportParams, "sex" | "age_min" | "age_max"> {
+      const params: Pick<ExportParams, "sex" | "age_min" | "age_max"> = {};
+      if (this.filters.sex) params.sex = this.filters.sex;
+      if (this.filters.ageMin !== null) params.age_min = this.filters.ageMin;
+      if (this.filters.ageMax !== null) params.age_max = this.filters.ageMax;
+      return params;
+    },
+    /** Same search/filters/sort as the table, without pagination. */
+    exportParams(): ExportParams {
+      return {
+        search: this.activeSearch || undefined,
+        sort: this.sort,
+        direction: this.direction,
+        ...this.filterParams,
+      };
+    },
+    isEmptyResult(): boolean {
+      return !this.loading && !!this.meta && this.meta.total === 0;
+    },
+    emptyMessage(): string {
+      if (this.filterCount > 0)
+        return this.activeSearch
+          ? "Tente buscar por outro nome ou CPF ou ajuste os filtros."
+          : "Nenhum paciente corresponde aos filtros aplicados. Ajuste ou limpe os filtros.";
+      return this.activeSearch
+        ? "Tente buscar por outro nome ou CPF."
+        : 'Clique em "Novo paciente" para cadastrar o primeiro.';
     },
     fields(): Array<Record<string, unknown>> {
       const ariaSort = (key: SortKey) => ({
@@ -303,6 +381,8 @@ export default defineComponent({
     },
   },
   created() {
+    // Starts open when the URL already carries filters.
+    this.filtersOpen = this.filterCount > 0;
     this.applySearch = debounce((value: string) => {
       const term = value.trim();
       if (term === this.activeSearch) return;
@@ -340,6 +420,7 @@ export default defineComponent({
         perPage: this.perPage,
         sort: this.sort,
         direction: this.direction,
+        filters: this.filters,
         ...changes,
       };
       const query: Record<string, string> = {};
@@ -351,6 +432,7 @@ export default defineComponent({
         query.sort = next.sort;
         query.direction = next.direction;
       }
+      Object.assign(query, filtersToQuery(next.filters));
       this.$router[mode]({ query }).catch(() => undefined);
     },
     goToPage(page: number): void {
@@ -367,6 +449,9 @@ export default defineComponent({
         ? "b-icon-caret-up-fill"
         : "b-icon-caret-down-fill";
     },
+    applyFilters(filters: PatientFilterValues): void {
+      this.updateQuery({ filters, page: 1 }, "push");
+    },
     setPerPage(value: number): void {
       this.updateQuery({ perPage: Number(value), page: 1 }, "push");
     },
@@ -381,6 +466,7 @@ export default defineComponent({
           per_page: this.perPage,
           sort: this.sort,
           direction: this.direction,
+          ...this.filterParams,
         });
         if (requestId !== this.requestId) return;
         // Page out of range (e.g. after deleting the last item of a page).
@@ -423,6 +509,49 @@ export default defineComponent({
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.list-toolbar__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filters-toggle {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+
+  &.is-open:not(:hover) {
+    background: rgba($blue, 0.08);
+  }
+}
+
+.filters-toggle__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  padding: 0 6px;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  background: $blue;
+  border-radius: 10px;
+
+  .filters-toggle:hover & {
+    color: $blue;
+    background: #fff;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .list-toolbar__actions > * {
+    flex: 1 1 0;
+  }
 }
 
 .patients-table ::v-deep .col-age {
