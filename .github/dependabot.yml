@@ -1,0 +1,50 @@
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: /php-laravel
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      composer-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /front-vuejs
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    ignore:
+      # The challenge requires Vue 2 / BootstrapVue 2 (Bootstrap 4).
+      - dependency-name: vue
+        update-types: [version-update:semver-major]
+      - dependency-name: vue-router
+        update-types: [version-update:semver-major]
+      - dependency-name: bootstrap
+        update-types: [version-update:semver-major]
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: weekly
+    groups:
+      playwright:
+        patterns: ["@playwright/*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /php-laravel
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /front-vuejs
+    schedule:
+      interval: weekly
