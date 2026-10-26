@@ -21,7 +21,7 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
 |---|------|-------|---------|------|
 | 1.1 | ✅ **CI no GitHub Actions** | Selo verde no README; nenhum push quebra o projeto | P | Workflow com jobs `api` (composer install, `php artisan test`, `pint --test`) e `web` (`npm ci`, lint, `npm test`, build) |
 | 1.2 | ✅ **Testes E2E com Playwright** | Critério de desempate do desafio; cobre o fluxo real | M | Pasta `e2e/` na raiz: cadastrar → buscar → ver → editar → excluir, com dados criados e limpos pelo próprio teste; job no CI subindo o `docker compose` |
-| 1.3 | **Testes de componentes no front** | Hoje só os utilitários têm teste | M | `@vue/test-utils` v1: `PatientForm` (obrigatórios, erros 422), `ConfirmDeleteModal`, `PatientListView` (busca com debounce, paginação) |
+| 1.3 | ✅ **Testes de componentes no front** | Hoje só os utilitários têm teste | M | `@vue/test-utils` v1: `PatientForm` (obrigatórios, erros 422), `ConfirmDeleteModal`, `PatientListView` (busca com debounce, paginação) |
 | 1.4 | **Cobertura de testes** | Mostra o quanto do código está protegido | P | `php artisan test --coverage` (PCOV no Dockerfile) e `vitest --coverage`; badge no README |
 | 1.5 | **Análise estática** | Pega erros antes de rodar | P | Larastan (PHPStan) nível 6+ no back; `vue-tsc` já roda no build |
 | 1.6 | ✅ **Dependabot / Renovate** | Dependências atualizadas com segurança | P | `.github/dependabot.yml` para composer, npm e Docker |
@@ -31,13 +31,13 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
 
 | # | Item | Valor | Esforço | Como |
 |---|------|-------|---------|------|
-| 2.1 | **Lixeira e restauração** | Aproveita o soft delete: exclusão por engano tem volta | M | `GET /patients?trashed=only`, `POST /patients/{id}/restore` (validando CPF único ao restaurar); tela "Pacientes excluídos" |
-| 2.2 | **Ordenação por coluna** | Achar pacientes mais rápido | P | Query `sort=name\|birth_date\|created_at` e `direction` com lista branca no back; cabeçalhos clicáveis na tabela |
+| 2.1 | ✅ **Lixeira e restauração** | Aproveita o soft delete: exclusão por engano tem volta | M | `GET /patients?trashed=only`, `POST /patients/{id}/restore` (validando CPF único ao restaurar); tela "Pacientes excluídos" |
+| 2.2 | ✅ **Ordenação por coluna** | Achar pacientes mais rápido | P | Query `sort=name\|birth_date\|created_at` e `direction` com lista branca no back; cabeçalhos clicáveis na tabela |
 | 2.3 | **Filtros** | Recortes como "mulheres acima de 60 anos" | M | `sex`, `age_min`/`age_max` (convertidos em faixa de `birth_date`); painel de filtros sincronizado com a URL |
-| 2.4 | **Itens por página** | Controle do usuário sobre a listagem | P | Select 10/25/50 ligado ao `per_page` que a API já aceita |
-| 2.5 | **Idade calculada** | Informação mais usada no atendimento | P | Campo `age` no `PatientResource`; exibir na listagem e nos detalhes |
+| 2.4 | ✅ **Itens por página** | Controle do usuário sobre a listagem | P | Select 10/25/50 ligado ao `per_page` que a API já aceita |
+| 2.5 | ✅ **Idade calculada** | Informação mais usada no atendimento | P | Campo `age` no `PatientResource`; exibir na listagem e nos detalhes |
 | 2.6 | **Endereço com busca de CEP** | Cadastro completo | M | Campos de endereço (tabela própria `addresses` 1:1); autopreenchimento via ViaCEP no front |
-| 2.7 | **Verificação de CPF em tempo real** | Avisa duplicidade antes de salvar | P | `GET /patients/check-cpf?cpf=` chamado no blur do campo |
+| 2.7 | ✅ **Verificação de CPF em tempo real** | Avisa duplicidade antes de salvar | P | `GET /patients/cpf-availability?cpf=` chamado no blur do campo |
 | 2.8 | **Foto do paciente** | Identificação visual na recepção | M | Upload com validação de tipo/tamanho, armazenamento no `storage` (S3/MinIO depois); avatar com iniciais como fallback |
 | 2.9 | **Exportar CSV** | Relatórios e integração com planilhas | P | `GET /patients/export?search=...` respeitando filtros, com stream de resposta |
 
@@ -80,7 +80,7 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
 ## Ordem recomendada
 
 1. ✅ **Sprint 1 — vitrine do desafio (2–3 dias):** concluída, exceto a demo pública (adiada) — 1.1 CI · 1.2 E2E · 1.7 acessibilidade · 5.1 OpenAPI · 5.3 front em produção · 5.6 demo pública
-2. **Sprint 2 — cadastro completo (3–4 dias):** 2.1 lixeira · 2.2 ordenação · 2.4 itens por página · 2.5 idade · 2.7 CPF em tempo real · 1.3 testes de componentes
+2. ✅ **Sprint 2 — cadastro completo (3–4 dias):** concluída — 2.1 lixeira · 2.2 ordenação · 2.4 itens por página · 2.5 idade · 2.7 CPF em tempo real · 1.3 testes de componentes
 3. **Sprint 3 — segurança (4–5 dias):** 3.1 autenticação · 3.2 perfis · 3.3 auditoria · 1.5 Larastan
 4. **Sprint 4+ — produto clínico:** 4.1 agendamento · 4.2 prontuário · 4.5 linha do tempo · 4.3 receita em PDF
 
