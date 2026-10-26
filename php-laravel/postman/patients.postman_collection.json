@@ -1,0 +1,368 @@
+{
+  "info": {
+    "name": "Pacientes API",
+    "description": "CRUD de pacientes (Laravel). Contrato: docs/API_CONTRACT.md. Execute em ordem (Runner/newman).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api"
+    },
+    {
+      "key": "patientId",
+      "value": "1"
+    },
+    {
+      "key": "cpf",
+      "value": "62518953060"
+    }
+  ],
+  "item": [
+    {
+      "name": "Listar pacientes",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Paginated payload', function () { const j = pm.response.json(); pm.expect(j).to.have.keys('data', 'links', 'meta'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients?page=1&per_page=10",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "per_page",
+              "value": "10"
+            }
+          ]
+        },
+        "description": "Lista paginada ordenada por nome."
+      }
+    },
+    {
+      "name": "Buscar pacientes (nome ou CPF)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients?search=Maria",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ],
+          "query": [
+            {
+              "key": "search",
+              "value": "Maria"
+            }
+          ]
+        },
+        "description": "Busca por nome parcial ou CPF com/sem máscara (ex.: 625.189.530-60)."
+      }
+    },
+    {
+      "name": "Cadastrar paciente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test('Stores digits only', function () { pm.expect(body.data.phone).to.eql('11928535718'); pm.expect(body.data.rg).to.eql('35688019X'); });",
+              "pm.collectionVariables.set('patientId', body.data.id);"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Generates a fresh valid CPF so the collection can be run repeatedly.",
+              "const d = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));",
+              "for (const len of [9, 10]) {",
+              "  const sum = d.slice(0, len).reduce((acc, n, i) => acc + n * (len + 1 - i), 0);",
+              "  d.push((sum * 10) % 11 % 10);",
+              "}",
+              "pm.collectionVariables.set('cpf', d.join(''));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ]
+        },
+        "description": "201 com o paciente criado. CPF/RG/celular podem vir com máscara; são armazenados só com dígitos. O pre-request gera um CPF válido em {{cpf}}.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Maria da Silva\",\n  \"cpf\": \"{{cpf}}\",\n  \"rg\": \"35.688.019-X\",\n  \"birth_date\": \"1996-07-20\",\n  \"sex\": \"F\",\n  \"phone\": \"(11) 92853-5718\",\n  \"email\": \"maria@example.com\",\n  \"description\": \"Paciente com miopia leve.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Detalhar paciente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}"
+          ]
+        },
+        "description": "200 ou 404 {\"message\":\"Paciente não encontrado.\"}"
+      }
+    },
+    {
+      "name": "Cadastrar paciente (inválido - 422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+              "pm.test('Validation errors in pt-BR', function () { const j = pm.response.json(); pm.expect(j.errors.name[0]).to.eql('O campo nome completo é obrigatório.'); pm.expect(j.errors.cpf[0]).to.eql('O CPF informado é inválido.'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ]
+        },
+        "description": "Exemplo de erro de validação 422 com mensagens em pt-BR.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"\",\n  \"cpf\": \"123.456.789-00\",\n  \"rg\": \"\",\n  \"birth_date\": \"2999-01-01\",\n  \"sex\": \"X\",\n  \"phone\": \"123\",\n  \"email\": \"email-invalido\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Atualizar paciente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Name updated', function () { pm.expect(pm.response.json().data.name).to.eql('Maria da Silva Souza'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}"
+          ]
+        },
+        "description": "Substituição completa; envie todos os campos editáveis (opcionais omitidos viram null).",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Maria da Silva Souza\",\n  \"cpf\": \"{{cpf}}\",\n  \"rg\": \"35.688.019-X\",\n  \"birth_date\": \"1996-07-20\",\n  \"sex\": \"F\",\n  \"phone\": \"11987654321\",\n  \"email\": \"maria@example.com\",\n  \"description\": null\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Excluir paciente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}"
+          ]
+        },
+        "description": "Soft delete. 204 sem corpo."
+      }
+    },
+    {
+      "name": "Detalhar paciente excluído (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404', function () { pm.response.to.have.status(404); });",
+              "pm.test('Not found message', function () { pm.expect(pm.response.json().message).to.eql('Paciente não encontrado.'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}"
+          ]
+        },
+        "description": "Após a exclusão o paciente retorna 404."
+      }
+    }
+  ]
+}
