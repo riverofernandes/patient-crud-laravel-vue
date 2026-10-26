@@ -20,4 +20,12 @@ Route::get('health', HealthController::class)
     ->withoutMiddleware(ThrottleRequests::class.':api')
     ->name('health');
 
+// Registered before the resource; {patient} only matches numeric ids anyway (see RouteServiceProvider).
+Route::get('patients/cpf-availability', [PatientController::class, 'cpfAvailability'])
+    ->name('patients.cpf-availability');
+
+Route::post('patients/{patient}/restore', [PatientController::class, 'restore'])
+    ->withTrashed()
+    ->name('patients.restore');
+
 Route::apiResource('patients', PatientController::class);

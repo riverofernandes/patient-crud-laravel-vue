@@ -86,4 +86,6 @@ WORKDIR /var/www/html
 EXPOSE 8000
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# --no-reload keeps the container's environment (compose `environment:`); without it
+# `serve` drops those variables and re-reads only the .env file.
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000", "--no-reload"]
