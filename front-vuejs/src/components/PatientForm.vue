@@ -7,6 +7,7 @@
         <FormField id="pf-name" label="Nome completo" :error="errors.name">
           <b-form-input
             id="pf-name"
+            required
             v-model="form.name"
             placeholder="Descrever"
             maxlength="255"
@@ -20,6 +21,7 @@
         <FormField id="pf-cpf" label="CPF" :error="errors.cpf">
           <b-form-input
             id="pf-cpf"
+            required
             v-model="form.cpf"
             placeholder="000.000.000-00"
             inputmode="numeric"
@@ -34,6 +36,7 @@
         <FormField id="pf-rg" label="RG" :error="errors.rg">
           <b-form-input
             id="pf-rg"
+            required
             v-model="form.rg"
             placeholder="00.000.000-0"
             maxlength="20"
@@ -54,6 +57,7 @@
           <div class="date-input">
             <b-form-input
               id="pf-birth-date"
+              required
               v-model="form.birthDate"
               placeholder="DD/MM/AAAA"
               inputmode="numeric"
@@ -65,6 +69,7 @@
               @input="clearError('birth_date')"
             />
             <b-form-datepicker
+              ref="picker"
               :value="birthDateIso"
               class="date-input__picker"
               button-only
@@ -87,7 +92,6 @@
               label-today="Hoje"
               label-calendar="Calendário"
               label-nav="Navegação do calendário"
-              aria-controls="pf-birth-date"
               @input="onPickDate"
             >
               <template #button-content>
@@ -101,6 +105,7 @@
         <FormField id="pf-sex" label="Sexo biológico" :error="errors.sex">
           <b-form-select
             id="pf-sex"
+            required
             v-model="form.sex"
             :options="sexOptions"
             :class="{ 'is-placeholder': !form.sex }"
@@ -113,6 +118,7 @@
         <FormField id="pf-phone" label="Celular" :error="errors.phone">
           <b-form-input
             id="pf-phone"
+            required
             v-model="form.phone"
             type="tel"
             placeholder="(00) 00000-0000"
@@ -177,6 +183,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from "vue";
+import type Vue from "vue";
 import FormField from "@/components/FormField.vue";
 import type { Patient, PatientPayload, Sex } from "@/services/patientService";
 import type { ValidationErrors } from "@/services/api";
@@ -252,6 +259,11 @@ export default defineComponent({
     };
   },
   computed: {
+    pickerButtonLabel(): string {
+      return this.birthDateIso
+        ? `Abrir calendário, data selecionada ${this.form.birthDate}`
+        : "Abrir calendário";
+    },
     birthDateIso(): string {
       return isValidBrDate(this.form.birthDate)
         ? brToIso(this.form.birthDate)
@@ -259,6 +271,7 @@ export default defineComponent({
     },
   },
   watch: {
+    pickerButtonLabel: "labelPickerButton",
     patient(value: Patient | null) {
       this.form = toFormState(value);
       this.errors = {};
@@ -273,6 +286,9 @@ export default defineComponent({
       this.focusFirstError();
     },
   },
+  mounted() {
+    this.labelPickerButton();
+  },
   methods: {
     maskCpf,
     maskRg,
@@ -285,6 +301,17 @@ export default defineComponent({
       return this.errors[field]
         ? `pf-${field.replace("_", "-")}-error`
         : undefined;
+    },
+    /**
+     * BootstrapVue names the datepicker toggle through a hidden <label for=button>
+     * holding the selected date or "Nenhuma data selecionada", so screen readers
+     * announced the button as that text. An aria-label on the button itself wins
+     * in the accessible-name computation (and Vue leaves unmanaged attrs alone).
+     */
+    labelPickerButton(): void {
+      const picker = this.$refs.picker as Vue | undefined;
+      const button = picker?.$el.querySelector("button");
+      button?.setAttribute("aria-label", this.pickerButtonLabel);
     },
     clearError(field: FieldName): void {
       if (this.errors[field]) this.$delete(this.errors, field);

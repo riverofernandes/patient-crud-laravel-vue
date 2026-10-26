@@ -37,7 +37,7 @@ export function notify(
         attrs: { type: "button", "aria-label": "Fechar notificação" },
         on: { click: () => root.$bvToast.hide(id) },
       },
-      [h("b-icon-x")]
+      [h("b-icon-x", { attrs: { "aria-hidden": "true" } })]
     ),
   ]);
 
@@ -48,6 +48,8 @@ export function notify(
     noCloseButton: true,
     solid: true,
     appendToast: false,
+    // Success is informational (role="status", polite); errors interrupt (role="alert").
+    isStatus: variant === "success",
     toastClass: ["app-toast", `app-toast--${variant}`],
     bodyClass: "app-toast__body",
   });

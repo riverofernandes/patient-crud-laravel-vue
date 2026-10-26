@@ -2,10 +2,11 @@
 $navy: #0d1d5a;
 $blue: #2f5bea;
 $blue-dark: #2148c9;
-$red: #f0341f;
+$red: #f0341f; // borders, icons, toast tiles (non-text, needs 3:1)
+$red-text: #c92a16; // red TEXT: 5.5:1 on white, 5:1 on $page-bg (WCAG AA)
 $green: #12c46f;
 $text: #4a5578;
-$text-muted: #8a94b2;
+$text-muted: #5f6987; // 5.4:1 on white, 5:1 on $page-bg (was #8a94b2, 3:1)
 $border: #c9d0e3;
 $border-light: #dde2ef;
 $page-bg: #f3f5fa;

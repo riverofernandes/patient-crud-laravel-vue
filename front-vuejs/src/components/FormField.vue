@@ -6,12 +6,9 @@
     </label>
     <slot />
     <div class="form-field__feedback">
-      <span
-        v-if="error"
-        :id="`${id}-error`"
-        class="form-field__error"
-        role="alert"
-      >
+      <!-- Linked to the control via aria-describedby (no role="alert": on submit
+           focus moves to the first invalid field and the toast announces the summary). -->
+      <span v-if="error" :id="`${id}-error`" class="form-field__error">
         {{ error }}
       </span>
     </div>
@@ -63,7 +60,7 @@ export default defineComponent({
 
 .form-field__error {
   display: block;
-  color: $red;
+  color: $red-text;
   font-size: 12px;
   line-height: 16px;
 }

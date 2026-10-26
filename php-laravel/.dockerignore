@@ -1,5 +1,22 @@
+# Only the prod target copies the source (the dev target uses the bind mount).
 vendor
 node_modules
 .env
-storage/logs/*
+.env.*
+!.env.example
+.git
 .phpunit.cache
+.phpunit.result.cache
+.scribe
+tests
+postman
+Dockerfile
+.dockerignore
+# Host caches would reference dev-only providers (Ignition, Collision...) and break a --no-dev image.
+bootstrap/cache/*.php
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+# NOT ignored on purpose: storage/app/scribe (OpenAPI/Postman served by /docs.openapi and /docs.postman).

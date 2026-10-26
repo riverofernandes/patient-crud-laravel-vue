@@ -61,6 +61,7 @@ import ConfirmDeleteModal from "@/components/ConfirmDeleteModal.vue";
 import PageState from "@/components/PageState.vue";
 import PatientForm from "@/components/PatientForm.vue";
 import { usePatient } from "@/composables/usePatient";
+import { focusHeadingIfParked } from "@/utils/routeFocus";
 import {
   patientService,
   type Patient,
@@ -88,6 +89,11 @@ export default defineComponent({
       serverErrors: null as ValidationErrors | null,
       patientToDelete: null as Patient | null,
     };
+  },
+  watch: {
+    patient(value: Patient | null) {
+      if (value) this.$nextTick(focusHeadingIfParked);
+    },
   },
   computed: {
     breadcrumb(): BreadcrumbItem[] {

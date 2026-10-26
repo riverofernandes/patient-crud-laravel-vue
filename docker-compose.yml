@@ -21,10 +21,14 @@ services:
       start_period: 20s
 
   api:
-    build: ./php-laravel
+    build:
+      context: ./php-laravel
+      target: dev
     restart: unless-stopped
     ports:
       - "${API_PORT:-8000}:8000"
+    environment:
+      APP_URL: http://localhost:${API_PORT:-8000}
     volumes:
       - ./php-laravel:/var/www/html
     depends_on:

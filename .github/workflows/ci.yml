@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: API (PHP 8.2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: php-laravel
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, pdo, pdo_sqlite, sqlite3, bcmath
+          coverage: none
+          tools: composer:v2
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('php-laravel/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Tests (SQLite in memory)
+        run: php artisan test
+
+      - name: Code style (Pint)
+        run: ./vendor/bin/pint --test
+
+  web:
+    name: Web (Node 20)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: front-vuejs
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: front-vuejs/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (no --fix)
+        run: npx eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Type-check and build
+        run: npm run build
+
+  e2e:
+    name: E2E (Playwright)
+    needs: [api, web]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      E2E_BASE_URL: http://localhost:5173
+      E2E_API_URL: http://localhost:8000/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the stack (MySQL + API + web)
+        run: docker compose up -d --build
+
+      - name: Wait for the API and the front-end
+        run: |
+          wait_for() {
+            local url=$1 deadline=$((SECONDS + 300))
+            until curl -fsS -o /dev/null "$url" 2>/dev/null; do
+              if [ "$SECONDS" -ge "$deadline" ]; then
+                echo "::error::Timed out waiting for $url"
+                exit 1
+              fi
+              sleep 3
+            done
+            echo "$url is up"
+          }
+          wait_for "$E2E_API_URL/health"      # readiness probe (not rate limited)
+          wait_for "$E2E_API_URL/patients"    # migrations + seed done, DB reachable
+          wait_for "$E2E_BASE_URL"
+
+      - name: Warm up Vite (pre-bundle dependencies before the first test)
+        run: |
+          curl -fsS -o /dev/null "$E2E_BASE_URL/"
+          curl -fsS -o /dev/null "$E2E_BASE_URL/src/main.ts"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install E2E dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        working-directory: e2e
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7
+
+      - name: Docker Compose logs
+        if: failure()
+        run: docker compose logs --no-color --timestamps
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v

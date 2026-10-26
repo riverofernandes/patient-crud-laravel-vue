@@ -1,7 +1,7 @@
 <template>
   <section>
     <header class="page-header">
-      <h1 class="page-title">Pacientes</h1>
+      <h1 class="page-title" tabindex="-1">Pacientes</h1>
       <b-button variant="primary" :to="{ name: 'patients.create' }"
         >Novo paciente</b-button
       >
@@ -31,6 +31,7 @@
       <template v-else>
         <b-table
           class="patients-table"
+          aria-label="Lista de pacientes"
           :items="patients"
           :fields="fields"
           :busy="loading"
@@ -406,7 +407,7 @@ export default defineComponent({
 
     &:hover,
     &:focus {
-      color: darken($red, 10%);
+      color: darken($red, 12%);
       background: rgba($red, 0.08);
     }
   }

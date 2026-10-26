@@ -54,4 +54,12 @@ class Handler extends ExceptionHandler
             }
         });
     }
+
+    /**
+     * Routing errors (e.g. 405) happen before the api middleware forces JSON.
+     */
+    protected function shouldReturnJson($request, Throwable $e): bool
+    {
+        return $request->is('api/*') || parent::shouldReturnJson($request, $e);
+    }
 }
