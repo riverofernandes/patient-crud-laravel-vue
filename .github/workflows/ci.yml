@@ -29,7 +29,8 @@ jobs:
         with:
           php-version: "8.2"
           extensions: mbstring, pdo, pdo_sqlite, sqlite3, bcmath
-          coverage: none
+          # Code coverage driver for `php artisan test --coverage` (faster than Xdebug).
+          coverage: pcov
           tools: composer:v2
 
       - name: Get Composer cache directory
@@ -50,8 +51,11 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      - name: Tests (SQLite in memory)
-        run: php artisan test
+      - name: Static analysis (Larastan)
+        run: ./vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+      - name: Tests with coverage (SQLite in memory, minimum 80%)
+        run: php artisan test --coverage --min=80
 
       - name: Code style (Pint)
         run: ./vendor/bin/pint --test
@@ -78,8 +82,57 @@ jobs:
       - name: Lint (no --fix)
         run: npx eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore
 
-      - name: Unit tests
-        run: npm test
+      # Runs the unit tests once, with coverage (thresholds in vite.config.ts fail the step).
+      - name: Unit tests with coverage
+        shell: bash
+        run: npm run test:coverage 2>&1 | tee coverage-output.txt
+
+      - name: Coverage summary
+        if: always()
+        shell: bash
+        run: |
+          lcov=coverage/lcov.info
+          if [ ! -f "$lcov" ]; then
+            echo "No coverage report was generated." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # Totals from the lcov report (lines, functions, branches).
+          awk -F: '
+            /^LF:/ {lf += $2} /^LH:/ {lh += $2}
+            /^FNF:/ {fnf += $2} /^FNH:/ {fnh += $2}
+            /^BRF:/ {brf += $2} /^BRH:/ {brh += $2}
+            function pct(h, t) { return t ? sprintf("%.1f%%", 100 * h / t) : "n/a" }
+            END {
+              print "### Front-end coverage (Vitest)\n"
+              print "| Metric | Covered | Total | % |"
+              print "|---|---:|---:|---:|"
+              printf "| Lines | %d | %d | %s |\n", lh, lf, pct(lh, lf)
+              printf "| Functions | %d | %d | %s |\n", fnh, fnf, pct(fnh, fnf)
+              printf "| Branches | %d | %d | %s |\n", brh, brf, pct(brh, brf)
+            }' "$lcov" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f coverage-output.txt ]; then
+            {
+              echo
+              echo "<details><summary>Per-file report</summary>"
+              echo
+              echo '```'
+              # Drop ANSI colors; keep only the coverage table.
+              sed -e 's/\x1b\[[0-9;]*m//g' coverage-output.txt | sed -n '/^-*|/,$p'
+              echo '```'
+              echo
+              echo "</details>"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-coverage
+          # upload-artifact ignores defaults.run.working-directory.
+          path: front-vuejs/coverage
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Type-check and build
         run: npm run build
@@ -92,7 +145,8 @@ jobs:
     env:
       E2E_BASE_URL: http://localhost:5173
       E2E_API_URL: http://localhost:8000/api
-      # Read by docker compose for the api service; the suite sends ~275 requests per run.
+      # Read by docker compose for the api service; the suite sends ~425 requests per run, above the
+      # default limit of 300/min.
       API_RATE_LIMIT: 1000
     steps:
       - uses: actions/checkout@v7
@@ -116,6 +170,17 @@ jobs:
           wait_for "$E2E_API_URL/health"      # readiness probe (not rate limited)
           wait_for "$E2E_API_URL/patients"    # migrations + seed done, DB reachable
           wait_for "$E2E_BASE_URL"
+
+      - name: Check the database migrations ran (fresh DB)
+        run: |
+          docker compose exec -T api php artisan migrate:status | tee migrate-status.txt
+          if grep -q "Pending" migrate-status.txt; then
+            echo "::error::There are pending migrations"
+            exit 1
+          fi
+          # Sprint 3 schema: encrypted CPF/RG/phone + change history.
+          grep -q "encrypt_patient_sensitive_columns .* Ran" migrate-status.txt
+          grep -q "create_patient_audits_table .* Ran" migrate-status.txt
 
       - name: Warm up Vite (pre-bundle dependencies before the first test)
         run: |
