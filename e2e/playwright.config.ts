@@ -11,8 +11,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  // The API rate limit (300 req/min) is shared by the browser and the API helper.
-  workers: isCI ? 2 : 3,
+  // The API rate limit (300 req/min per IP) is shared by the browser and the API helper. A full
+  // run sends ~275 requests and finishes in well under a minute, i.e. inside a single window:
+  // keep new tests lean (create only the patients they need).
+  workers: 2,
   reporter: isCI
     ? [["list"], ["html", { open: "never" }], ["github"]]
     : [["list"], ["html", { open: "never" }]],

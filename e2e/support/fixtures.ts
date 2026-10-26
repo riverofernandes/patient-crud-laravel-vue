@@ -47,7 +47,7 @@ export const emptyState = (page: Page): Locator =>
 /** Opens the listing filtered by `term` through the URL and waits for the table to settle. */
 export async function gotoListing(page: Page, term?: string): Promise<void> {
   await page.goto(term ? `/?search=${encodeURIComponent(term)}` : "/");
-  await expect(page.getByRole("heading", { level: 1, name: "Pacientes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Pacientes", exact: true })).toBeVisible();
   await waitForTable(page);
 }
 
@@ -70,4 +70,48 @@ export function deleteDialog(page: Page): Locator {
 /** Form field by its visible label (exact, so "CPF" does not match other inputs). */
 export function field(page: Page, label: string): Locator {
   return page.getByRole("textbox", { name: label, exact: true });
+}
+
+/* ---------- Trash ("Lixeira") ---------- */
+
+export const trashEmptyState = (page: Page): Locator =>
+  page.getByText("Nenhum paciente excluído", { exact: true });
+
+/** Data rows of the trash table (excludes the empty/busy placeholder rows). */
+export function trashRows(page: Page): Locator {
+  return page.locator("tbody tr").filter({ has: page.getByRole("button", { name: /^Restaurar / }) });
+}
+
+/** Opens the trash filtered by `term` through the URL and waits for the table to settle. */
+export async function gotoTrash(page: Page, term?: string): Promise<void> {
+  await page.goto(term ? `/pacientes/lixeira?search=${encodeURIComponent(term)}` : "/pacientes/lixeira");
+  await expect(page.getByRole("heading", { level: 1, name: "Pacientes excluídos", exact: true })).toBeVisible();
+  await waitForTrashTable(page);
+}
+
+export async function waitForTrashTable(page: Page): Promise<void> {
+  await expect(page.getByText("Carregando pacientes excluídos...")).toHaveCount(0);
+}
+
+/** "2026-10-26T15:51:56-03:00" -> "26/10/2026 15:51" in America/Sao_Paulo (the suite's timezone). */
+export function formatDateTimeSaoPaulo(iso: string): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(new Date(iso))
+      .map((p) => [p.type, p.value])
+  );
+  return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}`;
+}
+
+/** Today in America/Sao_Paulo as YYYY-MM-DD. */
+export function todaySaoPaulo(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 }

@@ -23,7 +23,10 @@ test.describe("Exclusão de paciente", () => {
 
     await row.getByRole("button", { name: `Excluir ${patient.name}` }).click();
     await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText("essa ação não poderá ser desfeita");
+    await expect(dialog).toContainText(
+      "Atenção! Ao excluir este paciente, ele será movido para a lixeira e poderá ser restaurado depois."
+    );
+    await expect(dialog.locator("strong")).toHaveText("ele será movido para a lixeira");
     await dialog.getByRole("button", { name: "Cancelar" }).click();
     await expect(dialog).toBeHidden();
     await expect(row).toBeVisible();
