@@ -1,0 +1,45 @@
+// Design tokens (taken from the mockups)
+$navy: #0d1d5a;
+$blue: #2f5bea;
+$blue-dark: #2148c9;
+$red: #f0341f;
+$green: #12c46f;
+$text: #4a5578;
+$text-muted: #8a94b2;
+$border: #c9d0e3;
+$border-light: #dde2ef;
+$page-bg: #f3f5fa;
+
+$sidebar-width: 72px;
+$topbar-height: 72px;
+
+// Bootstrap 4 overrides
+$primary: $blue;
+$danger: $red;
+$success: $green;
+$body-bg: $page-bg;
+$body-color: $text;
+$headings-color: $navy;
+$link-color: $blue;
+$font-family-base: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+$font-size-base: 1rem;
+$border-radius: 6px;
+$border-radius-lg: 8px;
+$border-radius-sm: 4px;
+$input-border-color: $border;
+$input-color: $text;
+$input-placeholder-color: $text-muted;
+$input-height: 2.5rem;
+$input-padding-x: 0.9375rem;
+$input-focus-border-color: $blue;
+$input-focus-box-shadow: 0 0 0 3px rgba($blue, 0.18);
+$btn-font-weight: 700;
+$btn-padding-x: 1rem;
+$btn-padding-y: 0.5rem;
+$btn-focus-box-shadow: 0 0 0 3px rgba($blue, 0.3);
+$table-border-color: $border-light;
+$modal-content-border-width: 0;
+$modal-content-border-radius: 8px;
+$modal-backdrop-bg: #6f7ea6;
+$modal-backdrop-opacity: 0.5;
+$toast-max-width: 324px;

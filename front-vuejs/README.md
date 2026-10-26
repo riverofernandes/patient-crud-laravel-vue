@@ -1,46 +1,44 @@
-# front-vuejs
+# front-vuejs — Cadastro de pacientes
 
-This template should help get you started developing with Vue 3 in Vite.
+Vue 2.7 + Vue Router 3 + Vite 3 + TypeScript, BootstrapVue 2 (Bootstrap 4) with SCSS overrides, axios.
 
-## Recommended IDE Setup
-
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
-
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
-
-1. Disable the built-in TypeScript Extension
-    1) Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-    2) Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
+## Setup
 
 ```sh
+cp .env.example .env.local   # VITE_API_URL (default http://localhost:8000/api)
 npm install
+npm run dev                  # http://localhost:5173 (listens on all interfaces)
 ```
 
-### Compile and Hot-Reload for Development
+| Script | |
+|---|---|
+| `npm run dev` | Dev server (port 5173, `host: true`, works inside a container) |
+| `npm run build` | Type-check (vue-tsc) + production build |
+| `npm run lint` | ESLint + Prettier (auto-fix) |
+| `npm run test` | Vitest unit tests for `src/utils` |
 
-```sh
-npm run dev
+## Structure
+
+```
+src/
+  services/       api.ts (axios instance + error helpers), patientService.ts (typed CRUD)
+  composables/    usePatient.ts (load one patient: loading / 404 / error)
+  components/     AppLayout, AppBreadcrumb, PatientForm, FormField, DetailItem,
+                  ConfirmDeleteModal, PageState
+  views/          PatientListView, PatientCreateView, PatientDetailView, PatientEditView, NotFoundView
+  utils/          format.ts (CPF/RG/phone/date masks, DD/MM/AAAA <-> YYYY-MM-DD),
+                  validation.ts (CPF check digits, e-mail), notify.ts (toasts), debounce.ts
+  styles/         _variables.scss (design tokens + Bootstrap overrides), main.scss
 ```
 
-### Type-Check, Compile and Minify for Production
+## Routes
 
-```sh
-npm run build
-```
+| Path | Screen |
+|---|---|
+| `/` | Listing with search (`?search=`), pagination (`?page=`), detail/edit/delete actions |
+| `/pacientes/novo` | Create |
+| `/pacientes/:id` | Detail |
+| `/pacientes/:id/editar` | Edit |
 
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
+Notes: dates are converted by string splitting (never `new Date('YYYY-MM-DD')`, which shifts a day in UTC-3);
+CPF/RG/phone are sent unmasked; server 422 `errors` are mapped onto the form fields.

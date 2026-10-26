@@ -1,0 +1,323 @@
+@import './variables';
+@import 'bootstrap/scss/bootstrap';
+@import 'bootstrap-vue/src/index';
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  font-family: $font-family-base;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 800;
+  color: $navy;
+  letter-spacing: -0.01em;
+}
+
+// Visible focus ring for keyboard users
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid $blue;
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+// ---------- Buttons ----------
+.btn {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.btn-primary:not(:disabled):not(.disabled):hover {
+  background-color: $blue-dark;
+  border-color: $blue-dark;
+}
+
+.btn-link-danger {
+  padding: 8px 0;
+  color: $red;
+  font-weight: 700;
+  background: none;
+  border: 0;
+
+  &:hover,
+  &:focus {
+    color: darken($red, 12%);
+    text-decoration: underline;
+  }
+}
+
+// ---------- Forms ----------
+.form-control,
+.custom-select {
+  height: $input-height;
+  font-size: 16px;
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 56px;
+  padding-top: 15px;
+  padding-bottom: 15px;
+  overflow-y: auto !important;
+}
+
+.custom-select {
+  padding-left: 15px;
+  // chevron like the mockup
+  background: #fff
+    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238a94b2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M3 6l5 5 5-5'/%3e%3c/svg%3e")
+    no-repeat right 18px center / 16px 16px;
+
+  &.is-placeholder {
+    color: $text-muted;
+  }
+}
+
+.form-control.is-invalid,
+.custom-select.is-invalid,
+.was-validated .form-control:invalid {
+  border-color: $red;
+  background-image: none;
+  padding-right: $input-padding-x;
+}
+
+.custom-select.is-invalid {
+  padding-right: 40px;
+  background: #fff
+    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238a94b2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M3 6l5 5 5-5'/%3e%3c/svg%3e")
+    no-repeat right 18px center / 16px 16px;
+}
+
+.form-control.is-invalid:focus,
+.custom-select.is-invalid:focus {
+  border-color: $red;
+  box-shadow: 0 0 0 3px rgba($red, 0.15);
+}
+
+// ---------- Toasts ----------
+.b-toaster.b-toaster-top-right .b-toaster-slot {
+  top: 32px;
+  right: 24px;
+  max-width: 324px;
+}
+
+// One toast at a time: notify() dismisses the previous toast, and this guard
+// covers the case where it is dismissed before it finished showing (newest is first).
+.b-toaster.b-toaster-top-right .b-toaster-slot > .b-toast ~ .b-toast {
+  display: none;
+}
+
+.app-toast.toast {
+  position: relative;
+  overflow: hidden;
+  max-width: 324px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(13, 29, 90, 0.18);
+  opacity: 1;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 4px;
+    width: 100%;
+    animation: app-toast-progress 4000ms linear forwards;
+  }
+
+  .app-toast__body {
+    padding: 0;
+  }
+}
+
+.app-toast--success::after {
+  background: #8de3b9;
+}
+
+.app-toast--error::after {
+  background: #f9a59c;
+}
+
+.app-toast__content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px 12px;
+}
+
+.app-toast__icon {
+  display: inline-flex;
+  flex: 0 0 48px;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+
+  .app-toast--success & {
+    background: #d4f6e5;
+  }
+
+  .app-toast--error & {
+    background: #fdd5d0;
+  }
+}
+
+.app-toast__icon-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 18px;
+
+  .app-toast--success & {
+    background: $green;
+  }
+
+  .app-toast--error & {
+    background: $red;
+  }
+}
+
+.app-toast__message {
+  flex: 1;
+  color: $text;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.app-toast__close {
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 0;
+  color: $text-muted;
+  font-size: 24px;
+  line-height: 1;
+  background: none;
+  border: 0;
+
+  &:hover {
+    color: $navy;
+  }
+}
+
+@keyframes app-toast-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0;
+  }
+}
+
+// ---------- Modal ----------
+.modal-content {
+  box-shadow: 0 10px 30px rgba(13, 29, 90, 0.2);
+}
+
+// ---------- Utilities ----------
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.app-card {
+  padding: 24px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.card-title-lg {
+  margin: 0;
+  padding: 4px 0 30px;
+  font-size: 24px;
+  border-bottom: 2px solid $border-light;
+}
+
+.state-box {
+  padding: 48px 16px;
+  color: $text;
+  text-align: center;
+
+  &__title {
+    margin-bottom: 4px;
+    color: $navy;
+    font-size: 18px;
+    font-weight: 700;
+  }
+}
+
+// ---------- Patient form / detail grid ----------
+.patient-grid {
+  display: grid;
+  column-gap: 8px;
+}
+
+.patient-grid--row1 {
+  grid-template-columns: minmax(0, 1fr) 200px 200px;
+}
+
+.patient-grid--row2 {
+  grid-template-columns: 200px 200px 200px minmax(0, 1fr);
+}
+
+@media (max-width: 1099.98px) {
+  .patient-grid--row1 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    > :first-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .patient-grid--row2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .patient-grid--row1,
+  .patient-grid--row2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .app-card {
+    padding: 16px;
+  }
+
+  .card-title-lg {
+    padding-bottom: 20px;
+    font-size: 22px;
+  }
+}
+
+// BootstrapVue pauses auto-hide on hover; keep the progress bar in sync.
+.app-toast.toast:hover::after {
+  animation-play-state: paused;
+}

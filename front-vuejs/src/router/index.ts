@@ -1,27 +1,52 @@
-import Vue from 'vue'
-import VueRouter from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import Vue from "vue";
+import VueRouter from "vue-router";
+import PatientListView from "@/views/PatientListView.vue";
 
-Vue.use(VueRouter)
+Vue.use(VueRouter);
 
 const router = new VueRouter({
-  mode: 'history',
+  mode: "history",
   base: import.meta.env.BASE_URL,
   routes: [
     {
-      path: '/',
-      name: 'home',
-      component: HomeView
+      path: "/",
+      name: "patients.index",
+      component: PatientListView,
+      meta: { title: "Pacientes" },
     },
     {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue')
-    }
-  ]
-})
+      path: "/pacientes/novo",
+      name: "patients.create",
+      component: () => import("@/views/PatientCreateView.vue"),
+      meta: { title: "Novo paciente" },
+    },
+    {
+      path: "/pacientes/:id(\\d+)",
+      name: "patients.show",
+      component: () => import("@/views/PatientDetailView.vue"),
+      props: true,
+      meta: { title: "Paciente" },
+    },
+    {
+      path: "/pacientes/:id(\\d+)/editar",
+      name: "patients.edit",
+      component: () => import("@/views/PatientEditView.vue"),
+      props: true,
+      meta: { title: "Editar paciente" },
+    },
+    {
+      path: "*",
+      name: "not-found",
+      component: () => import("@/views/NotFoundView.vue"),
+      meta: { title: "Página não encontrada" },
+    },
+  ],
+  scrollBehavior: () => ({ x: 0, y: 0 }),
+});
 
-export default router
+router.afterEach((to) => {
+  const title = to.meta?.title as string | undefined;
+  document.title = title ? `${title} | EyeCare` : "EyeCare";
+});
+
+export default router;

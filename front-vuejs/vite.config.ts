@@ -1,21 +1,32 @@
-import { fileURLToPath, URL } from 'node:url'
+import { fileURLToPath, URL } from "node:url";
 
-import { defineConfig } from 'vite'
-import legacy from '@vitejs/plugin-legacy'
-import vue2 from '@vitejs/plugin-vue2'
+import { defineConfig } from "vite";
+import vue2 from "@vitejs/plugin-vue2";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    vue2(),
-    legacy({
-      targets: ['ie >= 11'],
-      additionalLegacyPolyfills: ['regenerator-runtime/runtime']
-    })
-  ],
+  plugins: [vue2()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
-  }
-})
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["vue", "vue-router", "bootstrap-vue", "axios"],
+        },
+      },
+    },
+  },
+  server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
+  },
+  preview: {
+    host: true,
+    port: 4173,
+  },
+});
