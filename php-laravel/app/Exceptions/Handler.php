@@ -2,7 +2,11 @@
 
 namespace App\Exceptions;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -25,6 +29,29 @@ class Handler extends ExceptionHandler
     {
         $this->reportable(function (Throwable $e) {
             //
+        });
+
+        // ModelNotFoundException is converted to NotFoundHttpException before reaching here.
+        $this->renderable(function (NotFoundHttpException $e, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            $message = $e->getPrevious() instanceof ModelNotFoundException
+                ? 'Paciente não encontrado.'
+                : 'Recurso não encontrado.';
+
+            return response()->json(['message' => $message], 404);
+        });
+
+        $this->renderable(function (ThrottleRequestsException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(
+                    ['message' => 'Muitas requisições. Tente novamente em instantes.'],
+                    429,
+                    $e->getHeaders()
+                );
+            }
         });
     }
 }

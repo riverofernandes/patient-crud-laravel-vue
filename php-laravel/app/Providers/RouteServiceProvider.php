@@ -25,8 +25,11 @@ class RouteServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(300)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Only plain numeric ids reach route model binding ("35abc" or "035" would be cast to 35 by MySQL).
+        Route::pattern('patient', '[1-9][0-9]*');
 
         $this->routes(function () {
             Route::middleware('api')
