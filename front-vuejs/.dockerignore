@@ -1,0 +1,13 @@
+# Keep the build context small and never copy host (darwin) binaries into the image.
+node_modules
+dist
+dist-ssr
+.env.local
+*.local
+.git
+.vscode
+.idea
+coverage
+*.log
+Dockerfile
+.dockerignore
