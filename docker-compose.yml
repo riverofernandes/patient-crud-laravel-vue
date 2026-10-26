@@ -29,6 +29,7 @@ services:
       - "${API_PORT:-8000}:8000"
     environment:
       APP_URL: http://localhost:${API_PORT:-8000}
+      API_RATE_LIMIT: ${API_RATE_LIMIT:-300}
     volumes:
       - ./php-laravel:/var/www/html
     depends_on:
