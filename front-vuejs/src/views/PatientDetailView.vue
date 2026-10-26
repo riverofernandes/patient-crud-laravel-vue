@@ -27,13 +27,13 @@
     <article v-else-if="patient" class="app-card patient-detail">
       <h1 class="card-title-lg">{{ patient.name }}</h1>
 
-      <dl class="patient-detail__body">
-        <div class="patient-grid patient-grid--row1">
+      <div class="patient-detail__body">
+        <dl class="patient-grid patient-grid--row1">
           <DetailItem label="Nome completo" :value="patient.name" />
           <DetailItem label="CPF" :value="maskCpf(patient.cpf)" />
           <DetailItem label="RG" :value="maskRg(patient.rg)" />
-        </div>
-        <div class="patient-grid patient-grid--row2">
+        </dl>
+        <dl class="patient-grid patient-grid--row2">
           <DetailItem
             label="Data de nascimento"
             :value="isoToBr(patient.birth_date)"
@@ -41,9 +41,15 @@
           <DetailItem label="Sexo biológico" :value="formatSex(patient.sex)" />
           <DetailItem label="Celular" :value="maskPhone(patient.phone)" />
           <DetailItem label="E-mail" :value="patient.email" />
-        </div>
-        <DetailItem label="Descrição" :value="patient.description" multiline />
-      </dl>
+        </dl>
+        <dl>
+          <DetailItem
+            label="Descrição"
+            :value="patient.description"
+            multiline
+          />
+        </dl>
+      </div>
 
       <footer class="form-footer">
         <button
@@ -75,6 +81,7 @@ import ConfirmDeleteModal from "@/components/ConfirmDeleteModal.vue";
 import DetailItem from "@/components/DetailItem.vue";
 import PageState from "@/components/PageState.vue";
 import { usePatient } from "@/composables/usePatient";
+import { focusHeadingIfParked } from "@/utils/routeFocus";
 import type { Patient } from "@/services/patientService";
 import { formatSex, isoToBr, maskCpf, maskPhone, maskRg } from "@/utils/format";
 
@@ -100,7 +107,9 @@ export default defineComponent({
   },
   watch: {
     patient(value: Patient | null) {
-      if (value) document.title = `${value.name} | EyeCare`;
+      if (!value) return;
+      document.title = `${value.name} | EyeCare`;
+      this.$nextTick(focusHeadingIfParked);
     },
   },
   methods: {
@@ -124,8 +133,11 @@ export default defineComponent({
 }
 
 .patient-detail__body {
-  margin: 0;
   padding-top: 32px;
+
+  dl {
+    margin: 0;
+  }
 }
 
 .form-footer {

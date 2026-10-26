@@ -42,3 +42,24 @@ src/
 
 Notes: dates are converted by string splitting (never `new Date('YYYY-MM-DD')`, which shifts a day in UTC-3);
 CPF/RG/phone are sent unmasked; server 422 `errors` are mapped onto the form fields.
+
+## Accessibility
+
+Checked with axe-core (WCAG 2.2 A/AA + best practices) on every screen at 1280px and 375px: 0 violations.
+Route changes move focus to the page `<h1>` and announce the new title (only on path changes, so
+typing in the search box keeps focus); field errors are linked with `aria-describedby`/`aria-invalid`;
+success toasts are `role="status"`, error toasts `role="alert"`; the delete modal traps focus and returns it.
+
+## Production image
+
+Multi-stage `Dockerfile` (node:20-alpine build → nginx:1.27-alpine) with `docker/nginx.conf`:
+SPA history fallback, gzip, 1-year immutable cache for hashed `/assets/*`, `no-cache` for `index.html`,
+security headers, `/healthz`. `VITE_API_URL` is baked in at build time and is required.
+
+```sh
+docker build --build-arg VITE_API_URL=http://localhost:8001/api -t patients-web:prod .
+docker run --rm -p 8091:80 patients-web:prod   # http://localhost:8091
+```
+
+The API must allow the page's origin in CORS (e.g. `http://localhost:8091`). The dev `web` compose
+service does not use this Dockerfile.

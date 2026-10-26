@@ -17,19 +17,39 @@
     </aside>
 
     <div class="app-main">
-      <header class="app-topbar" />
-      <main id="main-content" class="app-content" tabindex="-1">
+      <div class="app-topbar" aria-hidden="true" />
+      <main id="main-content" ref="main" class="app-content" tabindex="-1">
         <slot />
       </main>
     </div>
+
+    <!-- Announces the new page title after client-side navigation. -->
+    <p class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      {{ routeAnnouncement }}
+    </p>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
+import type { Route } from "vue-router";
+import { focusPageHeading, shouldMoveFocus } from "@/utils/routeFocus";
 
 export default defineComponent({
   name: "AppLayout",
+  data() {
+    return { routeAnnouncement: "" };
+  },
+  watch: {
+    $route(to: Route, from: Route) {
+      if (!shouldMoveFocus(to, from)) return;
+      this.routeAnnouncement = "";
+      this.$nextTick(() => {
+        focusPageHeading(this.$refs.main as HTMLElement | null);
+        this.routeAnnouncement = document.title;
+      });
+    },
+  },
   computed: {
     isPatientsSection(): boolean {
       const name = this.$route.name ?? "";
@@ -91,6 +111,11 @@ export default defineComponent({
   &.is-active {
     color: #fff;
     background: rgba(#fff, 0.1);
+  }
+
+  // The global blue ring has too little contrast on the navy sidebar.
+  &:focus-visible {
+    outline-color: #fff;
   }
 }
 

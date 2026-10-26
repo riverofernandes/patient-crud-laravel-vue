@@ -2,12 +2,16 @@
   <b-modal
     :visible="!!patient"
     title="Excluir paciente"
+    title-tag="h2"
+    header-tag="div"
+    footer-tag="div"
     centered
     no-close-on-backdrop
     :no-close-on-esc="busy"
     :hide-header-close="busy"
     dialog-class="confirm-delete-modal"
     header-close-label="Fechar"
+    :return-focus="returnFocus"
     @hidden="onHidden"
     @hide="onHide"
   >
@@ -58,7 +62,11 @@ export default defineComponent({
     },
   },
   data() {
-    return { busy: false };
+    return {
+      busy: false,
+      // null = BootstrapVue returns focus to the control that opened the modal.
+      returnFocus: null as string | null,
+    };
   },
   methods: {
     close(): void {
@@ -68,6 +76,7 @@ export default defineComponent({
       if (this.busy) event.preventDefault();
     },
     onHidden(): void {
+      this.returnFocus = null;
       if (this.patient) this.close();
     },
     async confirm(): Promise<void> {
@@ -78,6 +87,9 @@ export default defineComponent({
         await patientService.remove(patient.id);
         notify(this.$root, "success", "Paciente excluído com sucesso!");
         this.busy = false;
+        // The opener (the row's delete button) is about to disappear: send focus
+        // to the page heading instead of letting it fall back to <body>.
+        this.returnFocus = "#main-content h1";
         this.close();
         this.$emit("deleted", patient);
       } catch (error) {
@@ -85,6 +97,7 @@ export default defineComponent({
         if (isNotFound(error)) {
           // Already removed elsewhere: treat as success for the user.
           notify(this.$root, "error", "Este paciente já havia sido excluído.");
+          this.returnFocus = "#main-content h1";
           this.close();
           this.$emit("deleted", patient);
           return;

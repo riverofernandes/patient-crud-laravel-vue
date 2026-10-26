@@ -23,10 +23,18 @@ h3 {
 // Visible focus ring for keyboard users
 a:focus-visible,
 button:focus-visible,
-.btn:focus-visible {
+.btn:focus-visible,
+[tabindex]:focus-visible {
   outline: 2px solid $blue;
   outline-offset: 2px;
   box-shadow: none;
+}
+
+// Headings focused programmatically on route change (tabindex="-1") should not
+// show a ring: they are not interactive. (Scoped to h1 so roving-tabindex widgets
+// such as the pagination keep their focus ring.)
+h1[tabindex='-1']:focus {
+  outline: none;
 }
 
 // ---------- Buttons ----------
@@ -42,14 +50,14 @@ button:focus-visible,
 
 .btn-link-danger {
   padding: 8px 0;
-  color: $red;
+  color: $red-text;
   font-weight: 700;
   background: none;
   border: 0;
 
   &:hover,
   &:focus {
-    color: darken($red, 12%);
+    color: darken($red-text, 10%);
     text-decoration: underline;
   }
 }
@@ -210,7 +218,8 @@ textarea.form-control {
   background: none;
   border: 0;
 
-  &:hover {
+  &:hover,
+  &:focus-visible {
     color: $navy;
   }
 }
