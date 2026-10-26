@@ -43,7 +43,7 @@ class PatientApiTest extends TestCase
             ->assertJsonPath('meta.per_page', 10)
             ->assertJsonPath('meta.last_page', 2)
             ->assertJsonStructure([
-                'data' => [['id', 'name', 'cpf', 'rg', 'birth_date', 'sex', 'phone', 'email', 'description', 'created_at', 'updated_at']],
+                'data' => [['id', 'name', 'cpf', 'rg', 'birth_date', 'sex', 'phone', 'email', 'description', 'created_at', 'updated_at', 'age', 'deleted_at']],
                 'links' => ['first', 'last', 'prev', 'next'],
                 'meta' => ['current_page', 'last_page', 'per_page', 'total', 'from', 'to'],
             ]);
@@ -147,9 +147,20 @@ class PatientApiTest extends TestCase
         foreach (["{$patient->id}abc", "{$patient->id}e0", '%20'.$patient->id, '0'.$patient->id] as $id) {
             $this->getJson("/api/patients/{$id}")->assertNotFound();
             $this->deleteJson("/api/patients/{$id}")->assertNotFound();
+            $this->postJson("/api/patients/{$id}/restore")->assertNotFound();
         }
 
         $this->assertNotSoftDeleted($patient);
+    }
+
+    public function test_array_query_params_do_not_break_the_listing(): void
+    {
+        Patient::factory()->create();
+
+        $this->getJson('/api/patients?search[]=a&sort[]=name&direction[]=desc&trashed[]=only&per_page[]=5')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('meta.per_page', 10);
     }
 
     public function test_unknown_api_route_returns_generic_404(): void
