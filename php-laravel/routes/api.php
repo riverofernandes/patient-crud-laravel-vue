@@ -24,6 +24,14 @@ Route::get('health', HealthController::class)
 Route::get('patients/cpf-availability', [PatientController::class, 'cpfAvailability'])
     ->name('patients.cpf-availability');
 
+Route::get('patients/export', [PatientController::class, 'export'])
+    ->name('patients.export');
+
+// History is also available for patients in the trash.
+Route::get('patients/{patient}/audits', [PatientController::class, 'audits'])
+    ->withTrashed()
+    ->name('patients.audits');
+
 Route::post('patients/{patient}/restore', [PatientController::class, 'restore'])
     ->withTrashed()
     ->name('patients.restore');
