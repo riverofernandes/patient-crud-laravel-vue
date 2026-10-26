@@ -96,4 +96,47 @@ class PatientRequest extends FormRequest
             'description' => 'descrição',
         ];
     }
+
+    /**
+     * Body parameter documentation for Scribe (API docs at /docs).
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function bodyParameters(): array
+    {
+        return [
+            'name' => [
+                'description' => 'Nome completo do paciente (3 a 255 caracteres).',
+                'example' => 'Maria da Silva',
+            ],
+            'cpf' => [
+                'description' => 'CPF válido (dígitos verificadores conferidos), com ou sem máscara. Único entre os pacientes ativos. Armazenado só com dígitos.',
+                'example' => '625.189.530-60',
+            ],
+            'rg' => [
+                'description' => 'RG, com ou sem máscara (até 20 caracteres). Armazenado só com dígitos e a letra X.',
+                'example' => '35.688.019-X',
+            ],
+            'birth_date' => [
+                'description' => 'Data de nascimento no formato AAAA-MM-DD; não pode ser futura.',
+                'example' => '1996-07-20',
+            ],
+            'sex' => [
+                'description' => 'Sexo: `M` (Masculino) ou `F` (Feminino).',
+                'example' => 'F',
+            ],
+            'phone' => [
+                'description' => 'Celular com DDD, com ou sem máscara (10 ou 11 dígitos). Armazenado só com dígitos.',
+                'example' => '(11) 92853-5718',
+            ],
+            'email' => [
+                'description' => 'E-mail do paciente (opcional).',
+                'example' => 'maria@example.com',
+            ],
+            'description' => [
+                'description' => 'Observações sobre o paciente (opcional, até 2000 caracteres).',
+                'example' => 'Paciente com miopia leve, retorno anual.',
+            ],
+        ];
+    }
 }

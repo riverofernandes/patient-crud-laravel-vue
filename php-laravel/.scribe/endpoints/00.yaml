@@ -1,0 +1,47 @@
+name: Monitoramento
+description: ''
+endpoints:
+  -
+    httpMethods:
+      - GET
+    uri: api/health
+    metadata:
+      groupName: Monitoramento
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Verificar saúde da API'
+      description: |-
+        Usado por healthchecks de container e monitoramento. Verifica a conexão com o banco de dados.
+        Não sofre limite de requisições (throttle).
+      authenticated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: '{"status": "ok"}'
+        headers: []
+        description: 'API e banco disponíveis'
+        custom: []
+      -
+        status: 503
+        content: '{"status": "unavailable", "message": "Banco de dados indisponível."}'
+        headers: []
+        description: 'Banco de dados indisponível'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
