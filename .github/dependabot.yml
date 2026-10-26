@@ -17,11 +17,14 @@ updates:
     ignore:
       # The challenge requires Vue 2 / BootstrapVue 2 (Bootstrap 4).
       - dependency-name: vue
-        update-types: [version-update:semver-major]
+        update-types: ["version-update:semver-major"]
       - dependency-name: vue-router
-        update-types: [version-update:semver-major]
+        update-types: ["version-update:semver-major"]
       - dependency-name: bootstrap
-        update-types: [version-update:semver-major]
+        update-types: ["version-update:semver-major"]
+      # Keep Node typings on the LTS lines the project runs on (20/22).
+      - dependency-name: "@types/node"
+        versions: ["21.x", ">= 23"]
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
@@ -30,6 +33,10 @@ updates:
     directory: /e2e
     schedule:
       interval: weekly
+    ignore:
+      # Keep Node typings on the LTS lines the project runs on (20/22).
+      - dependency-name: "@types/node"
+        versions: ["21.x", ">= 23"]
     groups:
       playwright:
         patterns: ["@playwright/*"]
@@ -43,8 +50,16 @@ updates:
     directory: /php-laravel
     schedule:
       interval: weekly
+    ignore:
+      # Laravel 10 officially supports PHP 8.1-8.3; stay on 8.2/8.3.
+      - dependency-name: php
+        versions: [">= 8.4"]
 
   - package-ecosystem: docker
     directory: /front-vuejs
     schedule:
       interval: weekly
+    ignore:
+      # Node LTS lines only (20/22); odd and newer majors break the Vite 3 / Vue 2 toolchain.
+      - dependency-name: node
+        versions: ["21.x", ">= 23"]
