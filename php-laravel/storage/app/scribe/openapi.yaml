@@ -7,11 +7,188 @@ servers:
   -
     url: 'http://localhost:8000'
 paths:
+  /api/patients/cpf-availability:
+    get:
+      summary: 'Verificar disponibilidade de CPF'
+      operationId: verificarDisponibilidadeDeCPF
+      description: "Informa se um CPF pode ser usado em um cadastro (não pertence a nenhum paciente ativo). Pacientes excluídos\nnão contam. Na edição, envie `ignore` com o ID do próprio paciente. CPF inválido retorna 422 com as mesmas\nmensagens do cadastro."
+      parameters:
+        -
+          in: query
+          name: cpf
+          description: 'CPF a verificar, com ou sem máscara. Deve ser válido (dígitos verificadores conferidos).'
+          example: 625.189.530-60
+          required: true
+          schema:
+            type: string
+            description: 'CPF a verificar, com ou sem máscara. Deve ser válido (dígitos verificadores conferidos).'
+            example: 625.189.530-60
+        -
+          in: query
+          name: ignore
+          description: 'ID de um paciente a desconsiderar (use na edição para não acusar o próprio CPF). Must be at least 1.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'ID de um paciente a desconsiderar (use na edição para não acusar o próprio CPF). Must be at least 1.'
+            example: 1
+      responses:
+        200:
+          description: 'CPF em uso'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  available: false
+                  message: 'Já existe um paciente cadastrado com este CPF.'
+                properties:
+                  available:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Já existe um paciente cadastrado com este CPF.'
+        422:
+          description: 'CPF inválido'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'O CPF informado é inválido.'
+                  errors:
+                    cpf:
+                      - 'O CPF informado é inválido.'
+                properties:
+                  message:
+                    type: string
+                    example: 'O CPF informado é inválido.'
+                  errors:
+                    type: object
+                    properties:
+                      cpf:
+                        type: array
+                        example:
+                          - 'O CPF informado é inválido.'
+                        items:
+                          type: string
+      tags:
+        - Pacientes
+      security: []
+  '/api/patients/{patient_id}/restore':
+    post:
+      summary: 'Restaurar paciente'
+      operationId: restaurarPaciente
+      description: "Restaura um paciente da lixeira (desfaz a exclusão lógica). Falha com 409 se outro paciente ativo\nestiver usando o mesmo CPF (o CPF pode ter sido reutilizado depois da exclusão)."
+      parameters: []
+      responses:
+        200:
+          description: 'Paciente restaurado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    name: 'Maria da Silva'
+                    cpf: '62518953060'
+                    rg: 35688019X
+                    birth_date: '1996-07-20'
+                    sex: F
+                    phone: '11928535718'
+                    email: maria@example.com
+                    description: 'Paciente com miopia leve, retorno anual.'
+                    created_at: '2026-10-26T15:30:00-03:00'
+                    updated_at: '2026-10-26T15:45:00-03:00'
+                    age: 30
+                    deleted_at: null
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: 'Maria da Silva'
+                      cpf:
+                        type: string
+                        example: '62518953060'
+                      rg:
+                        type: string
+                        example: 35688019X
+                      birth_date:
+                        type: string
+                        example: '1996-07-20'
+                      sex:
+                        type: string
+                        example: F
+                      phone:
+                        type: string
+                        example: '11928535718'
+                      email:
+                        type: string
+                        example: maria@example.com
+                      description:
+                        type: string
+                        example: 'Paciente com miopia leve, retorno anual.'
+                      created_at:
+                        type: string
+                        example: '2026-10-26T15:30:00-03:00'
+                      updated_at:
+                        type: string
+                        example: '2026-10-26T15:45:00-03:00'
+                      age:
+                        type: integer
+                        example: 30
+                      deleted_at:
+                        type: string
+                        example: null
+        404:
+          description: 'Paciente não encontrado ou não excluído'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Paciente não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Paciente não encontrado.'
+        409:
+          description: 'CPF em uso por outro paciente ativo'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Já existe um paciente ativo com este CPF.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Já existe um paciente ativo com este CPF.'
+      tags:
+        - Pacientes
+      security: []
+    parameters:
+      -
+        in: path
+        name: patient_id
+        description: 'ID do paciente excluído.'
+        example: 1
+        required: true
+        schema:
+          type: integer
   /api/patients:
     get:
       summary: 'Listar pacientes'
       operationId: listarPacientes
-      description: 'Retorna os pacientes ativos (não excluídos) ordenados por nome, com paginação no formato padrão do Laravel.'
+      description: "Retorna os pacientes ativos (não excluídos), com paginação no formato padrão do Laravel. Com `trashed=only`,\nlista apenas os pacientes da lixeira (excluídos), com `deleted_at` preenchido; busca, ordenação e paginação\ncontinuam valendo. Cada paciente traz `age` (idade em anos completos no fuso America/Sao_Paulo)."
       parameters:
         -
           in: query
@@ -43,6 +220,36 @@ paths:
             type: integer
             description: 'Itens por página. Padrão: 10; máximo: 100 (valores maiores são limitados a 100).'
             example: 10
+        -
+          in: query
+          name: sort
+          description: 'Campo de ordenação: `name`, `birth_date` ou `created_at`. Padrão: `name` (valor fora da lista também usa `name`).'
+          example: name
+          required: false
+          schema:
+            type: string
+            description: 'Campo de ordenação: `name`, `birth_date` ou `created_at`. Padrão: `name` (valor fora da lista também usa `name`).'
+            example: name
+        -
+          in: query
+          name: direction
+          description: 'Sentido da ordenação: `asc` ou `desc`. Padrão: `asc` (valor inválido também usa `asc`). O desempate é sempre por `id` crescente.'
+          example: asc
+          required: false
+          schema:
+            type: string
+            description: 'Sentido da ordenação: `asc` ou `desc`. Padrão: `asc` (valor inválido também usa `asc`). O desempate é sempre por `id` crescente.'
+            example: asc
+        -
+          in: query
+          name: trashed
+          description: 'Use `only` para listar apenas os pacientes excluídos (lixeira).'
+          example: only
+          required: false
+          schema:
+            type: string
+            description: 'Use `only` para listar apenas os pacientes excluídos (lixeira).'
+            example: only
       responses:
         200:
           description: Sucesso
@@ -64,6 +271,8 @@ paths:
                       description: 'Paciente com miopia leve, retorno anual.'
                       created_at: '2026-10-26T15:30:00-03:00'
                       updated_at: '2026-10-26T15:30:00-03:00'
+                      age: 30
+                      deleted_at: null
                     -
                       id: 2
                       name: 'João Pereira Santos'
@@ -76,6 +285,8 @@ paths:
                       description: null
                       created_at: '2026-10-26T15:31:00-03:00'
                       updated_at: '2026-10-26T15:31:00-03:00'
+                      age: 46
+                      deleted_at: null
                   links:
                     first: 'http://localhost:8000/api/patients?page=1'
                     last: 'http://localhost:8000/api/patients?page=1'
@@ -118,6 +329,8 @@ paths:
                         description: 'Paciente com miopia leve, retorno anual.'
                         created_at: '2026-10-26T15:30:00-03:00'
                         updated_at: '2026-10-26T15:30:00-03:00'
+                        age: 30
+                        deleted_at: null
                       -
                         id: 2
                         name: 'João Pereira Santos'
@@ -130,6 +343,8 @@ paths:
                         description: null
                         created_at: '2026-10-26T15:31:00-03:00'
                         updated_at: '2026-10-26T15:31:00-03:00'
+                        age: 46
+                        deleted_at: null
                     items:
                       type: object
                       properties:
@@ -166,6 +381,12 @@ paths:
                         updated_at:
                           type: string
                           example: '2026-10-26T15:30:00-03:00'
+                        age:
+                          type: integer
+                          example: 30
+                        deleted_at:
+                          type: string
+                          example: null
                   links:
                     type: object
                     properties:
@@ -260,6 +481,8 @@ paths:
                     description: 'Paciente com miopia leve, retorno anual.'
                     created_at: '2026-10-26T15:30:00-03:00'
                     updated_at: '2026-10-26T15:30:00-03:00'
+                    age: 30
+                    deleted_at: null
                 properties:
                   data:
                     type: object
@@ -297,6 +520,12 @@ paths:
                       updated_at:
                         type: string
                         example: '2026-10-26T15:30:00-03:00'
+                      age:
+                        type: integer
+                        example: 30
+                      deleted_at:
+                        type: string
+                        example: null
         422:
           description: 'Erro de validação'
           content:
@@ -407,6 +636,8 @@ paths:
                     description: 'Paciente com miopia leve, retorno anual.'
                     created_at: '2026-10-26T15:30:00-03:00'
                     updated_at: '2026-10-26T15:30:00-03:00'
+                    age: 30
+                    deleted_at: null
                 properties:
                   data:
                     type: object
@@ -444,6 +675,12 @@ paths:
                       updated_at:
                         type: string
                         example: '2026-10-26T15:30:00-03:00'
+                      age:
+                        type: integer
+                        example: 30
+                      deleted_at:
+                        type: string
+                        example: null
         404:
           description: 'Paciente não encontrado ou excluído'
           content:
@@ -484,6 +721,8 @@ paths:
                     description: 'Paciente com miopia leve, retorno anual.'
                     created_at: '2026-10-26T15:30:00-03:00'
                     updated_at: '2026-10-26T15:30:00-03:00'
+                    age: 30
+                    deleted_at: null
                 properties:
                   data:
                     type: object
@@ -521,6 +760,12 @@ paths:
                       updated_at:
                         type: string
                         example: '2026-10-26T15:30:00-03:00'
+                      age:
+                        type: integer
+                        example: 30
+                      deleted_at:
+                        type: string
+                        example: null
         404:
           description: 'Paciente não encontrado ou excluído'
           content:
@@ -644,14 +889,6 @@ paths:
       -
         in: path
         name: id
-        description: 'The ID of the patient.'
-        example: 1
-        required: true
-        schema:
-          type: integer
-      -
-        in: path
-        name: patient
         description: 'ID do paciente.'
         example: 1
         required: true
@@ -698,7 +935,7 @@ paths:
 tags:
   -
     name: Pacientes
-    description: "\nCadastro de pacientes: listagem com busca e paginação, detalhe, criação, atualização e exclusão lógica."
+    description: "\nCadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,\nexclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF."
   -
     name: Monitoramento
     description: ''

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Pacientes API",
-    "description": "CRUD de pacientes (Laravel). Contrato: docs/API_CONTRACT.md. Execute em ordem (Runner/newman).",
+    "description": "CRUD de pacientes (Laravel): listagem com ordenação, lixeira, restauração e verificação de CPF. Contrato: docs/API_CONTRACT.md. Execute em ordem (Runner/newman).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -60,7 +60,63 @@
             }
           ]
         },
-        "description": "Lista paginada ordenada por nome."
+        "description": "Lista paginada ordenada por nome (padrão)."
+      }
+    },
+    {
+      "name": "Listar pacientes ordenados (data de nascimento desc)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Sorted by birth_date desc, ties by id asc', function () {",
+              "  const d = pm.response.json().data;",
+              "  for (let i = 1; i < d.length; i++) {",
+              "    const prev = d[i - 1], cur = d[i];",
+              "    pm.expect(prev.birth_date >= cur.birth_date).to.be.true;",
+              "    if (prev.birth_date === cur.birth_date) { pm.expect(prev.id).to.be.below(cur.id); }",
+              "  }",
+              "});",
+              "pm.test('Items expose age and deleted_at', function () { pm.response.json().data.forEach(p => { pm.expect(p.age).to.be.a('number'); pm.expect(p.deleted_at).to.eql(null); }); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients?sort=birth_date&direction=desc&per_page=25",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ],
+          "query": [
+            {
+              "key": "sort",
+              "value": "birth_date"
+            },
+            {
+              "key": "direction",
+              "value": "desc"
+            },
+            {
+              "key": "per_page",
+              "value": "25"
+            }
+          ]
+        },
+        "description": "sort: name | birth_date | created_at (padrão name; inválido → name). direction: asc | desc (padrão asc). Desempate por id asc."
       }
     },
     {
@@ -167,6 +223,133 @@
       }
     },
     {
+      "name": "Verificar CPF (em uso)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('CPF taken by the created patient', function () { pm.expect(pm.response.json()).to.eql({ available: false, message: 'Já existe um paciente cadastrado com este CPF.' }); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/cpf-availability?cpf={{cpf}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "cpf-availability"
+          ],
+          "query": [
+            {
+              "key": "cpf",
+              "value": "{{cpf}}"
+            }
+          ]
+        },
+        "description": "Verifica se o CPF pode ser usado (aceita máscara). Pacientes excluídos não contam."
+      }
+    },
+    {
+      "name": "Verificar CPF (ignorando o próprio paciente)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Available when ignoring the patient being edited', function () { pm.expect(pm.response.json()).to.eql({ available: true }); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/cpf-availability?cpf={{cpf}}&ignore={{patientId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "cpf-availability"
+          ],
+          "query": [
+            {
+              "key": "cpf",
+              "value": "{{cpf}}"
+            },
+            {
+              "key": "ignore",
+              "value": "{{patientId}}"
+            }
+          ]
+        },
+        "description": "Na edição, envie ignore com o ID do próprio paciente."
+      }
+    },
+    {
+      "name": "Verificar CPF (inválido - 422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+              "pm.test('Same message as create', function () { pm.expect(pm.response.json().errors.cpf[0]).to.eql('O CPF informado é inválido.'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/cpf-availability?cpf=123.456.789-00",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "cpf-availability"
+          ],
+          "query": [
+            {
+              "key": "cpf",
+              "value": "123.456.789-00"
+            }
+          ]
+        },
+        "description": "CPF inválido retorna 422 com as mesmas mensagens do cadastro."
+      }
+    },
+    {
       "name": "Detalhar paciente",
       "event": [
         {
@@ -174,7 +357,8 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has age and deleted_at', function () { const d = pm.response.json().data; pm.expect(d.age).to.be.a('number'); pm.expect(d.deleted_at).to.eql(null); });"
             ]
           }
         }
@@ -362,6 +546,161 @@
           ]
         },
         "description": "Após a exclusão o paciente retorna 404."
+      }
+    },
+    {
+      "name": "Listar lixeira (pacientes excluídos)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Deleted patient is in the trash', function () {",
+              "  const d = pm.response.json().data;",
+              "  const p = d.find(x => x.id === Number(pm.collectionVariables.get('patientId')));",
+              "  pm.expect(p, 'patient in trash').to.be.an('object');",
+              "  d.forEach(x => pm.expect(x.deleted_at).to.be.a('string'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients?trashed=only&search={{cpf}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ],
+          "query": [
+            {
+              "key": "trashed",
+              "value": "only"
+            },
+            {
+              "key": "search",
+              "value": "{{cpf}}"
+            }
+          ]
+        },
+        "description": "trashed=only lista apenas pacientes excluídos (deleted_at preenchido); busca, ordenação e paginação continuam valendo."
+      }
+    },
+    {
+      "name": "Restaurar paciente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Restored (deleted_at null)', function () { const d = pm.response.json().data; pm.expect(d.id).to.eql(Number(pm.collectionVariables.get('patientId'))); pm.expect(d.deleted_at).to.eql(null); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}/restore",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}",
+            "restore"
+          ]
+        },
+        "description": "Restaura da lixeira. 404 se não existir ou não estiver excluído; 409 {\"message\":\"Já existe um paciente ativo com este CPF.\"} se outro paciente ativo usar o CPF."
+      }
+    },
+    {
+      "name": "Restaurar paciente ativo (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404', function () { pm.response.to.have.status(404); });",
+              "pm.test('Not found message', function () { pm.expect(pm.response.json().message).to.eql('Paciente não encontrado.'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}/restore",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}",
+            "restore"
+          ]
+        },
+        "description": "Só pacientes na lixeira podem ser restaurados."
+      }
+    },
+    {
+      "name": "Excluir paciente (limpeza)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}"
+          ]
+        },
+        "description": "Remove o paciente de teste ao final, para execuções repetidas não acumularem registros ativos."
       }
     }
   ]

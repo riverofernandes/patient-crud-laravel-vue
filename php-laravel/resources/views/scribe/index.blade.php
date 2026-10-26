@@ -71,7 +71,13 @@
                     <a href="#pacientes">Pacientes</a>
                 </li>
                                     <ul id="tocify-subheader-pacientes" class="tocify-subheader">
-                                                    <li class="tocify-item level-2" data-unique="pacientes-GETapi-patients">
+                                                    <li class="tocify-item level-2" data-unique="pacientes-GETapi-patients-cpf-availability">
+                                <a href="#pacientes-GETapi-patients-cpf-availability">Verificar disponibilidade de CPF</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="pacientes-POSTapi-patients--patient_id--restore">
+                                <a href="#pacientes-POSTapi-patients--patient_id--restore">Restaurar paciente</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="pacientes-GETapi-patients">
                                 <a href="#pacientes-GETapi-patients">Listar pacientes</a>
                             </li>
                                                                                 <li class="tocify-item level-2" data-unique="pacientes-POSTapi-patients">
@@ -131,14 +137,352 @@ A exclusão é lógica (soft delete): o paciente deixa de aparecer na listagem e
 
         <h1 id="pacientes">Pacientes</h1>
 
-    <p>Cadastro de pacientes: listagem com busca e paginação, detalhe, criação, atualização e exclusão lógica.</p>
+    <p>Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
+exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.</p>
 
-                                <h2 id="pacientes-GETapi-patients">Listar pacientes</h2>
+                                <h2 id="pacientes-GETapi-patients-cpf-availability">Verificar disponibilidade de CPF</h2>
 
 <p>
 </p>
 
-<p>Retorna os pacientes ativos (não excluídos) ordenados por nome, com paginação no formato padrão do Laravel.</p>
+<p>Informa se um CPF pode ser usado em um cadastro (não pertence a nenhum paciente ativo). Pacientes excluídos
+não contam. Na edição, envie <code>ignore</code> com o ID do próprio paciente. CPF inválido retorna 422 com as mesmas
+mensagens do cadastro.</p>
+
+<span id="example-requests-GETapi-patients-cpf-availability">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/patients/cpf-availability?cpf=625.189.530-60&amp;ignore=1" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/patients/cpf-availability"
+);
+
+const params = {
+    "cpf": "625.189.530-60",
+    "ignore": "1",
+};
+Object.keys(params)
+    .forEach(key =&gt; url.searchParams.append(key, params[key]));
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-patients-cpf-availability">
+            <blockquote>
+            <p>Example response (200, CPF disponível):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;available&quot;: true
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (200, CPF em uso):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;available&quot;: false,
+    &quot;message&quot;: &quot;J&aacute; existe um paciente cadastrado com este CPF.&quot;
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (422, CPF inválido):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;O CPF informado &eacute; inv&aacute;lido.&quot;,
+    &quot;errors&quot;: {
+        &quot;cpf&quot;: [
+            &quot;O CPF informado &eacute; inv&aacute;lido.&quot;
+        ]
+    }
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-patients-cpf-availability" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-patients-cpf-availability"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-patients-cpf-availability"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-patients-cpf-availability" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-patients-cpf-availability">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-patients-cpf-availability" data-method="GET"
+      data-path="api/patients/cpf-availability"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-patients-cpf-availability', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-patients-cpf-availability"
+                    onclick="tryItOut('GETapi-patients-cpf-availability');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-patients-cpf-availability"
+                    onclick="cancelTryOut('GETapi-patients-cpf-availability');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-patients-cpf-availability"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/patients/cpf-availability</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-patients-cpf-availability"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-patients-cpf-availability"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                            <h4 class="fancy-heading-panel"><b>Query Parameters</b></h4>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>cpf</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="cpf"                data-endpoint="GETapi-patients-cpf-availability"
+               value="625.189.530-60"
+               data-component="query">
+    <br>
+<p>CPF a verificar, com ou sem máscara. Deve ser válido (dígitos verificadores conferidos). Example: <code>625.189.530-60</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>ignore</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="ignore"                data-endpoint="GETapi-patients-cpf-availability"
+               value="1"
+               data-component="query">
+    <br>
+<p>ID de um paciente a desconsiderar (use na edição para não acusar o próprio CPF). Must be at least 1. Example: <code>1</code></p>
+            </div>
+                </form>
+
+                    <h2 id="pacientes-POSTapi-patients--patient_id--restore">Restaurar paciente</h2>
+
+<p>
+</p>
+
+<p>Restaura um paciente da lixeira (desfaz a exclusão lógica). Falha com 409 se outro paciente ativo
+estiver usando o mesmo CPF (o CPF pode ter sido reutilizado depois da exclusão).</p>
+
+<span id="example-requests-POSTapi-patients--patient_id--restore">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request POST \
+    "http://localhost:8000/api/patients/1/restore" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/patients/1/restore"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "POST",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-POSTapi-patients--patient_id--restore">
+            <blockquote>
+            <p>Example response (200, Paciente restaurado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: {
+        &quot;id&quot;: 1,
+        &quot;name&quot;: &quot;Maria da Silva&quot;,
+        &quot;cpf&quot;: &quot;62518953060&quot;,
+        &quot;rg&quot;: &quot;35688019X&quot;,
+        &quot;birth_date&quot;: &quot;1996-07-20&quot;,
+        &quot;sex&quot;: &quot;F&quot;,
+        &quot;phone&quot;: &quot;11928535718&quot;,
+        &quot;email&quot;: &quot;maria@example.com&quot;,
+        &quot;description&quot;: &quot;Paciente com miopia leve, retorno anual.&quot;,
+        &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-26T15:45:00-03:00&quot;,
+        &quot;age&quot;: 30,
+        &quot;deleted_at&quot;: null
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Paciente não encontrado ou não excluído):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Paciente n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (409, CPF em uso por outro paciente ativo):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;J&aacute; existe um paciente ativo com este CPF.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-POSTapi-patients--patient_id--restore" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-POSTapi-patients--patient_id--restore"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-POSTapi-patients--patient_id--restore"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-POSTapi-patients--patient_id--restore" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-POSTapi-patients--patient_id--restore">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-POSTapi-patients--patient_id--restore" data-method="POST"
+      data-path="api/patients/{patient_id}/restore"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('POSTapi-patients--patient_id--restore', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-POSTapi-patients--patient_id--restore"
+                    onclick="tryItOut('POSTapi-patients--patient_id--restore');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-POSTapi-patients--patient_id--restore"
+                    onclick="cancelTryOut('POSTapi-patients--patient_id--restore');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-POSTapi-patients--patient_id--restore"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-black">POST</small>
+            <b><code>api/patients/{patient_id}/restore</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="POSTapi-patients--patient_id--restore"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="POSTapi-patients--patient_id--restore"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>patient_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="patient_id"                data-endpoint="POSTapi-patients--patient_id--restore"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do paciente excluído. Example: <code>1</code></p>
+            </div>
+                    </form>
+
+                    <h2 id="pacientes-GETapi-patients">Listar pacientes</h2>
+
+<p>
+</p>
+
+<p>Retorna os pacientes ativos (não excluídos), com paginação no formato padrão do Laravel. Com <code>trashed=only</code>,
+lista apenas os pacientes da lixeira (excluídos), com <code>deleted_at</code> preenchido; busca, ordenação e paginação
+continuam valendo. Cada paciente traz <code>age</code> (idade em anos completos no fuso America/Sao_Paulo).</p>
 
 <span id="example-requests-GETapi-patients">
 <blockquote>Example request:</blockquote>
@@ -146,7 +490,7 @@ A exclusão é lógica (soft delete): o paciente deixa de aparecer na listagem e
 
 <div class="bash-example">
     <pre><code class="language-bash">curl --request GET \
-    --get "http://localhost:8000/api/patients?search=maria&amp;page=1&amp;per_page=10" \
+    --get "http://localhost:8000/api/patients?search=maria&amp;page=1&amp;per_page=10&amp;sort=name&amp;direction=asc&amp;trashed=only" \
     --header "Content-Type: application/json" \
     --header "Accept: application/json"</code></pre></div>
 
@@ -160,6 +504,9 @@ const params = {
     "search": "maria",
     "page": "1",
     "per_page": "10",
+    "sort": "name",
+    "direction": "asc",
+    "trashed": "only",
 };
 Object.keys(params)
     .forEach(key =&gt; url.searchParams.append(key, params[key]));
@@ -195,7 +542,9 @@ fetch(url, {
             &quot;email&quot;: &quot;maria@example.com&quot;,
             &quot;description&quot;: &quot;Paciente com miopia leve, retorno anual.&quot;,
             &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
-            &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;
+            &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
+            &quot;age&quot;: 30,
+            &quot;deleted_at&quot;: null
         },
         {
             &quot;id&quot;: 2,
@@ -208,7 +557,9 @@ fetch(url, {
             &quot;email&quot;: null,
             &quot;description&quot;: null,
             &quot;created_at&quot;: &quot;2026-10-26T15:31:00-03:00&quot;,
-            &quot;updated_at&quot;: &quot;2026-10-26T15:31:00-03:00&quot;
+            &quot;updated_at&quot;: &quot;2026-10-26T15:31:00-03:00&quot;,
+            &quot;age&quot;: 46,
+            &quot;deleted_at&quot;: null
         }
     ],
     &quot;links&quot;: {
@@ -349,6 +700,39 @@ You can check the Dev Tools console for debugging information.</code></pre>
     <br>
 <p>Itens por página. Padrão: 10; máximo: 100 (valores maiores são limitados a 100). Example: <code>10</code></p>
             </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>sort</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="sort"                data-endpoint="GETapi-patients"
+               value="name"
+               data-component="query">
+    <br>
+<p>Campo de ordenação: <code>name</code>, <code>birth_date</code> ou <code>created_at</code>. Padrão: <code>name</code> (valor fora da lista também usa <code>name</code>). Example: <code>name</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>direction</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="direction"                data-endpoint="GETapi-patients"
+               value="asc"
+               data-component="query">
+    <br>
+<p>Sentido da ordenação: <code>asc</code> ou <code>desc</code>. Padrão: <code>asc</code> (valor inválido também usa <code>asc</code>). O desempate é sempre por <code>id</code> crescente. Example: <code>asc</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>trashed</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="trashed"                data-endpoint="GETapi-patients"
+               value="only"
+               data-component="query">
+    <br>
+<p>Use <code>only</code> para listar apenas os pacientes excluídos (lixeira). Example: <code>only</code></p>
+            </div>
                 </form>
 
                     <h2 id="pacientes-POSTapi-patients">Cadastrar paciente</h2>
@@ -428,7 +812,9 @@ fetch(url, {
         &quot;email&quot;: &quot;maria@example.com&quot;,
         &quot;description&quot;: &quot;Paciente com miopia leve, retorno anual.&quot;,
         &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
-        &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;
+        &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
+        &quot;age&quot;: 30,
+        &quot;deleted_at&quot;: null
     }
 }</code>
  </pre>
@@ -665,7 +1051,9 @@ fetch(url, {
         &quot;email&quot;: &quot;maria@example.com&quot;,
         &quot;description&quot;: &quot;Paciente com miopia leve, retorno anual.&quot;,
         &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
-        &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;
+        &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
+        &quot;age&quot;: 30,
+        &quot;deleted_at&quot;: null
     }
 }</code>
  </pre>
@@ -758,17 +1146,6 @@ You can check the Dev Tools console for debugging information.</code></pre>
                value="1"
                data-component="url">
     <br>
-<p>The ID of the patient. Example: <code>1</code></p>
-            </div>
-                    <div style="padding-left: 28px; clear: unset;">
-                <b style="line-height: 2;"><code>patient</code></b>&nbsp;&nbsp;
-<small>integer</small>&nbsp;
- &nbsp;
-                <input type="number" style="display: none"
-               step="any"               name="patient"                data-endpoint="GETapi-patients--id-"
-               value="1"
-               data-component="url">
-    <br>
 <p>ID do paciente. Example: <code>1</code></p>
             </div>
                     </form>
@@ -849,7 +1226,9 @@ fetch(url, {
         &quot;email&quot;: &quot;maria@example.com&quot;,
         &quot;description&quot;: &quot;Paciente com miopia leve, retorno anual.&quot;,
         &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
-        &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;
+        &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
+        &quot;age&quot;: 30,
+        &quot;deleted_at&quot;: null
     }
 }</code>
  </pre>
@@ -960,17 +1339,6 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="number" style="display: none"
                step="any"               name="id"                data-endpoint="PUTapi-patients--id-"
-               value="1"
-               data-component="url">
-    <br>
-<p>The ID of the patient. Example: <code>1</code></p>
-            </div>
-                    <div style="padding-left: 28px; clear: unset;">
-                <b style="line-height: 2;"><code>patient</code></b>&nbsp;&nbsp;
-<small>integer</small>&nbsp;
- &nbsp;
-                <input type="number" style="display: none"
-               step="any"               name="patient"                data-endpoint="PUTapi-patients--id-"
                value="1"
                data-component="url">
     <br>
@@ -1198,17 +1566,6 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="number" style="display: none"
                step="any"               name="id"                data-endpoint="DELETEapi-patients--id-"
-               value="1"
-               data-component="url">
-    <br>
-<p>The ID of the patient. Example: <code>1</code></p>
-            </div>
-                    <div style="padding-left: 28px; clear: unset;">
-                <b style="line-height: 2;"><code>patient</code></b>&nbsp;&nbsp;
-<small>integer</small>&nbsp;
- &nbsp;
-                <input type="number" style="display: none"
-               step="any"               name="patient"                data-endpoint="DELETEapi-patients--id-"
                value="1"
                data-component="url">
     <br>
