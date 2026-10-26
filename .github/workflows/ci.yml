@@ -3,8 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+  # Any base branch, so stacked PRs (e.g. one sprint on top of another) are checked too.
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
