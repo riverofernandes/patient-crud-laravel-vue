@@ -74,6 +74,10 @@ Variáveis: `APP_KEY` (obrigatória), `API_PORT`, `WEB_PORT`, `DB_PASSWORD`, `SE
 banco na subida). O projeto de produção usa outro nome (`patients-prod`), então não conflita com o
 banco de desenvolvimento.
 
+> **Atenção à `APP_KEY` em produção:** CPF, RG e celular são gravados criptografados com essa chave.
+> Trocar a chave torna esses dados ilegíveis. Faça backup do banco antes do primeiro deploy desta versão:
+> a migration criptografa os dados existentes.
+
 ## Rodando o front-end fora do Docker (opcional)
 
 Com a API rodando no Docker:
@@ -88,12 +92,15 @@ npm run dev
 ## Testes e qualidade
 
 ```bash
-docker compose exec api php artisan test        # testes de feature + unitários (SQLite em memória)
-docker compose exec api ./vendor/bin/pint --test # padrão de código PSR-12
+docker compose exec api php artisan test                    # testes de feature + unitários (SQLite em memória)
+docker compose exec api php artisan test --coverage --min=80 # com cobertura (pcov), mínimo de 80%
+docker compose exec api ./vendor/bin/phpstan analyse         # análise estática (Larastan, nível 8)
+docker compose exec api ./vendor/bin/pint --test             # padrão de código PSR-12
 ```
 
 ```bash
-cd front-vuejs && npm test         # Vitest (máscaras, datas, validação de CPF)
+cd front-vuejs && npm test               # Vitest: utilitários, serviços e componentes
+cd front-vuejs && npm run test:coverage  # com cobertura (Istanbul) e limites mínimos
 cd front-vuejs && npm run lint     # ESLint + Prettier
 cd front-vuejs && npm run build    # type-check (vue-tsc) + build de produção
 ```
@@ -102,26 +109,37 @@ Os testes do back-end usam SQLite em memória e nunca tocam o banco MySQL do con
 
 ### Testes E2E
 
-Testes de ponta a ponta com Playwright em [`e2e/`](e2e/README.md): listagem, busca, paginação,
-cadastro, detalhes, edição, exclusão, layout mobile e auditoria de acessibilidade com axe (WCAG 2.1 AA)
-em todas as telas. Cada teste cria e apaga os próprios pacientes via API. Com a stack de dev no ar:
+Testes de ponta a ponta com Playwright em [`e2e/`](e2e/README.md): listagem, busca (CPF só completo),
+filtros por sexo e idade, ordenação, paginação, cadastro, detalhes, edição, exclusão, lixeira, desfazer,
+exportação CSV, histórico de alterações, layout mobile e auditoria de acessibilidade com axe
+(WCAG 2.1 AA) em todas as telas. Cada teste cria e apaga os próprios pacientes via API.
+
+A suíte faz cerca de 425 requisições por execução, acima do limite padrão da API (300/min), então suba
+a stack com o limite maior:
 
 ```bash
 cd e2e && npm ci && npx playwright install chromium
 ```
 
 ```bash
+API_RATE_LIMIT=1000 docker compose up -d
+```
+
+```bash
 cd e2e && npx playwright test
 ```
 
-Se a API subiu em outra porta, informe a URL: `E2E_API_URL=http://localhost:8001/api npx playwright test`.
+Se a API subiu em outra porta: `API_PORT=8001 API_RATE_LIMIT=1000 docker compose up -d` e
+`E2E_API_URL=http://localhost:8001/api npx playwright test`.
 Relatório: `npx playwright show-report`.
 
 ### Integração contínua
 
-O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda a cada push e PR na `main`:
-testes e pint do back-end, lint, testes e build do front-end e, por fim, a suíte E2E contra a stack do
-`docker compose`. O Dependabot mantém as dependências de Composer, npm, Docker e Actions atualizadas.
+O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda a cada push na `main` e em todo PR:
+análise estática (Larastan), testes com cobertura mínima de 80% (pcov) e pint do back-end; lint, testes
+com cobertura (limites no `vite.config.ts`, relatório no resumo do job e artefato `web-coverage`) e build
+do front-end; por fim, confere que as migrations rodaram no banco novo e executa a suíte E2E contra a
+stack do `docker compose`. O Dependabot mantém as dependências de Composer, npm, Docker e Actions atualizadas.
 
 ### Acessibilidade
 
@@ -154,7 +172,9 @@ O `APP_URL` fixo mantém a URL base dos arquivos gerados estável mesmo que a st
 
 | Método | Rota                  | Descrição                                                        |
 |--------|-----------------------|------------------------------------------------------------------|
-| GET    | `/api/patients`       | Lista paginada (`search`, `page`, `per_page`, `sort`, `direction`, `trashed=only`) |
+| GET    | `/api/patients`       | Lista paginada (`search`, `page`, `per_page`, `sort`, `direction`, `trashed=only`, `sex`, `age_min`, `age_max`) |
+| GET    | `/api/patients/export` | Exporta em CSV com os mesmos filtros (UTF-8 com BOM, `;`)        |
+| GET    | `/api/patients/{id}/audits` | Histórico de alterações do paciente                         |
 | GET    | `/api/patients/{id}`  | Detalhe                                                          |
 | POST   | `/api/patients`       | Cria (201)                                                       |
 | PUT    | `/api/patients/{id}`  | Atualiza (substituição completa)                                 |
@@ -167,15 +187,25 @@ Validação via FormRequest com mensagens em pt-BR: CPF com dígitos verificador
 ativos (o CPF de um paciente excluído pode ser reutilizado), data de nascimento não futura, sexo `M`/`F`,
 e-mail opcional. CPF, RG e celular aceitam máscara na entrada e são armazenados só com dígitos.
 
+**Dados sensíveis:** CPF, RG e celular ficam **criptografados** no banco (casts `encrypted` do Laravel,
+com a `APP_KEY`). Para manter a unicidade e a busca por CPF sem descriptografar a tabela, a API guarda
+um hash HMAC do CPF (*blind index*), com chave definida em `CPF_HASH_KEY` (derivada da `APP_KEY` se vazia).
+Por isso a busca encontra só o **CPF completo**; a busca por nome continua parcial. Se a chave do hash
+mudar, rode `php artisan patients:rehash-cpf`.
+
+**Histórico:** cada cadastro, edição (só os campos alterados, com antes e depois), exclusão e restauração
+fica registrado em `patient_audits`, também criptografado. Como a API é aberta nesta fase, o registro não
+tem usuário (`user_id` nulo, pronto para quando houver login).
+
 ## Telas
 
 | Rota                     | Tela                                                                 |
 |--------------------------|----------------------------------------------------------------------|
-| `/`                      | Listagem com busca (debounce), ordenação por coluna, itens por página, idade e ações ver / editar / excluir |
+| `/`                      | Listagem com busca (debounce), filtros (sexo, faixa de idade), ordenação por coluna, itens por página, idade, exportação CSV e ações ver / editar / excluir |
 | `/pacientes/novo`        | Cadastro                                                             |
-| `/pacientes/:id`         | Detalhes                                                             |
+| `/pacientes/:id`         | Detalhes, com as abas Dados e Histórico (`?aba=historico`)           |
 | `/pacientes/:id/editar`  | Edição                                                               |
-| `/pacientes/lixeira`     | Pacientes excluídos, com busca e ação de restaurar                   |
+| `/pacientes/lixeira`     | Pacientes excluídos, com busca, exportação CSV e ação de restaurar   |
 
 A exclusão abre um modal de confirmação a partir da listagem, dos detalhes ou da edição. Como é um soft
 delete, o aviso de sucesso traz um botão **Desfazer**, e o paciente fica na **Lixeira**, de onde pode ser
