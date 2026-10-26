@@ -22,7 +22,7 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # ---- runtime ----
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.31-alpine AS runtime
 
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/security-headers.conf /etc/nginx/snippets/security-headers.conf
