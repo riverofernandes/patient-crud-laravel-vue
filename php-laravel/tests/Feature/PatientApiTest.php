@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Patient;
 use App\Rules\Cpf;
+use App\Support\CpfBlindIndex;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -14,6 +15,10 @@ class PatientApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
@@ -82,9 +87,12 @@ class PatientApiTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'Carlos Alberto');
 
-        $this->getJson('/api/patients?search=529.982')
+        $this->getJson('/api/patients?search=52998224725')
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'Daniela Prado');
+
+        // CPF is encrypted: only a full CPF is searchable.
+        $this->getJson('/api/patients?search=529.982')->assertJsonCount(0, 'data');
     }
 
     public function test_name_search_with_digits_does_not_match_cpfs(): void
@@ -192,11 +200,10 @@ class PatientApiTest extends TestCase
             ->assertJsonPath('data.phone', '11928535718')
             ->assertJsonPath('data.birth_date', '1996-07-20');
 
-        $this->assertDatabaseHas('patients', [
-            'cpf' => '62518953060',
-            'rg' => '35688019X',
-            'phone' => '11928535718',
-        ]);
+        // Stored encrypted (see PatientEncryptionTest); the model decrypts the normalized digits.
+        $patient = Patient::findOrFail((int) $response->json('data.id'));
+        $this->assertSame(['62518953060', '35688019X', '11928535718'], [$patient->cpf, $patient->rg, $patient->phone]);
+        $this->assertDatabaseHas('patients', ['id' => $patient->id, 'cpf_hash' => CpfBlindIndex::hash('62518953060')]);
     }
 
     public function test_optional_fields_may_be_omitted(): void
@@ -225,7 +232,7 @@ class PatientApiTest extends TestCase
         $response = $this->post('/api/patients', []);
 
         $response->assertUnprocessable();
-        $this->assertStringContainsString('application/json', $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('application/json', (string) $response->headers->get('Content-Type'));
         $response->assertJsonPath('errors.name.0', 'O campo nome completo é obrigatório.');
     }
 
@@ -344,7 +351,7 @@ class PatientApiTest extends TestCase
 
         $this->postJson('/api/patients', $this->validPayload())->assertCreated();
 
-        $this->assertSame(2, Patient::withTrashed()->where('cpf', '62518953060')->count());
+        $this->assertSame(2, Patient::withTrashed()->where('cpf_hash', CpfBlindIndex::hash('62518953060'))->count());
     }
 
     public function test_factory_generates_valid_cpfs(): void

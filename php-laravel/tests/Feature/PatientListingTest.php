@@ -103,7 +103,7 @@ class PatientListingTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $deleted->id)
-            ->assertJsonPath('data.0.deleted_at', $deleted->fresh()->deleted_at->toIso8601String());
+            ->assertJsonPath('data.0.deleted_at', $deleted->refresh()->deleted_at?->toIso8601String());
 
         $this->getJson('/api/patients')
             ->assertJsonCount(1, 'data')
