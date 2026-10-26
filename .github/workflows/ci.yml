@@ -23,7 +23,7 @@ jobs:
       run:
         working-directory: php-laravel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -64,7 +64,7 @@ jobs:
       run:
         working-directory: front-vuejs
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
@@ -95,7 +95,7 @@ jobs:
       # Read by docker compose for the api service; the suite sends ~275 requests per run.
       API_RATE_LIMIT: 1000
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Start the stack (MySQL + API + web)
         run: docker compose up -d --build
