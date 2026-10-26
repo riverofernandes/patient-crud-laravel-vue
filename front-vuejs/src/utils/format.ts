@@ -110,3 +110,43 @@ export const SEX_LABELS: Record<string, string> = {
 export function formatSex(value: string | null | undefined): string {
   return value ? SEX_LABELS[value] ?? value : "";
 }
+
+/** Full years between a YYYY-MM-DD birth date and today (local time), by string math. */
+export function ageFromBirthDate(
+  birthDate: string | null | undefined,
+  today: string = todayIso()
+): number | null {
+  const b = /^(\d{4})-(\d{2})-(\d{2})/.exec(birthDate ?? "");
+  const t = /^(\d{4})-(\d{2})-(\d{2})/.exec(today);
+  if (!b || !t) return null;
+  let age = Number(t[1]) - Number(b[1]);
+  if (`${t[2]}${t[3]}` < `${b[2]}${b[3]}`) age -= 1;
+  return age >= 0 ? age : null;
+}
+
+/** 0 -> "Menos de 1 ano", 1 -> "1 ano", N -> "N anos". */
+export function formatAge(age: number | null | undefined): string {
+  if (age === null || age === undefined || !Number.isFinite(age) || age < 0)
+    return "";
+  if (age === 0) return "Menos de 1 ano";
+  return age === 1 ? "1 ano" : `${age} anos`;
+}
+
+/** Patient age: the API's `age` when present, otherwise computed from birth_date. */
+export function patientAge(patient: {
+  age?: number | null;
+  birth_date?: string | null;
+}): string {
+  return formatAge(patient.age ?? ageFromBirthDate(patient.birth_date));
+}
+
+/** ISO-8601 datetime -> DD/MM/AAAA HH:mm in the browser's local time. */
+export function formatDateTime(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(date.getDate())}/${pad(
+    date.getMonth() + 1
+  )}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}

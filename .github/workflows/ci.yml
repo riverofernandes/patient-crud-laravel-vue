@@ -3,8 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+  # Any base branch, so stacked PRs (e.g. one sprint on top of another) are checked too.
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -92,6 +92,8 @@ jobs:
     env:
       E2E_BASE_URL: http://localhost:5173
       E2E_API_URL: http://localhost:8000/api
+      # Read by docker compose for the api service; the suite sends ~275 requests per run.
+      API_RATE_LIMIT: 1000
     steps:
       - uses: actions/checkout@v4
 

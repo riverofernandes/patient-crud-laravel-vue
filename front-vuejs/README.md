@@ -15,7 +15,7 @@ npm run dev                  # http://localhost:5173 (listens on all interfaces)
 | `npm run dev` | Dev server (port 5173, `host: true`, works inside a container) |
 | `npm run build` | Type-check (vue-tsc) + production build |
 | `npm run lint` | ESLint + Prettier (auto-fix) |
-| `npm run test` | Vitest unit tests for `src/utils` |
+| `npm run test` | Vitest: unit tests for `src/utils` + component tests (`@vue/test-utils` v1, jsdom) |
 
 ## Structure
 
@@ -26,8 +26,10 @@ src/
   components/     AppLayout, AppBreadcrumb, PatientForm, FormField, DetailItem,
                   ConfirmDeleteModal, PageState
   views/          PatientListView, PatientCreateView, PatientDetailView, PatientEditView, NotFoundView
-  utils/          format.ts (CPF/RG/phone/date masks, DD/MM/AAAA <-> YYYY-MM-DD),
-                  validation.ts (CPF check digits, e-mail), notify.ts (toasts), debounce.ts
+  utils/          format.ts (CPF/RG/phone/date masks, DD/MM/AAAA <-> YYYY-MM-DD, age, date-time),
+                  validation.ts (CPF check digits, e-mail), notify.ts (toasts, optional action),
+                  restore.ts (restore from trash + toast), debounce.ts
+  test/           helpers for component tests (localVue with BootstrapVue, in-memory router)
   styles/         _variables.scss (design tokens + Bootstrap overrides), main.scss
 ```
 
@@ -35,13 +37,17 @@ src/
 
 | Path | Screen |
 |---|---|
-| `/` | Listing with search (`?search=`), pagination (`?page=`), detail/edit/delete actions |
+| `/` | Listing with search (`?search=`), pagination (`?page=`, `?per_page=` 10/25/50), sorting (`?sort=name\|birth_date&direction=asc\|desc`), detail/edit/delete actions |
+| `/pacientes/lixeira` | Trash ("Pacientes excluídos"): search, pagination, "Restaurar" |
 | `/pacientes/novo` | Create |
 | `/pacientes/:id` | Detail |
 | `/pacientes/:id/editar` | Edit |
 
 Notes: dates are converted by string splitting (never `new Date('YYYY-MM-DD')`, which shifts a day in UTC-3);
 CPF/RG/phone are sent unmasked; server 422 `errors` are mapped onto the form fields.
+The CPF field checks availability on blur (`GET /patients/cpf-availability`, debounced, stale requests aborted);
+any failure is ignored, so it never blocks saving. The delete toast offers "Desfazer" (restore) and stays 10 s,
+pausing on hover/focus. Age uses the API's `age`, falling back to a calculation from `birth_date`.
 
 ## Accessibility
 

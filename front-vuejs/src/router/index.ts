@@ -21,6 +21,12 @@ const router = new VueRouter({
       meta: { title: "Novo paciente" },
     },
     {
+      path: "/pacientes/lixeira",
+      name: "patients.trash",
+      component: () => import("@/views/PatientTrashView.vue"),
+      meta: { title: "Pacientes excluídos" },
+    },
+    {
       path: "/pacientes/:id(\\d+)",
       name: "patients.show",
       component: () => import("@/views/PatientDetailView.vue"),

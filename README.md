@@ -46,6 +46,9 @@ inclua a nova origem em `CORS_ALLOWED_ORIGINS` no `php-laravel/.env` (por padrã
 `http://localhost:5173` e `http://127.0.0.1:5173`). O MySQL não é exposto no host (veja o comentário no
 `docker-compose.yml` para habilitar).
 
+A API limita a 300 requisições por minuto por cliente; `API_RATE_LIMIT` ajusta o valor (o CI usa 1000
+para a suíte E2E).
+
 > Já tinha o projeto rodando antes desta versão? Rode `docker compose exec api composer install`
 > depois de atualizar, pois o container só instala dependências quando `vendor/` não existe.
 
@@ -144,16 +147,20 @@ uma coleção Postman gerada em `/docs.postman`. A documentação é versionada;
 a API:
 
 ```bash
-docker compose exec api php artisan scribe:generate
+docker compose exec -e APP_URL=http://localhost:8000 api php artisan scribe:generate
 ```
+
+O `APP_URL` fixo mantém a URL base dos arquivos gerados estável mesmo que a stack rode em outra porta.
 
 | Método | Rota                  | Descrição                                                        |
 |--------|-----------------------|------------------------------------------------------------------|
-| GET    | `/api/patients`       | Lista paginada (`search` por nome ou CPF, `page`, `per_page`)    |
+| GET    | `/api/patients`       | Lista paginada (`search`, `page`, `per_page`, `sort`, `direction`, `trashed=only`) |
 | GET    | `/api/patients/{id}`  | Detalhe                                                          |
 | POST   | `/api/patients`       | Cria (201)                                                       |
 | PUT    | `/api/patients/{id}`  | Atualiza (substituição completa)                                 |
 | DELETE | `/api/patients/{id}`  | **Soft delete** (204) — o registro permanece com `deleted_at`    |
+| POST   | `/api/patients/{id}/restore` | Restaura um paciente da lixeira (409 se o CPF já estiver em uso) |
+| GET    | `/api/patients/cpf-availability` | Verifica se um CPF está livre (`cpf`, `ignore`)         |
 | GET    | `/api/health`         | Health check com verificação do banco (200 / 503)                |
 
 Validação via FormRequest com mensagens em pt-BR: CPF com dígitos verificadores e único entre pacientes
@@ -164,13 +171,18 @@ e-mail opcional. CPF, RG e celular aceitam máscara na entrada e são armazenado
 
 | Rota                     | Tela                                                                 |
 |--------------------------|----------------------------------------------------------------------|
-| `/`                      | Listagem com busca (debounce), paginação e ações ver / editar / excluir |
+| `/`                      | Listagem com busca (debounce), ordenação por coluna, itens por página, idade e ações ver / editar / excluir |
 | `/pacientes/novo`        | Cadastro                                                             |
 | `/pacientes/:id`         | Detalhes                                                             |
 | `/pacientes/:id/editar`  | Edição                                                               |
+| `/pacientes/lixeira`     | Pacientes excluídos, com busca e ação de restaurar                   |
 
-A exclusão abre um modal de confirmação a partir da listagem, dos detalhes ou da edição. O layout segue os
-protótipos em [`images/`](images); a tela de detalhes não tinha protótipo e foi desenhada no mesmo estilo.
+A exclusão abre um modal de confirmação a partir da listagem, dos detalhes ou da edição. Como é um soft
+delete, o aviso de sucesso traz um botão **Desfazer**, e o paciente fica na **Lixeira**, de onde pode ser
+restaurado. No formulário, o CPF é verificado ao sair do campo, avisando de duplicidade antes de salvar.
+
+O layout segue os protótipos em [`images/`](images); as telas de detalhes e da lixeira não tinham protótipo
+e foram desenhadas no mesmo estilo.
 
 ## Estrutura
 

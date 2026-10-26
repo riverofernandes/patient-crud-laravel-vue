@@ -17,8 +17,123 @@
     "item": [
         {
             "name": "Pacientes",
-            "description": "\nCadastro de pacientes: listagem com busca e pagina\u00e7\u00e3o, detalhe, cria\u00e7\u00e3o, atualiza\u00e7\u00e3o e exclus\u00e3o l\u00f3gica.",
+            "description": "\nCadastro de pacientes: listagem com busca, ordena\u00e7\u00e3o e pagina\u00e7\u00e3o, detalhe, cria\u00e7\u00e3o, atualiza\u00e7\u00e3o,\nexclus\u00e3o l\u00f3gica (lixeira), restaura\u00e7\u00e3o e verifica\u00e7\u00e3o de disponibilidade de CPF.",
             "item": [
+                {
+                    "name": "Verificar disponibilidade de CPF",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/patients\/cpf-availability",
+                            "query": [
+                                {
+                                    "key": "cpf",
+                                    "value": "625.189.530-60",
+                                    "description": "CPF a verificar, com ou sem m\u00e1scara. Deve ser v\u00e1lido (d\u00edgitos verificadores conferidos).",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "ignore",
+                                    "value": "1",
+                                    "description": "ID de um paciente a desconsiderar (use na edi\u00e7\u00e3o para n\u00e3o acusar o pr\u00f3prio CPF). Must be at least 1.",
+                                    "disabled": false
+                                }
+                            ],
+                            "raw": "{{baseUrl}}\/api\/patients\/cpf-availability?cpf=625.189.530-60&ignore=1"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Informa se um CPF pode ser usado em um cadastro (n\u00e3o pertence a nenhum paciente ativo). Pacientes exclu\u00eddos\nn\u00e3o contam. Na edi\u00e7\u00e3o, envie `ignore` com o ID do pr\u00f3prio paciente. CPF inv\u00e1lido retorna 422 com as mesmas\nmensagens do cadastro.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"available\": true}",
+                            "name": "CPF dispon\u00edvel"
+                        },
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"available\": false, \"message\": \"J\u00e1 existe um paciente cadastrado com este CPF.\"}",
+                            "name": "CPF em uso"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"O CPF informado \u00e9 inv\u00e1lido.\", \"errors\": {\"cpf\": [\"O CPF informado \u00e9 inv\u00e1lido.\"]}}",
+                            "name": "CPF inv\u00e1lido"
+                        }
+                    ]
+                },
+                {
+                    "name": "Restaurar paciente",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/patients\/:patient_id\/restore",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/patients\/:patient_id\/restore",
+                            "variable": [
+                                {
+                                    "id": "patient_id",
+                                    "key": "patient_id",
+                                    "value": "1",
+                                    "description": "ID do paciente exclu\u00eddo."
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Restaura um paciente da lixeira (desfaz a exclus\u00e3o l\u00f3gica). Falha com 409 se outro paciente ativo\nestiver usando o mesmo CPF (o CPF pode ter sido reutilizado depois da exclus\u00e3o).",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:45:00-03:00\", \"age\": 30, \"deleted_at\": null}}",
+                            "name": "Paciente restaurado"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Paciente n\u00e3o encontrado.\"}",
+                            "name": "Paciente n\u00e3o encontrado ou n\u00e3o exclu\u00eddo"
+                        },
+                        {
+                            "header": [],
+                            "code": 409,
+                            "body": "{\"message\": \"J\u00e1 existe um paciente ativo com este CPF.\"}",
+                            "name": "CPF em uso por outro paciente ativo"
+                        }
+                    ]
+                },
                 {
                     "name": "Listar pacientes",
                     "request": {
@@ -43,9 +158,27 @@
                                     "value": "10",
                                     "description": "Itens por p\u00e1gina. Padr\u00e3o: 10; m\u00e1ximo: 100 (valores maiores s\u00e3o limitados a 100).",
                                     "disabled": false
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "name",
+                                    "description": "Campo de ordena\u00e7\u00e3o: `name`, `birth_date` ou `created_at`. Padr\u00e3o: `name` (valor fora da lista tamb\u00e9m usa `name`).",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "direction",
+                                    "value": "asc",
+                                    "description": "Sentido da ordena\u00e7\u00e3o: `asc` ou `desc`. Padr\u00e3o: `asc` (valor inv\u00e1lido tamb\u00e9m usa `asc`). O desempate \u00e9 sempre por `id` crescente.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "trashed",
+                                    "value": "only",
+                                    "description": "Use `only` para listar apenas os pacientes exclu\u00eddos (lixeira).",
+                                    "disabled": false
                                 }
                             ],
-                            "raw": "{{baseUrl}}\/api\/patients?search=maria&page=1&per_page=10"
+                            "raw": "{{baseUrl}}\/api\/patients?search=maria&page=1&per_page=10&sort=name&direction=asc&trashed=only"
                         },
                         "method": "GET",
                         "header": [
@@ -59,7 +192,7 @@
                             }
                         ],
                         "body": null,
-                        "description": "Retorna os pacientes ativos (n\u00e3o exclu\u00eddos) ordenados por nome, com pagina\u00e7\u00e3o no formato padr\u00e3o do Laravel.",
+                        "description": "Retorna os pacientes ativos (n\u00e3o exclu\u00eddos), com pagina\u00e7\u00e3o no formato padr\u00e3o do Laravel. Com `trashed=only`,\nlista apenas os pacientes da lixeira (exclu\u00eddos), com `deleted_at` preenchido; busca, ordena\u00e7\u00e3o e pagina\u00e7\u00e3o\ncontinuam valendo. Cada paciente traz `age` (idade em anos completos no fuso America\/Sao_Paulo).",
                         "auth": {
                             "type": "noauth"
                         }
@@ -68,7 +201,7 @@
                         {
                             "header": [],
                             "code": 200,
-                            "body": "{\n    \"data\": [\n        {\n            \"id\": 1,\n            \"name\": \"Maria da Silva\",\n            \"cpf\": \"62518953060\",\n            \"rg\": \"35688019X\",\n            \"birth_date\": \"1996-07-20\",\n            \"sex\": \"F\",\n            \"phone\": \"11928535718\",\n            \"email\": \"maria@example.com\",\n            \"description\": \"Paciente com miopia leve, retorno anual.\",\n            \"created_at\": \"2026-10-26T15:30:00-03:00\",\n            \"updated_at\": \"2026-10-26T15:30:00-03:00\"\n        },\n        {\n            \"id\": 2,\n            \"name\": \"Jo\u00e3o Pereira Santos\",\n            \"cpf\": \"52998224725\",\n            \"rg\": \"123456789\",\n            \"birth_date\": \"1980-03-15\",\n            \"sex\": \"M\",\n            \"phone\": \"1133334444\",\n            \"email\": null,\n            \"description\": null,\n            \"created_at\": \"2026-10-26T15:31:00-03:00\",\n            \"updated_at\": \"2026-10-26T15:31:00-03:00\"\n        }\n    ],\n    \"links\": {\n        \"first\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n        \"last\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n        \"prev\": null,\n        \"next\": null\n    },\n    \"meta\": {\n        \"current_page\": 1,\n        \"from\": 1,\n        \"last_page\": 1,\n        \"links\": [\n            {\n                \"url\": null,\n                \"label\": \"&laquo; Previous\",\n                \"active\": false\n            },\n            {\n                \"url\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n                \"label\": \"1\",\n                \"active\": true\n            },\n            {\n                \"url\": null,\n                \"label\": \"Next &raquo;\",\n                \"active\": false\n            }\n        ],\n        \"path\": \"http:\/\/localhost:8000\/api\/patients\",\n        \"per_page\": 10,\n        \"to\": 2,\n        \"total\": 2\n    }\n}\n",
+                            "body": "{\n    \"data\": [\n        {\n            \"id\": 1,\n            \"name\": \"Maria da Silva\",\n            \"cpf\": \"62518953060\",\n            \"rg\": \"35688019X\",\n            \"birth_date\": \"1996-07-20\",\n            \"sex\": \"F\",\n            \"phone\": \"11928535718\",\n            \"email\": \"maria@example.com\",\n            \"description\": \"Paciente com miopia leve, retorno anual.\",\n            \"created_at\": \"2026-10-26T15:30:00-03:00\",\n            \"updated_at\": \"2026-10-26T15:30:00-03:00\",\n            \"age\": 30,\n            \"deleted_at\": null\n        },\n        {\n            \"id\": 2,\n            \"name\": \"Jo\u00e3o Pereira Santos\",\n            \"cpf\": \"52998224725\",\n            \"rg\": \"123456789\",\n            \"birth_date\": \"1980-03-15\",\n            \"sex\": \"M\",\n            \"phone\": \"1133334444\",\n            \"email\": null,\n            \"description\": null,\n            \"created_at\": \"2026-10-26T15:31:00-03:00\",\n            \"updated_at\": \"2026-10-26T15:31:00-03:00\",\n            \"age\": 46,\n            \"deleted_at\": null\n        }\n    ],\n    \"links\": {\n        \"first\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n        \"last\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n        \"prev\": null,\n        \"next\": null\n    },\n    \"meta\": {\n        \"current_page\": 1,\n        \"from\": 1,\n        \"last_page\": 1,\n        \"links\": [\n            {\n                \"url\": null,\n                \"label\": \"&laquo; Previous\",\n                \"active\": false\n            },\n            {\n                \"url\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n                \"label\": \"1\",\n                \"active\": true\n            },\n            {\n                \"url\": null,\n                \"label\": \"Next &raquo;\",\n                \"active\": false\n            }\n        ],\n        \"path\": \"http:\/\/localhost:8000\/api\/patients\",\n        \"per_page\": 10,\n        \"to\": 2,\n        \"total\": 2\n    }\n}\n",
                             "name": "Sucesso"
                         }
                     ]
@@ -106,7 +239,7 @@
                         {
                             "header": [],
                             "code": 201,
-                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\"}}",
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null}}",
                             "name": "Paciente criado"
                         },
                         {
@@ -129,12 +262,6 @@
                                 {
                                     "id": "id",
                                     "key": "id",
-                                    "value": "1",
-                                    "description": "The ID of the patient."
-                                },
-                                {
-                                    "id": "patient",
-                                    "key": "patient",
                                     "value": "1",
                                     "description": "ID do paciente."
                                 }
@@ -161,7 +288,7 @@
                         {
                             "header": [],
                             "code": 200,
-                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\"}}",
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null}}",
                             "name": "Sucesso"
                         },
                         {
@@ -184,12 +311,6 @@
                                 {
                                     "id": "id",
                                     "key": "id",
-                                    "value": "1",
-                                    "description": "The ID of the patient."
-                                },
-                                {
-                                    "id": "patient",
-                                    "key": "patient",
                                     "value": "1",
                                     "description": "ID do paciente."
                                 }
@@ -219,7 +340,7 @@
                         {
                             "header": [],
                             "code": 200,
-                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\"}}",
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null}}",
                             "name": "Paciente atualizado"
                         },
                         {
@@ -248,12 +369,6 @@
                                 {
                                     "id": "id",
                                     "key": "id",
-                                    "value": "1",
-                                    "description": "The ID of the patient."
-                                },
-                                {
-                                    "id": "patient",
-                                    "key": "patient",
                                     "value": "1",
                                     "description": "ID do paciente."
                                 }

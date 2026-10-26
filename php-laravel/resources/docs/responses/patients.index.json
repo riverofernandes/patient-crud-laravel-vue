@@ -11,7 +11,9 @@
             "email": "maria@example.com",
             "description": "Paciente com miopia leve, retorno anual.",
             "created_at": "2026-10-26T15:30:00-03:00",
-            "updated_at": "2026-10-26T15:30:00-03:00"
+            "updated_at": "2026-10-26T15:30:00-03:00",
+            "age": 30,
+            "deleted_at": null
         },
         {
             "id": 2,
@@ -24,7 +26,9 @@
             "email": null,
             "description": null,
             "created_at": "2026-10-26T15:31:00-03:00",
-            "updated_at": "2026-10-26T15:31:00-03:00"
+            "updated_at": "2026-10-26T15:31:00-03:00",
+            "age": 46,
+            "deleted_at": null
         }
     ],
     "links": {

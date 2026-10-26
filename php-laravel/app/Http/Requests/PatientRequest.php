@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\NormalizesPatientInput;
 use App\Models\Patient;
 use App\Rules\Cpf;
+use App\Rules\UniqueActiveCpf;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,24 +14,11 @@ use Illuminate\Validation\Rule;
  */
 class PatientRequest extends FormRequest
 {
+    use NormalizesPatientInput;
+
     public function authorize(): bool
     {
         return true;
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $sanitized = [];
-
-        foreach (['cpf' => '/\D/', 'phone' => '/\D/', 'rg' => '/[^0-9X]/'] as $field => $pattern) {
-            $value = $this->input($field);
-
-            if (is_string($value)) {
-                $sanitized[$field] = preg_replace($pattern, '', strtoupper($value));
-            }
-        }
-
-        $this->merge($sanitized);
     }
 
     /**
@@ -45,9 +34,7 @@ class PatientRequest extends FormRequest
                 'required',
                 'string',
                 new Cpf(),
-                Rule::unique('patients', 'cpf')
-                    ->whereNull('deleted_at')
-                    ->ignore($patient instanceof Patient ? $patient->getKey() : null),
+                new UniqueActiveCpf($patient instanceof Patient ? $patient->getKey() : null),
             ],
             'rg' => ['required', 'string', 'max:20'],
             'birth_date' => ['bail', 'required', 'date_format:Y-m-d', 'before_or_equal:today'],
@@ -63,12 +50,9 @@ class PatientRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
-            'required' => 'O campo :attribute é obrigatório.',
-            'string' => 'O campo :attribute deve ser um texto.',
+        return $this->sharedMessages() + [
             'name.min' => 'O campo :attribute deve ter pelo menos :min caracteres.',
             'name.max' => 'O campo :attribute não pode ter mais de :max caracteres.',
-            'cpf.unique' => 'Já existe um paciente cadastrado com este CPF.',
             'rg.max' => 'O campo :attribute não pode ter mais de :max caracteres.',
             'birth_date.date_format' => 'O campo :attribute deve ser uma data válida no formato AAAA-MM-DD.',
             'birth_date.before_or_equal' => 'O campo :attribute não pode ser uma data futura.',
@@ -85,16 +69,7 @@ class PatientRequest extends FormRequest
      */
     public function attributes(): array
     {
-        return [
-            'name' => 'nome completo',
-            'cpf' => 'CPF',
-            'rg' => 'RG',
-            'birth_date' => 'data de nascimento',
-            'sex' => 'sexo',
-            'phone' => 'celular',
-            'email' => 'e-mail',
-            'description' => 'descrição',
-        ];
+        return $this->sharedAttributes();
     }
 
     /**

@@ -18,6 +18,8 @@ Todas as respostas são JSON. Header recomendado: `Accept: application/json`.
 | `description` | string \| null       | opcional, até 2000                                                     |
 | `created_at`  | ISO-8601             | somente leitura                                                        |
 | `updated_at`  | ISO-8601             | somente leitura                                                        |
+| `age`         | int                  | somente leitura — idade em anos completos no fuso America/Sao_Paulo    |
+| `deleted_at`  | ISO-8601 \| null     | somente leitura — preenchido só para pacientes na lixeira              |
 
 Formatação visual (máscaras de CPF/RG/celular, data `DD/MM/AAAA`) é responsabilidade do front-end.
 
@@ -26,13 +28,23 @@ Exclusão é **soft delete** (`deleted_at`). Pacientes excluídos não aparecem 
 ## Endpoints
 
 ### `GET /patients`
-Query params: `search` (opcional — busca por nome parcial ou CPF, com ou sem máscara), `page` (default 1), `per_page` (default 10, máx 100).
-Ordenação: `name` asc.
+Query params:
+
+| Param       | Default | Descrição |
+|-------------|---------|-----------|
+| `search`    | —       | Nome parcial ou CPF, com ou sem máscara |
+| `page`      | 1       | Página |
+| `per_page`  | 10      | Itens por página (1–100; inválido → 10) |
+| `sort`      | `name`  | `name` \| `birth_date` \| `created_at` (valor fora da lista → `name`) |
+| `direction` | `asc`   | `asc` \| `desc`, minúsculos (inválido → `asc`). Desempate sempre por `id` asc |
+| `trashed`   | —       | `only` lista **apenas** pacientes excluídos (lixeira) |
+
+Na lixeira (`trashed=only`) cada item traz `deleted_at` preenchido; nas demais respostas `deleted_at` é `null`.
 
 ```json
 200
 {
-  "data": [ { "id": 1, "name": "...", "cpf": "62518953060", "rg": "356880199", "birth_date": "1996-07-20", "sex": "M", "phone": "11928535718", "email": null, "description": null, "created_at": "...", "updated_at": "..." } ],
+  "data": [ { "id": 1, "name": "...", "cpf": "62518953060", "rg": "356880199", "birth_date": "1996-07-20", "sex": "M", "phone": "11928535718", "email": null, "description": null, "created_at": "...", "updated_at": "...", "age": 30, "deleted_at": null } ],
   "links": { "first": "...", "last": "...", "prev": null, "next": "..." },
   "meta": { "current_page": 1, "last_page": 3, "per_page": 10, "total": 27, "from": 1, "to": 10 }
 }
@@ -50,6 +62,16 @@ Body: todos os campos editáveis (substituição completa). `200 { "data": Patie
 
 ### `DELETE /patients/{id}`
 Soft delete. `204` sem corpo · `404`
+
+### `POST /patients/{id}/restore`
+Restaura um paciente da lixeira. `200 { "data": Patient }` ·
+`404` se o id não existir ou o paciente não estiver excluído ·
+`409 { "message": "Já existe um paciente ativo com este CPF." }` se outro paciente ativo usar o mesmo CPF.
+
+### `GET /patients/cpf-availability?cpf={cpf}&ignore={id}`
+Verifica se um CPF pode ser usado (aceita máscara; `ignore` opcional, id inteiro do paciente em edição — valor não inteiro → `422`).
+`200 { "available": true }` ou `200 { "available": false, "message": "Já existe um paciente cadastrado com este CPF." }` ·
+`422` se o CPF for inválido (mesmas mensagens da validação de cadastro).
 
 ### `GET /health`
 Verifica a aplicação e a conexão com o banco. Não passa pelo rate limit.

@@ -1,7 +1,18 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
-import { deleteDialog, detailValue, expect, field, gotoListing, rowFor, test } from "../support/fixtures";
-import type { Patient } from "../support/api";
+import {
+  deleteDialog,
+  detailValue,
+  expect,
+  field,
+  gotoListing,
+  gotoTrash,
+  rowFor,
+  test,
+  trashRows,
+  waitForTable,
+} from "../support/fixtures";
+import type { Patient, PatientApi } from "../support/api";
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 
@@ -29,19 +40,39 @@ for (const viewport of [
   test.describe(`Acessibilidade (axe, WCAG 2.1 AA) @ ${viewport.name}`, () => {
     test.use({ viewport: { width: viewport.width, height: viewport.height } });
 
-    let patient: Patient;
+    // Created only by the tests that need it (the API rate limit is tight for the whole suite).
+    const createPatient = (api: PatientApi): Promise<Patient> =>
+      api.createPatient({ email: "e2e@example.com", description: "Paciente criado pelo E2E" });
 
-    test.beforeEach(async ({ api }) => {
-      patient = await api.createPatient({ email: "e2e@example.com", description: "Paciente criado pelo E2E" });
-    });
-
-    test("listagem", async ({ page }) => {
+    test("listagem", async ({ page, api }) => {
+      await createPatient(api); // at least one row
       await gotoListing(page);
       await expect(page.getByRole("table", { name: "Lista de pacientes" }).getByRole("row").nth(1)).toBeVisible();
       await expectNoA11yViolations(page);
     });
 
-    test("detalhes", async ({ page }) => {
+    test("listagem ordenada", async ({ page, api }) => {
+      await createPatient(api); // at least one row
+      await page.goto("/?sort=birth_date&direction=desc");
+      await waitForTable(page);
+      await expect(page.getByRole("columnheader", { name: "Data de nascimento" })).toHaveAttribute(
+        "aria-sort",
+        "descending"
+      );
+      await expect(page.getByRole("table", { name: "Lista de pacientes" }).getByRole("row").nth(1)).toBeVisible();
+      await expectNoA11yViolations(page);
+    });
+
+    test("lixeira com pacientes", async ({ page, api }) => {
+      const patient = await createPatient(api);
+      await api.deletePatient(patient.id);
+      await gotoTrash(page);
+      await expect(trashRows(page).first()).toBeVisible();
+      await expectNoA11yViolations(page);
+    });
+
+    test("detalhes", async ({ page, api }) => {
+      const patient = await createPatient(api);
       await page.goto(`/pacientes/${patient.id}`);
       await expect(detailValue(page, "Nome completo")).toHaveText(patient.name);
       await expectNoA11yViolations(page);
@@ -60,13 +91,15 @@ for (const viewport of [
       await expectNoA11yViolations(page);
     });
 
-    test("edição", async ({ page }) => {
+    test("edição", async ({ page, api }) => {
+      const patient = await createPatient(api);
       await page.goto(`/pacientes/${patient.id}/editar`);
       await expect(field(page, "Nome completo")).toHaveValue(patient.name);
       await expectNoA11yViolations(page);
     });
 
-    test("modal de exclusão", async ({ page }) => {
+    test("modal de exclusão", async ({ page, api }) => {
+      const patient = await createPatient(api);
       await gotoListing(page, patient.name);
       await rowFor(page, patient.name).getByRole("button", { name: `Excluir ${patient.name}` }).click();
       await waitForFadeIn(deleteDialog(page));
@@ -74,6 +107,7 @@ for (const viewport of [
     });
 
     test("paciente não encontrado", async ({ page, api }) => {
+      const patient = await createPatient(api);
       await api.deletePatient(patient.id);
       await page.goto(`/pacientes/${patient.id}`);
       await expect(page.getByRole("heading", { level: 1, name: "Paciente não encontrado" })).toBeVisible();

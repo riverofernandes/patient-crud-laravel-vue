@@ -1,8 +1,146 @@
 name: Pacientes
 description: |-
 
-  Cadastro de pacientes: listagem com busca e paginação, detalhe, criação, atualização e exclusão lógica.
+  Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
+  exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
 endpoints:
+  -
+    httpMethods:
+      - GET
+    uri: api/patients/cpf-availability
+    metadata:
+      groupName: Pacientes
+      groupDescription: |-
+
+        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
+        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Verificar disponibilidade de CPF'
+      description: |-
+        Informa se um CPF pode ser usado em um cadastro (não pertence a nenhum paciente ativo). Pacientes excluídos
+        não contam. Na edição, envie `ignore` com o ID do próprio paciente. CPF inválido retorna 422 com as mesmas
+        mensagens do cadastro.
+      authenticated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters:
+      cpf:
+        name: cpf
+        description: 'CPF a verificar, com ou sem máscara. Deve ser válido (dígitos verificadores conferidos).'
+        required: true
+        example: 625.189.530-60
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      ignore:
+        name: ignore
+        description: 'ID de um paciente a desconsiderar (use na edição para não acusar o próprio CPF). Must be at least 1.'
+        required: false
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+    cleanQueryParameters:
+      cpf: 625.189.530-60
+      ignore: 1
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: '{"available": true}'
+        headers: []
+        description: 'CPF disponível'
+        custom: []
+      -
+        status: 200
+        content: '{"available": false, "message": "Já existe um paciente cadastrado com este CPF."}'
+        headers: []
+        description: 'CPF em uso'
+        custom: []
+      -
+        status: 422
+        content: '{"message": "O CPF informado é inválido.", "errors": {"cpf": ["O CPF informado é inválido."]}}'
+        headers: []
+        description: 'CPF inválido'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: 'api/patients/{patient_id}/restore'
+    metadata:
+      groupName: Pacientes
+      groupDescription: |-
+
+        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
+        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Restaurar paciente'
+      description: |-
+        Restaura um paciente da lixeira (desfaz a exclusão lógica). Falha com 409 se outro paciente ativo
+        estiver usando o mesmo CPF (o CPF pode ter sido reutilizado depois da exclusão).
+      authenticated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      patient_id:
+        name: patient_id
+        description: 'ID do paciente excluído.'
+        required: true
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+    cleanUrlParameters:
+      patient_id: 1
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:45:00-03:00", "age": 30, "deleted_at": null}}'
+        headers: []
+        description: 'Paciente restaurado'
+        custom: []
+      -
+        status: 404
+        content: '{"message": "Paciente não encontrado."}'
+        headers: []
+        description: 'Paciente não encontrado ou não excluído'
+        custom: []
+      -
+        status: 409
+        content: '{"message": "Já existe um paciente ativo com este CPF."}'
+        headers: []
+        description: 'CPF em uso por outro paciente ativo'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
   -
     httpMethods:
       - GET
@@ -11,11 +149,15 @@ endpoints:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca e paginação, detalhe, criação, atualização e exclusão lógica.
+        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
+        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Listar pacientes'
-      description: 'Retorna os pacientes ativos (não excluídos) ordenados por nome, com paginação no formato padrão do Laravel.'
+      description: |-
+        Retorna os pacientes ativos (não excluídos), com paginação no formato padrão do Laravel. Com `trashed=only`,
+        lista apenas os pacientes da lixeira (excluídos), com `deleted_at` preenchido; busca, ordenação e paginação
+        continuam valendo. Cada paciente traz `age` (idade em anos completos no fuso America/Sao_Paulo).
       authenticated: false
       custom: []
     headers:
@@ -51,10 +193,40 @@ endpoints:
         enumValues: []
         exampleWasSpecified: true
         custom: []
+      sort:
+        name: sort
+        description: 'Campo de ordenação: `name`, `birth_date` ou `created_at`. Padrão: `name` (valor fora da lista também usa `name`).'
+        required: false
+        example: name
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      direction:
+        name: direction
+        description: 'Sentido da ordenação: `asc` ou `desc`. Padrão: `asc` (valor inválido também usa `asc`). O desempate é sempre por `id` crescente.'
+        required: false
+        example: asc
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      trashed:
+        name: trashed
+        description: 'Use `only` para listar apenas os pacientes excluídos (lixeira).'
+        required: false
+        example: only
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
     cleanQueryParameters:
       search: maria
       page: 1
       per_page: 10
+      sort: name
+      direction: asc
+      trashed: only
     bodyParameters: []
     cleanBodyParameters: []
     fileParameters: []
@@ -75,7 +247,9 @@ endpoints:
                       "email": "maria@example.com",
                       "description": "Paciente com miopia leve, retorno anual.",
                       "created_at": "2026-10-26T15:30:00-03:00",
-                      "updated_at": "2026-10-26T15:30:00-03:00"
+                      "updated_at": "2026-10-26T15:30:00-03:00",
+                      "age": 30,
+                      "deleted_at": null
                   },
                   {
                       "id": 2,
@@ -88,7 +262,9 @@ endpoints:
                       "email": null,
                       "description": null,
                       "created_at": "2026-10-26T15:31:00-03:00",
-                      "updated_at": "2026-10-26T15:31:00-03:00"
+                      "updated_at": "2026-10-26T15:31:00-03:00",
+                      "age": 46,
+                      "deleted_at": null
                   }
               ],
               "links": {
@@ -141,7 +317,8 @@ endpoints:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca e paginação, detalhe, criação, atualização e exclusão lógica.
+        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
+        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Cadastrar paciente'
@@ -245,7 +422,7 @@ endpoints:
     responses:
       -
         status: 201
-        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00"}}'
+        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null}}'
         headers: []
         description: 'Paciente criado'
         custom: []
@@ -269,7 +446,8 @@ endpoints:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca e paginação, detalhe, criação, atualização e exclusão lógica.
+        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
+        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Detalhar paciente'
@@ -282,15 +460,6 @@ endpoints:
     urlParameters:
       id:
         name: id
-        description: 'The ID of the patient.'
-        required: true
-        example: 1
-        type: integer
-        enumValues: []
-        exampleWasSpecified: false
-        custom: []
-      patient:
-        name: patient
         description: 'ID do paciente.'
         required: true
         example: 1
@@ -300,7 +469,6 @@ endpoints:
         custom: []
     cleanUrlParameters:
       id: 1
-      patient: 1
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters: []
@@ -309,7 +477,7 @@ endpoints:
     responses:
       -
         status: 200
-        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00"}}'
+        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null}}'
         headers: []
         description: Sucesso
         custom: []
@@ -334,7 +502,8 @@ endpoints:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca e paginação, detalhe, criação, atualização e exclusão lógica.
+        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
+        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Atualizar paciente'
@@ -347,15 +516,6 @@ endpoints:
     urlParameters:
       id:
         name: id
-        description: 'The ID of the patient.'
-        required: true
-        example: 1
-        type: integer
-        enumValues: []
-        exampleWasSpecified: false
-        custom: []
-      patient:
-        name: patient
         description: 'ID do paciente.'
         required: true
         example: 1
@@ -365,7 +525,6 @@ endpoints:
         custom: []
     cleanUrlParameters:
       id: 1
-      patient: 1
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters:
@@ -456,7 +615,7 @@ endpoints:
     responses:
       -
         status: 200
-        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00"}}'
+        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null}}'
         headers: []
         description: 'Paciente atualizado'
         custom: []
@@ -486,7 +645,8 @@ endpoints:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca e paginação, detalhe, criação, atualização e exclusão lógica.
+        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
+        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Excluir paciente'
@@ -501,15 +661,6 @@ endpoints:
     urlParameters:
       id:
         name: id
-        description: 'The ID of the patient.'
-        required: true
-        example: 1
-        type: integer
-        enumValues: []
-        exampleWasSpecified: false
-        custom: []
-      patient:
-        name: patient
         description: 'ID do paciente.'
         required: true
         example: 1
@@ -519,7 +670,6 @@ endpoints:
         custom: []
     cleanUrlParameters:
       id: 1
-      patient: 1
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters: []

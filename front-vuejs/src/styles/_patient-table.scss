@@ -1,0 +1,247 @@
+// Shared by the patients listing and the trash (imported inside scoped <style>
+// blocks, so ::v-deep reaches into BootstrapVue's table/pagination markup).
+@import "variables";
+
+.search-field {
+  position: relative;
+  margin-bottom: 16px;
+
+  ::v-deep .form-control {
+    padding-left: 47px;
+
+    &::-webkit-search-cancel-button {
+      cursor: pointer;
+    }
+  }
+}
+
+.search-field__icon {
+  position: absolute;
+  top: 10px;
+  left: 17px;
+  color: $text-muted;
+  font-size: 20px;
+  pointer-events: none;
+}
+
+.patients-table {
+  position: relative; // contains the absolutely positioned .sr-only header text
+  margin-bottom: 0;
+  border: 1px solid $border;
+  border-radius: 8px;
+
+  ::v-deep table {
+    margin-bottom: 0;
+    color: $text;
+    font-size: 16px;
+  }
+
+  ::v-deep thead th {
+    height: 55px;
+    padding: 0 24px;
+    color: $navy;
+    font-weight: 700;
+    white-space: nowrap;
+    vertical-align: middle;
+    background: $page-bg;
+    border-top: 0;
+    border-bottom: 1px solid $border;
+  }
+
+  ::v-deep tbody td {
+    height: 56px;
+    padding: 0 24px;
+    white-space: nowrap;
+    vertical-align: middle;
+    border-top: 1px solid $border;
+  }
+
+  ::v-deep tbody tr:first-child td {
+    border-top: 0;
+  }
+
+  ::v-deep .patients-table__row {
+    cursor: pointer;
+  }
+
+  ::v-deep .table-hover tbody tr:hover {
+    color: $text;
+    background: rgba($blue, 0.03);
+  }
+
+  ::v-deep .b-table-empty-row td,
+  ::v-deep .b-table-busy-slot td {
+    cursor: default;
+    white-space: normal;
+  }
+
+  ::v-deep .col-name {
+    width: 41%;
+  }
+
+  ::v-deep .col-cpf,
+  ::v-deep .col-phone {
+    width: 16%;
+  }
+
+  ::v-deep .col-actions {
+    width: 1%;
+    padding-right: 14px;
+    padding-left: 0;
+    text-align: right;
+  }
+}
+
+.row-actions {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.row-actions__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: $blue;
+  font-size: 18px;
+  border-radius: 6px;
+
+  &:hover,
+  &:focus {
+    color: $blue-dark;
+    background: rgba($blue, 0.08);
+  }
+
+  &--danger {
+    color: $red;
+
+    &:hover,
+    &:focus {
+      color: darken($red, 12%);
+      background: rgba($red, 0.08);
+    }
+  }
+}
+
+.list-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.list-footer__info {
+  color: $text-muted;
+  font-size: 14px;
+}
+
+.app-pagination {
+  gap: 10px;
+  margin: 0 0 0 auto;
+
+  ::v-deep .page-item {
+    .page-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 30px;
+      height: 30px;
+      margin: 0;
+      padding: 0 8px;
+      color: $text-muted;
+      font-size: 14px;
+      font-weight: 700;
+      border: 1px solid $border-light;
+      border-radius: 4px !important;
+    }
+
+    &:first-child .page-link,
+    &:last-child .page-link {
+      color: $blue;
+    }
+
+    &.active .page-link {
+      color: #fff;
+      background: $blue;
+      border-color: $blue;
+    }
+
+    &.disabled .page-link {
+      color: $text-muted;
+      background: $page-bg;
+      border-color: $border-light;
+    }
+  }
+}
+
+// ---------- Sortable headers ----------
+// aria-sort is set by us (not b-table's `sortable`): drop BootstrapVue's
+// background sort icons, our header button draws its own.
+.patients-table ::v-deep thead th[aria-sort] {
+  padding-right: 24px !important;
+  background-image: none !important;
+  cursor: default;
+}
+
+.sort-btn {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0 -6px;
+  padding: 4px 6px;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover {
+    color: $blue;
+  }
+}
+
+.sort-btn__icon {
+  flex: 0 0 auto;
+  color: $text-muted;
+  font-size: 12px;
+
+  &.is-active {
+    color: $blue;
+  }
+}
+
+// ---------- Footer: per-page select ----------
+.list-footer__start {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  align-items: center;
+}
+
+.per-page {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+
+  label {
+    margin: 0;
+    color: $text-muted;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  ::v-deep .custom-select {
+    width: 76px;
+    height: 30px;
+    padding: 0 30px 0 10px;
+    font-size: 14px;
+    background-position: right 10px center;
+  }
+}

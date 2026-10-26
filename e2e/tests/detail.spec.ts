@@ -48,6 +48,6 @@ test.describe("Detalhes do paciente", () => {
       .getByRole("link", { name: "Pacientes" })
       .click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Pacientes" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Pacientes", exact: true })).toBeVisible();
   });
 });

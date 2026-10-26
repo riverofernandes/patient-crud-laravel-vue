@@ -29,7 +29,8 @@
             :formatter="maskCpf"
             :state="state('cpf')"
             :aria-describedby="errorId('cpf')"
-            @input="clearError('cpf')"
+            @input="onCpfInput"
+            @blur="scheduleCpfCheck"
           />
         </FormField>
 
@@ -167,6 +168,12 @@
       </FormField>
     </div>
 
+    <!-- Announces the asynchronous CPF availability result (the field error
+         itself is linked with aria-describedby like any other error). -->
+    <p class="sr-only" role="status" aria-live="polite">
+      {{ cpfAnnouncement }}
+    </p>
+
     <footer class="form-footer">
       <slot name="footer-start">
         <router-link :to="{ name: 'patients.index' }" class="btn-link-danger"
@@ -202,6 +209,8 @@ import {
 } from "@/utils/format";
 import { isValidCpf, isValidEmail } from "@/utils/validation";
 import { notify } from "@/utils/notify";
+import { debounce } from "@/utils/debounce";
+import { patientService } from "@/services/patientService";
 
 type FieldName = keyof PatientPayload;
 type FieldErrors = Partial<Record<FieldName, string>>;
@@ -218,6 +227,8 @@ interface FormState {
 }
 
 const REQUIRED = "Campo obrigatório";
+export const CPF_TAKEN = "Já existe um paciente cadastrado com este CPF.";
+export const CPF_CHECK_DELAY = 300;
 
 function toFormState(patient: Patient | null): FormState {
   return {
@@ -251,6 +262,10 @@ export default defineComponent({
       form: toFormState(this.patient) as FormState,
       errors: {} as FieldErrors,
       today: todayIso(),
+      cpfAnnouncement: "",
+      /** Message set by the availability check (so only that one is cleared by it). */
+      cpfCheckMessage: "",
+      cpfAbort: null as AbortController | null,
       sexOptions: [
         { value: "", text: "Selecionar", disabled: true },
         { value: "M", text: "Masculino" },
@@ -273,6 +288,7 @@ export default defineComponent({
   watch: {
     pickerButtonLabel: "labelPickerButton",
     patient(value: Patient | null) {
+      this.cancelCpfCheck();
       this.form = toFormState(value);
       this.errors = {};
     },
@@ -286,10 +302,18 @@ export default defineComponent({
       this.focusFirstError();
     },
   },
+  created() {
+    this.runCpfCheck = debounce(() => void this.checkCpf(), CPF_CHECK_DELAY);
+  },
   mounted() {
     this.labelPickerButton();
   },
+  beforeDestroy() {
+    this.cancelCpfCheck();
+  },
   methods: {
+    // replaced with a debounced version in created()
+    runCpfCheck: (() => undefined) as (() => void) & { cancel?: () => void },
     maskCpf,
     maskRg,
     maskPhone,
@@ -315,6 +339,64 @@ export default defineComponent({
     },
     clearError(field: FieldName): void {
       if (this.errors[field]) this.$delete(this.errors, field);
+    },
+    onCpfInput(): void {
+      this.clearError("cpf");
+      this.cpfAnnouncement = "";
+      this.cancelCpfCheck();
+    },
+    /** Digits of the CPF when it is worth asking the API about, else "". */
+    checkableCpf(): string {
+      const digits = onlyDigits(this.form.cpf);
+      if (!isValidCpf(digits)) return "";
+      // Editing and the CPF is unchanged: it is (by definition) this patient's.
+      if (this.patient && digits === onlyDigits(this.patient.cpf)) return "";
+      return digits;
+    },
+    scheduleCpfCheck(): void {
+      if (!this.checkableCpf()) return;
+      this.runCpfCheck();
+    },
+    cancelCpfCheck(): void {
+      this.runCpfCheck.cancel?.();
+      this.cpfAbort?.abort();
+      this.cpfAbort = null;
+    },
+    /**
+     * Real-time duplicate check. Any failure (network, 404 on an older API, 422)
+     * is ignored on purpose: it never blocks saving, the server still validates.
+     */
+    async checkCpf(): Promise<void> {
+      const cpf = this.checkableCpf();
+      if (!cpf) return;
+      this.cpfAbort?.abort();
+      const controller = new AbortController();
+      this.cpfAbort = controller;
+      try {
+        const result = await patientService.checkCpf(cpf, {
+          ignore: this.patient?.id,
+          signal: controller.signal,
+        });
+        // Stale: the user changed the CPF (or a newer check started) meanwhile.
+        if (controller.signal.aborted || onlyDigits(this.form.cpf) !== cpf)
+          return;
+        if (!result.available) {
+          const message = result.message || CPF_TAKEN;
+          this.cpfCheckMessage = message;
+          this.$set(this.errors, "cpf", message);
+          this.cpfAnnouncement = message;
+        } else if (
+          this.errors.cpf &&
+          this.errors.cpf === this.cpfCheckMessage
+        ) {
+          this.clearError("cpf");
+          this.cpfAnnouncement = "";
+        }
+      } catch {
+        // ignored (see above)
+      } finally {
+        if (this.cpfAbort === controller) this.cpfAbort = null;
+      }
     },
     onPickDate(iso: string): void {
       if (!iso) return;
