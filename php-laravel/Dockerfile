@@ -76,6 +76,13 @@ RUN apt-get update \
     && docker-php-ext-install pdo_mysql pdo_sqlite zip \
     && rm -rf /var/lib/apt/lists/*
 
+# Code coverage driver for `php artisan test --coverage` (dev only; never installed in the prod image).
+RUN pecl install pcov-1.0.12 \
+    && docker-php-ext-enable pcov \
+    && rm -rf /tmp/pear \
+    # The CLI default (128M) is too small for a cold Larastan run (`vendor/bin/phpstan analyse`).
+    && echo 'memory_limit=512M' > "$PHP_INI_DIR/conf.d/zz-dev.ini"
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
