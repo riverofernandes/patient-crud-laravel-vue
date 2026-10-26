@@ -63,6 +63,29 @@ for (const viewport of [
       await expectNoA11yViolations(page);
     });
 
+    test("listagem com filtros abertos e erro de validação", async ({ page }) => {
+      // ?sex opens the panel; no patients needed (the empty state is checked too).
+      await page.goto(`/?sex=F&search=${encodeURIComponent("E2E sem resultado a11y")}`);
+      await waitForTable(page);
+      const min = page.getByRole("spinbutton", { name: "Idade mínima", exact: true });
+      await expect(min).toBeVisible();
+      await min.fill("151");
+      await min.blur();
+      await expect(min).toHaveAccessibleDescription("Informe uma idade entre 0 e 150.");
+      await expectNoA11yViolations(page);
+    });
+
+    test("detalhes: aba Histórico", async ({ page, api }) => {
+      const patient = await createPatient(api);
+      await api.updatePatient(patient, { name: `${patient.name} Editado` });
+      await page.goto(`/pacientes/${patient.id}?aba=historico`);
+      await expect(page.getByText("Carregando histórico...")).toHaveCount(0);
+      const panel = page.getByRole("tabpanel", { name: "Histórico" });
+      await expect(panel.getByRole("list", { name: "Histórico de alterações" }).locator(":scope > li")).toHaveCount(2);
+      await waitForFadeIn(panel);
+      await expectNoA11yViolations(page);
+    });
+
     test("lixeira com pacientes", async ({ page, api }) => {
       const patient = await createPatient(api);
       await api.deletePatient(patient.id);

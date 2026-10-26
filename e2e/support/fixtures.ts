@@ -115,3 +115,88 @@ export function formatDateTimeSaoPaulo(iso: string): string {
 export function todaySaoPaulo(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 }
+
+/**
+ * Today (America/Sao_Paulo) shifted by `days`, minus `years`, as YYYY-MM-DD. A Feb 29 that does not
+ * exist in the target year becomes Feb 28 (like the API's subYearsNoOverflow). Use `ageOn` for the
+ * expected age instead of assuming it, so the rare leap-day cases stay consistent.
+ */
+export function birthDateYearsAgo(years: number, days = 0): string {
+  const [y, m, d] = todaySaoPaulo().split("-").map(Number);
+  const shifted = new Date(Date.UTC(y, m - 1, d + days));
+  const year = shifted.getUTCFullYear() - years;
+  const month = shifted.getUTCMonth() + 1;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const day = Math.min(shifted.getUTCDate(), lastDay);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/** Age in whole years today (America/Sao_Paulo), same rule as the API. */
+export function ageOn(birthDate: string, today: string = todaySaoPaulo()): number {
+  const [by, bmd] = [Number(birthDate.slice(0, 4)), birthDate.slice(5)];
+  const [ty, tmd] = [Number(today.slice(0, 4)), today.slice(5)];
+  return ty - by - (tmd < bmd ? 1 : 0);
+}
+
+/* ---------- Listing filters ---------- */
+
+/** The "Filtros" toggle. Its accessible name grows to "Filtros (N ativo/ativos)" with active filters. */
+export function filtersToggle(page: Page): Locator {
+  return page.getByRole("button", { name: /^Filtros(\s*\(\d+ ativos?\))?$/ });
+}
+
+export function filtersPanel(page: Page): Locator {
+  return page.getByRole("group", { name: "Filtros" });
+}
+
+export function sexFilter(page: Page): Locator {
+  return filtersPanel(page).getByRole("combobox", { name: "Sexo" });
+}
+
+/** Number inputs (role spinbutton): "Idade mínima" / "Idade máxima". */
+export function ageFilter(page: Page, label: "Idade mínima" | "Idade máxima"): Locator {
+  return filtersPanel(page).getByRole("spinbutton", { name: label, exact: true });
+}
+
+/** Opens the filters panel if it is closed. */
+export async function openFilters(page: Page): Promise<void> {
+  const toggle = filtersToggle(page);
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(filtersPanel(page)).toBeVisible();
+}
+
+/** Opens the listing with an arbitrary query string and waits for the table to settle. */
+export async function gotoListingQuery(page: Page, query: Record<string, string | number>): Promise<void> {
+  const qs = new URLSearchParams(Object.entries(query).map(([k, v]) => [k, String(v)])).toString();
+  await page.goto(qs ? `/?${qs}` : "/");
+  await expect(page.getByRole("heading", { level: 1, name: "Pacientes", exact: true })).toBeVisible();
+  await waitForTable(page);
+}
+
+/** Query param of the current page URL. */
+export function urlParam(page: Page, name: string): string | null {
+  return new URL(page.url()).searchParams.get(name);
+}
+
+/* ---------- Detail: history tab ---------- */
+
+export function historyList(page: Page): Locator {
+  return page.getByRole("list", { name: "Histórico de alterações" });
+}
+
+/** Top-level entries of the history (not the nested changed-field rows). */
+export function historyEntries(page: Page): Locator {
+  return historyList(page).locator(":scope > li");
+}
+
+/** Changed-field row of an "Edição" entry, by the field label ("Nome completo", "Celular"...). */
+export function historyChange(entry: Locator, label: string): Locator {
+  return entry.locator(".history-change").filter({
+    has: entry.page().locator(".history-change__field", { hasText: new RegExp(`^${label}$`) }),
+  });
+}
+
+export async function waitForHistory(page: Page): Promise<void> {
+  await expect(page.getByText("Carregando histórico...")).toHaveCount(0);
+}

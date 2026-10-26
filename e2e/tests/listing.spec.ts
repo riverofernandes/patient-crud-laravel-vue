@@ -55,6 +55,27 @@ test.describe("Listagem de pacientes", () => {
     ).toBeVisible();
   });
 
+  test("busca por CPF: só o CPF completo encontra (com ou sem máscara); CPF parcial não", async ({ page, api }) => {
+    const patient = await api.createPatient();
+
+    await gotoListing(page);
+    // Hint under the search box (CPF is stored encrypted: only the full number is searchable)
+    await expect(searchBox(page)).toHaveAccessibleDescription("CPF: informe os 11 dígitos");
+
+    await searchBox(page).fill(patient.cpf);
+    await expect.poll(() => new URL(page.url()).searchParams.get("search")).toBe(patient.cpf);
+    await waitForTable(page);
+    await expect(patientRows(page)).toHaveCount(1);
+    await expect(rowFor(page, patient.name)).toBeVisible();
+
+    for (const partial of [maskCpf(patient.cpf).slice(0, 11), patient.cpf.slice(0, 10)]) {
+      await searchBox(page).fill(partial);
+      await expect.poll(() => new URL(page.url()).searchParams.get("search")).toBe(partial);
+      await expect(emptyState(page)).toBeVisible();
+      await expect(rowFor(page, patient.name)).toHaveCount(0);
+    }
+  });
+
   test("mostra estado vazio quando a busca não encontra nada", async ({ page }) => {
     await gotoListing(page);
     await searchBox(page).fill(`${uniqueTag()} inexistente`);
