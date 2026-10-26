@@ -8,7 +8,12 @@ import { patientService, type Patient } from "@/services/patientService";
 import { flushPromises, makeLocalVue, makeRouter } from "@/test/helpers";
 
 vi.mock("@/services/patientService", () => ({
-  patientService: { list: vi.fn(), remove: vi.fn(), restore: vi.fn() },
+  patientService: {
+    list: vi.fn(),
+    remove: vi.fn(),
+    restore: vi.fn(),
+    exportCsv: vi.fn(),
+  },
 }));
 vi.mock("@/utils/notify", () => ({ notify: vi.fn() }));
 
@@ -150,5 +155,183 @@ describe("PatientListView", () => {
     expect(list).toHaveBeenLastCalledWith(
       expect.objectContaining({ per_page: 10 })
     );
+  });
+});
+
+describe("PatientListView filters and export", () => {
+  const toggle = () => wrapper.find(".filters-toggle");
+
+  it("starts with the panel closed and no badge", async () => {
+    await mountList();
+    expect(toggle().attributes("aria-expanded")).toBe("false");
+    expect(toggle().attributes("aria-controls")).toBe("patient-filters");
+    expect(wrapper.find("#patient-filters").isVisible()).toBe(false);
+    expect(toggle().text().replace(/\s+/g, " ").trim()).toBe("Filtros");
+
+    await toggle().trigger("click");
+    expect(toggle().attributes("aria-expanded")).toBe("true");
+    expect(wrapper.find("#patient-filters").isVisible()).toBe(true);
+  });
+
+  it("links the CPF hint to the search box without changing its name", async () => {
+    await mountList();
+    const input = wrapper.find("#patient-search");
+    expect(input.attributes("aria-describedby")).toBe("patient-search-help");
+    expect(wrapper.find("#patient-search-help").text()).toBe(
+      "CPF: informe os 11 dígitos"
+    );
+    expect(input.attributes("placeholder")).toBe(
+      "Buscar por nome do paciente ou CPF"
+    );
+  });
+
+  it("reads filters from the URL: panel open, badge, API params", async () => {
+    await mountList("/?sex=F&age_min=0&age_max=60&search=Ana");
+    expect(toggle().attributes("aria-expanded")).toBe("true");
+    expect(wrapper.find(".filters-toggle__badge").text()).toBe("3");
+    expect(toggle().find(".sr-only").text()).toBe("(3 ativos)");
+    expect(list).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        search: "Ana",
+        sex: "F",
+        age_min: 0,
+        age_max: 60,
+        page: 1,
+      })
+    );
+  });
+
+  it("pushes filter changes to the query, back to page 1, keeping search/sort/per_page", async () => {
+    await mountList(
+      "/?search=Ana&page=3&per_page=25&sort=birth_date&direction=desc"
+    );
+    await toggle().trigger("click");
+    await wrapper.find("#filter-sex").setValue("M");
+    await flushPromises();
+
+    expect(router.currentRoute.query).toEqual({
+      search: "Ana",
+      per_page: "25",
+      sort: "birth_date",
+      direction: "desc",
+      sex: "M",
+    });
+
+    const min = wrapper.find("#filter-age-min");
+    await min.setValue("18");
+    await min.trigger("change");
+    await flushPromises();
+    expect(router.currentRoute.query).toMatchObject({
+      sex: "M",
+      age_min: "18",
+    });
+    expect(list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sex: "M", age_min: 18, page: 1 })
+    );
+  });
+
+  it("keeps filters when sorting or paginating", async () => {
+    await mountList("/?sex=F");
+    await th("Nome do paciente").find("button").trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.query).toEqual({
+      sex: "F",
+      sort: "name",
+      direction: "desc",
+    });
+  });
+
+  it("does not push an invalid range", async () => {
+    await mountList("/?age_min=50");
+    const max = wrapper.find("#filter-age-max");
+    await max.setValue("20");
+    await max.trigger("change");
+    await flushPromises();
+    expect(router.currentRoute.query).toEqual({ age_min: "50" });
+    expect(wrapper.find("#filter-age-max-error").exists()).toBe(true);
+  });
+
+  it("Limpar filtros removes only the filters", async () => {
+    await mountList("/?search=Ana&sex=F&age_max=40");
+    const clear = wrapper
+      .findAll("button")
+      .filter((b) => b.text() === "Limpar filtros")
+      .at(0);
+    await clear.trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.query).toEqual({ search: "Ana" });
+    expect(wrapper.find(".filters-toggle__badge").exists()).toBe(false);
+  });
+
+  it("mentions filters in the empty state", async () => {
+    list.mockResolvedValue({
+      data: [],
+      meta: {
+        current_page: 1,
+        last_page: 1,
+        per_page: 10,
+        total: 0,
+        from: null,
+        to: null,
+      },
+    });
+    await mountList("/?sex=M");
+    expect(wrapper.text()).toContain(
+      "Nenhum paciente corresponde aos filtros aplicados. Ajuste ou limpe os filtros."
+    );
+    // Nothing to export.
+    const exportBtn = wrapper
+      .findAll("button")
+      .filter((b) => b.text() === "Exportar CSV")
+      .at(0);
+    expect(exportBtn.attributes("disabled")).toBe("disabled");
+  });
+
+  it("keeps the original copy when only searching", async () => {
+    list.mockResolvedValue({
+      data: [],
+      meta: {
+        current_page: 1,
+        last_page: 1,
+        per_page: 10,
+        total: 0,
+        from: null,
+        to: null,
+      },
+    });
+    await mountList("/?search=zzz");
+    expect(wrapper.text()).toContain("Tente buscar por outro nome ou CPF.");
+  });
+
+  it("exports with the current search, filters and sort (no pagination)", async () => {
+    vi.mocked(patientService.exportCsv).mockResolvedValue({
+      blob: new Blob(["x"]),
+      filename: "pacientes.csv",
+    });
+    Object.assign(URL, {
+      createObjectURL: vi.fn(() => "blob:x"),
+      revokeObjectURL: vi.fn(),
+    });
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined);
+    await mountList(
+      "/?search=Ana&sex=F&age_min=0&page=2&per_page=25&sort=birth_date&direction=desc"
+    );
+    const exportBtn = wrapper
+      .findAll("button")
+      .filter((b) => b.text() === "Exportar CSV")
+      .at(0);
+    await exportBtn.trigger("click");
+    await flushPromises();
+    expect(patientService.exportCsv).toHaveBeenCalledWith({
+      search: "Ana",
+      sort: "birth_date",
+      direction: "desc",
+      sex: "F",
+      age_min: 0,
+    });
+    expect(click).toHaveBeenCalled();
+    click.mockRestore();
   });
 });

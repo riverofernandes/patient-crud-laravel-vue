@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { fileURLToPath, URL } from "node:url";
 
 import { defineConfig } from "vite";
@@ -46,5 +47,28 @@ export default defineConfig({
   preview: {
     host: true,
     port: 4173,
+  },
+  test: {
+    coverage: {
+      provider: "istanbul",
+      reporter: ["text", "html", "lcov"],
+      reportsDirectory: "coverage",
+      // Every source file counts, not only the ones a test happens to import.
+      all: true,
+      include: ["src/**/*.{ts,vue}"],
+      exclude: [
+        "src/**/__tests__/**",
+        "src/test/**",
+        "src/main.ts",
+        "src/router/**",
+        "src/**/*.d.ts",
+      ],
+      // Set slightly below the measured values: fails on regressions.
+      // Measured (Sprint 3): statements 71.9, branches 70.5, functions 74.9, lines 72.1.
+      statements: 70,
+      branches: 69,
+      functions: 73,
+      lines: 71,
+    },
   },
 });
