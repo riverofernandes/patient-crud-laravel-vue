@@ -31,6 +31,19 @@ updates:
       # ESLint 9+ requires migrating to the flat config format.
       - dependency-name: eslint
         update-types: ["version-update:semver-major"]
+      # Newer shared configs require ESLint 9 (flat config).
+      - dependency-name: "@vue/eslint-config-prettier"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vue/eslint-config-typescript"
+        update-types: ["version-update:semver-major"]
+      # The build is pinned to TypeScript 4.7 (vue-tsc 0.38 for Vue 2.7);
+      # @vue/tsconfig >= 0.2 targets newer TypeScript (0.9 needs >= 5.8).
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "@vue/tsconfig"
+        versions: [">= 0.2"]
+      - dependency-name: vue-tsc
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
