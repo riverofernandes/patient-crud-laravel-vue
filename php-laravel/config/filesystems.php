@@ -36,6 +36,15 @@ return [
             'throw' => false,
         ],
 
+        // Patient photos and exam attachments: outside public/, contents encrypted with APP_KEY and random file
+        // names (see App\Support\EncryptedFiles). In production this directory must be a persistent volume.
+        'private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private'),
+            'visibility' => 'private',
+            'throw' => true,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
