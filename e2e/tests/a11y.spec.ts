@@ -15,12 +15,14 @@ import {
   rowFor,
   statusDialog,
   test,
+  toast,
   trashRows,
   waitForFadeIn,
   waitForTable,
 } from "../support/fixtures";
 import type { Consultation, ConsultationStatus, Patient, PatientApi } from "../support/api";
 import { professionalName } from "../support/data";
+import { CEP_UNAVAILABLE_BODY, examPdf, mockCep, photoPng } from "../support/files";
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 
@@ -133,6 +135,52 @@ for (const viewport of [
       await page.goto("/pacientes/novo");
       await page.getByRole("button", { name: "Salvar paciente" }).click();
       await expect(field(page, "Nome completo")).toHaveAccessibleDescription("Campo obrigatório");
+      await expectNoA11yViolations(page);
+    });
+
+    test("cadastro com erros no endereço e aviso de CEP indisponível", async ({ page }) => {
+      await mockCep(page, 503, CEP_UNAVAILABLE_BODY);
+      await page.goto("/pacientes/novo");
+      await page.locator("#pf-address-cep").pressSequentially("01310100");
+      await expect(page.locator("#pf-address-cep-note")).toBeVisible();
+      await page.locator("#pf-address-street").fill("Rua Parcial");
+      await page.getByRole("button", { name: "Salvar paciente" }).click();
+      await expect(page.locator("#pf-address-number")).toHaveAccessibleDescription("Campo obrigatório");
+      await expect(page.locator("#pf-address-state")).toHaveAccessibleDescription("Campo obrigatório");
+      // Let the error toast finish fading in (axe would measure the contrast mid-transition).
+      const message = toast(page, "Preencha os campos obrigatórios para salvar!");
+      await expect(message).toBeVisible();
+      await expect.poll(() => message.evaluate((el) => getComputedStyle(el.closest(".toast") ?? el).opacity)).toBe("1");
+      await expectNoA11yViolations(page);
+    });
+
+    test("detalhes com foto e modal de remover foto", async ({ page, api }) => {
+      const patient = await createPatient(api);
+      await api.uploadPhoto(patient.id, photoPng());
+      await page.goto(`/pacientes/${patient.id}`);
+      const img = page.getByRole("img", { name: `Foto de ${patient.name}` });
+      await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+      await expect(page.locator("#patient-photo-pick")).toHaveText("Trocar foto");
+      await expectNoA11yViolations(page);
+
+      await page.locator("#patient-photo-remove").click();
+      await waitForFadeIn(page.getByRole("dialog", { name: "Remover foto" }));
+      await expectNoA11yViolations(page);
+    });
+
+    test("atendimento com anexos e modal de exclusão de anexo", async ({ page, api }) => {
+      const consultation = await createConsultation(api, await createPatient(api));
+      await api.uploadAttachment(consultation.id, examPdf("laudo.pdf"), "Topografia de córnea");
+      await api.uploadAttachment(consultation.id, photoPng("retina.png"));
+      await gotoConsultation(page, consultation.id);
+      await expect(page.locator(".attachment-item")).toHaveCount(2);
+      // Client-side error state of the upload form too.
+      await page.getByRole("button", { name: "Enviar anexo" }).click();
+      await expect(page.locator("#attachment-file-error")).toHaveText("Selecione um arquivo.");
+      await expectNoA11yViolations(page);
+
+      await page.getByRole("button", { name: "Excluir anexo laudo.pdf" }).click();
+      await waitForFadeIn(page.getByRole("dialog", { name: "Excluir anexo" }));
       await expectNoA11yViolations(page);
     });
 

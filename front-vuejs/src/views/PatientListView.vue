@@ -129,6 +129,17 @@
             <span class="sr-only">{{ label }}</span>
           </template>
 
+          <!-- The avatar is decorative and has no text: the cell's text and
+               accessible name stay exactly the patient's name. -->
+          <template #cell(name)="{ item }">
+            <span class="name-cell"
+              ><PatientAvatar
+                decorative
+                :name="item.name"
+                :photo-url="item.photo_url"
+              /><span class="name-cell__text">{{ item.name }}</span></span
+            >
+          </template>
           <template #cell(cpf)="{ value }">{{ maskCpf(value) }}</template>
           <template #cell(phone)="{ value }">{{ maskPhone(value) }}</template>
           <template #cell(birth_date)="{ value }">{{
@@ -218,6 +229,7 @@
 import { defineComponent } from "vue";
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal.vue";
 import ExportCsvButton from "@/components/ExportCsvButton.vue";
+import PatientAvatar from "@/components/PatientAvatar.vue";
 import PatientFilters from "@/components/PatientFilters.vue";
 import {
   patientService,
@@ -255,7 +267,12 @@ interface ListQuery {
 
 export default defineComponent({
   name: "PatientListView",
-  components: { ConfirmDeleteModal, ExportCsvButton, PatientFilters },
+  components: {
+    ConfirmDeleteModal,
+    ExportCsvButton,
+    PatientAvatar,
+    PatientFilters,
+  },
   data() {
     return {
       search: "",
@@ -504,6 +521,18 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 @import "@/styles/patient-table";
+
+.name-cell {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  max-width: 100%;
+}
+
+.name-cell__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
 .page-header__actions {
   display: flex;

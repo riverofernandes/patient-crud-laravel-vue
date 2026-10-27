@@ -11,7 +11,7 @@
     "info": {
         "name": "API de Pacientes",
         "_postman_id": "6f1d2c3e-8a4b-4c5d-9e7f-0a1b2c3d4e5f",
-        "description": "API REST para cadastro, consulta, edi\u00e7\u00e3o e exclus\u00e3o (soft delete) de pacientes, atendimentos, prontu\u00e1rio oftalmol\u00f3gico e receita de \u00f3culos.",
+        "description": "API REST para cadastro, consulta, edi\u00e7\u00e3o e exclus\u00e3o (soft delete) de pacientes (com endere\u00e7o e foto), atendimentos, prontu\u00e1rio oftalmol\u00f3gico, receita de \u00f3culos e anexos de exames.",
         "schema": "https:\/\/schema.getpostman.com\/json\/collection\/v2.1.0\/collection.json"
     },
     "item": [
@@ -143,7 +143,7 @@
                             }
                         ],
                         "body": null,
-                        "description": "Baixa os pacientes em CSV, com os mesmos filtros e ordena\u00e7\u00e3o da listagem (`search`, `sex`, `age_min`,\n`age_max`, `sort`, `direction`, `trashed`) e sem pagina\u00e7\u00e3o. Arquivo UTF-8 com BOM, separador `;` e\nquebra de linha CRLF (abre direto no Excel em pt-BR), nome `pacientes-AAAAMMDD-HHMM.csv` (hor\u00e1rio de\nBras\u00edlia). Valores formatados: CPF `000.000.000-00`, celular `(00) 00000-0000`, datas `DD\/MM\/AAAA`,\nsexo `Masculino`\/`Feminino`; com `trashed=only` h\u00e1 a coluna extra `Exclu\u00eddo em` (`DD\/MM\/AAAA HH:MM`).\nC\u00e9lulas que come\u00e7am com `=`, `+`, `-`, `@`, tab ou CR recebem um `'` na frente (prote\u00e7\u00e3o contra\ninje\u00e7\u00e3o de f\u00f3rmulas). O \"Try it out\" mostra o CSV como texto; para baixar o arquivo, abra a URL no\nnavegador.",
+                        "description": "Baixa os pacientes em CSV, com os mesmos filtros e ordena\u00e7\u00e3o da listagem (`search`, `sex`, `age_min`,\n`age_max`, `sort`, `direction`, `trashed`) e sem pagina\u00e7\u00e3o. Arquivo UTF-8 com BOM, separador `;` e\nquebra de linha CRLF (abre direto no Excel em pt-BR), nome `pacientes-AAAAMMDD-HHMM.csv` (hor\u00e1rio de\nBras\u00edlia). Valores formatados: CPF `000.000.000-00`, celular `(00) 00000-0000`, datas `DD\/MM\/AAAA`,\nsexo `Masculino`\/`Feminino`, CEP `00000-000`, endere\u00e7o \"rua, n\u00famero - complemento - bairro\"; com `trashed=only` h\u00e1 a coluna extra `Exclu\u00eddo em` (`DD\/MM\/AAAA HH:MM`).\nC\u00e9lulas que come\u00e7am com `=`, `+`, `-`, `@`, tab ou CR recebem um `'` na frente (prote\u00e7\u00e3o contra\ninje\u00e7\u00e3o de f\u00f3rmulas). O \"Try it out\" mostra o CSV como texto; para baixar o arquivo, abra a URL no\nnavegador.",
                         "auth": {
                             "type": "noauth"
                         }
@@ -152,7 +152,7 @@
                         {
                             "header": [],
                             "code": 200,
-                            "body": "Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descri\u00e7\u00e3o\nMaria da Silva;625.189.530-60;35688019X;20\/07\/1996;30;Feminino;(11) 92853-5718;maria@example.com;\"Paciente com miopia leve; retorno anual.\"",
+                            "body": "Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descri\u00e7\u00e3o;CEP;Endere\u00e7o;Cidade;UF\nMaria da Silva;625.189.530-60;35688019X;20\/07\/1996;30;Feminino;(11) 92853-5718;maria@example.com;\"Paciente com miopia leve; retorno anual.\";01310-100;Avenida Paulista, 1578 - Sala 12 - Bela Vista;S\u00e3o Paulo;SP",
                             "name": "CSV (com BOM UTF-8)"
                         }
                     ]
@@ -199,7 +199,7 @@
                             }
                         ],
                         "body": null,
-                        "description": "Lista as altera\u00e7\u00f5es do paciente, da mais recente para a mais antiga (desempate por `id` decrescente),\npaginadas como a listagem. Funciona tamb\u00e9m para pacientes na lixeira. `event` \u00e9 `created`, `updated`,\n`deleted` ou `restored`; `changes` traz `{campo: {old, new}}` com os valores crus (como na API): todos os\ncampos em `created`, s\u00f3 os alterados em `updated` e `{}` em `deleted`\/`restored`. `user_id` \u00e9 sempre\n`null` enquanto a API n\u00e3o tem autentica\u00e7\u00e3o. Os valores ficam criptografados no banco.",
+                        "description": "Lista as altera\u00e7\u00f5es do paciente, da mais recente para a mais antiga (desempate por `id` decrescente),\npaginadas como a listagem. Funciona tamb\u00e9m para pacientes na lixeira. `event` \u00e9 `created`, `updated`,\n`deleted` ou `restored`; `changes` traz `{campo: {old, new}}` com os valores crus (como na API): todos os\ncampos em `created`, s\u00f3 os alterados em `updated` e `{}` em `deleted`\/`restored`. O endere\u00e7o aparece como\n`address.<campo>` (ex.: `address.cep`) e a foto como `photo` (`{\"old\": null, \"new\": \"adicionada\" | \"alterada\" |\n\"removida\"}`, nunca a imagem). `user_id` \u00e9 sempre\n`null` enquanto a API n\u00e3o tem autentica\u00e7\u00e3o. Os valores ficam criptografados no banco.",
                         "auth": {
                             "type": "noauth"
                         }
@@ -257,7 +257,7 @@
                         {
                             "header": [],
                             "code": 200,
-                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:45:00-03:00\", \"age\": 30, \"deleted_at\": null}}",
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:45:00-03:00\", \"age\": 30, \"deleted_at\": null, \"address\": {\"cep\": \"01310100\", \"street\": \"Avenida Paulista\", \"number\": \"1578\", \"complement\": \"Sala 12\", \"neighborhood\": \"Bela Vista\", \"city\": \"S\u00e3o Paulo\", \"state\": \"SP\"}, \"photo_url\": \"http:\/\/localhost:8000\/api\/patients\/1\/photo?v=1\"}}",
                             "name": "Paciente restaurado"
                         },
                         {
@@ -359,7 +359,7 @@
                         {
                             "header": [],
                             "code": 200,
-                            "body": "{\n    \"data\": [\n        {\n            \"id\": 1,\n            \"name\": \"Maria da Silva\",\n            \"cpf\": \"62518953060\",\n            \"rg\": \"35688019X\",\n            \"birth_date\": \"1996-07-20\",\n            \"sex\": \"F\",\n            \"phone\": \"11928535718\",\n            \"email\": \"maria@example.com\",\n            \"description\": \"Paciente com miopia leve, retorno anual.\",\n            \"created_at\": \"2026-10-26T15:30:00-03:00\",\n            \"updated_at\": \"2026-10-26T15:30:00-03:00\",\n            \"age\": 30,\n            \"deleted_at\": null\n        },\n        {\n            \"id\": 2,\n            \"name\": \"Jo\u00e3o Pereira Santos\",\n            \"cpf\": \"52998224725\",\n            \"rg\": \"123456789\",\n            \"birth_date\": \"1980-03-15\",\n            \"sex\": \"M\",\n            \"phone\": \"1133334444\",\n            \"email\": null,\n            \"description\": null,\n            \"created_at\": \"2026-10-26T15:31:00-03:00\",\n            \"updated_at\": \"2026-10-26T15:31:00-03:00\",\n            \"age\": 46,\n            \"deleted_at\": null\n        }\n    ],\n    \"links\": {\n        \"first\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n        \"last\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n        \"prev\": null,\n        \"next\": null\n    },\n    \"meta\": {\n        \"current_page\": 1,\n        \"from\": 1,\n        \"last_page\": 1,\n        \"links\": [\n            {\n                \"url\": null,\n                \"label\": \"&laquo; Previous\",\n                \"active\": false\n            },\n            {\n                \"url\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n                \"label\": \"1\",\n                \"active\": true\n            },\n            {\n                \"url\": null,\n                \"label\": \"Next &raquo;\",\n                \"active\": false\n            }\n        ],\n        \"path\": \"http:\/\/localhost:8000\/api\/patients\",\n        \"per_page\": 10,\n        \"to\": 2,\n        \"total\": 2\n    }\n}\n",
+                            "body": "{\n    \"data\": [\n        {\n            \"id\": 1,\n            \"name\": \"Maria da Silva\",\n            \"cpf\": \"62518953060\",\n            \"rg\": \"35688019X\",\n            \"birth_date\": \"1996-07-20\",\n            \"sex\": \"F\",\n            \"phone\": \"11928535718\",\n            \"email\": \"maria@example.com\",\n            \"description\": \"Paciente com miopia leve, retorno anual.\",\n            \"created_at\": \"2026-10-26T15:30:00-03:00\",\n            \"updated_at\": \"2026-10-26T15:30:00-03:00\",\n            \"age\": 30,\n            \"deleted_at\": null,\n            \"address\": {\n                \"cep\": \"01310100\",\n                \"street\": \"Avenida Paulista\",\n                \"number\": \"1578\",\n                \"complement\": null,\n                \"neighborhood\": \"Bela Vista\",\n                \"city\": \"S\u00e3o Paulo\",\n                \"state\": \"SP\"\n            },\n            \"photo_url\": null\n        },\n        {\n            \"id\": 2,\n            \"name\": \"Jo\u00e3o Pereira Santos\",\n            \"cpf\": \"52998224725\",\n            \"rg\": \"123456789\",\n            \"birth_date\": \"1980-03-15\",\n            \"sex\": \"M\",\n            \"phone\": \"1133334444\",\n            \"email\": null,\n            \"description\": null,\n            \"created_at\": \"2026-10-26T15:31:00-03:00\",\n            \"updated_at\": \"2026-10-26T15:31:00-03:00\",\n            \"age\": 46,\n            \"deleted_at\": null,\n            \"address\": null,\n            \"photo_url\": null\n        }\n    ],\n    \"links\": {\n        \"first\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n        \"last\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n        \"prev\": null,\n        \"next\": null\n    },\n    \"meta\": {\n        \"current_page\": 1,\n        \"from\": 1,\n        \"last_page\": 1,\n        \"links\": [\n            {\n                \"url\": null,\n                \"label\": \"&laquo; Previous\",\n                \"active\": false\n            },\n            {\n                \"url\": \"http:\/\/localhost:8000\/api\/patients?page=1\",\n                \"label\": \"1\",\n                \"active\": true\n            },\n            {\n                \"url\": null,\n                \"label\": \"Next &raquo;\",\n                \"active\": false\n            }\n        ],\n        \"path\": \"http:\/\/localhost:8000\/api\/patients\",\n        \"per_page\": 10,\n        \"to\": 2,\n        \"total\": 2\n    }\n}\n",
                             "name": "Sucesso"
                         }
                     ]
@@ -386,9 +386,9 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\"name\":\"Maria da Silva\",\"cpf\":\"625.189.530-60\",\"rg\":\"35.688.019-X\",\"birth_date\":\"1996-07-20\",\"sex\":\"F\",\"phone\":\"(11) 92853-5718\",\"email\":\"maria@example.com\",\"description\":\"Paciente com miopia leve, retorno anual.\"}"
+                            "raw": "{\"name\":\"Maria da Silva\",\"cpf\":\"625.189.530-60\",\"rg\":\"35.688.019-X\",\"birth_date\":\"1996-07-20\",\"sex\":\"F\",\"phone\":\"(11) 92853-5718\",\"email\":\"maria@example.com\",\"description\":\"Paciente com miopia leve, retorno anual.\",\"address\":{\"cep\":\"01310-100\",\"street\":\"Avenida Paulista\",\"number\":\"1578\",\"complement\":\"Sala 12\",\"neighborhood\":\"Bela Vista\",\"city\":\"S\u00e3o Paulo\",\"state\":\"SP\"}}"
                         },
-                        "description": "Cria um paciente. CPF, RG e celular podem ser enviados com m\u00e1scara; s\u00e3o armazenados s\u00f3 com d\u00edgitos.\nO CPF deve ser v\u00e1lido e \u00fanico entre os pacientes ativos.",
+                        "description": "Cria um paciente. CPF, RG e celular podem ser enviados com m\u00e1scara; s\u00e3o armazenados s\u00f3 com d\u00edgitos.\nO CPF deve ser v\u00e1lido e \u00fanico entre os pacientes ativos. `address` \u00e9 opcional (objeto ou `null`); quando\nenviado, todos os subcampos exceto `complement` s\u00e3o obrigat\u00f3rios e os erros usam chaves com ponto\n(`errors[\"address.cep\"]`). A foto \u00e9 enviada \u00e0 parte (`POST \/patients\/{id}\/photo`).",
                         "auth": {
                             "type": "noauth"
                         }
@@ -397,7 +397,7 @@
                         {
                             "header": [],
                             "code": 201,
-                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null}}",
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null, \"address\": {\"cep\": \"01310100\", \"street\": \"Avenida Paulista\", \"number\": \"1578\", \"complement\": \"Sala 12\", \"neighborhood\": \"Bela Vista\", \"city\": \"S\u00e3o Paulo\", \"state\": \"SP\"}, \"photo_url\": \"http:\/\/localhost:8000\/api\/patients\/1\/photo?v=1\"}}",
                             "name": "Paciente criado"
                         },
                         {
@@ -446,7 +446,7 @@
                         {
                             "header": [],
                             "code": 200,
-                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null}}",
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null, \"address\": {\"cep\": \"01310100\", \"street\": \"Avenida Paulista\", \"number\": \"1578\", \"complement\": \"Sala 12\", \"neighborhood\": \"Bela Vista\", \"city\": \"S\u00e3o Paulo\", \"state\": \"SP\"}, \"photo_url\": \"http:\/\/localhost:8000\/api\/patients\/1\/photo?v=1\"}}",
                             "name": "Sucesso"
                         },
                         {
@@ -487,9 +487,9 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\"name\":\"Maria da Silva\",\"cpf\":\"625.189.530-60\",\"rg\":\"35.688.019-X\",\"birth_date\":\"1996-07-20\",\"sex\":\"F\",\"phone\":\"(11) 92853-5718\",\"email\":\"maria@example.com\",\"description\":\"Paciente com miopia leve, retorno anual.\"}"
+                            "raw": "{\"name\":\"Maria da Silva\",\"cpf\":\"625.189.530-60\",\"rg\":\"35.688.019-X\",\"birth_date\":\"1996-07-20\",\"sex\":\"F\",\"phone\":\"(11) 92853-5718\",\"email\":\"maria@example.com\",\"description\":\"Paciente com miopia leve, retorno anual.\",\"address\":{\"cep\":\"01310-100\",\"street\":\"Avenida Paulista\",\"number\":\"1578\",\"complement\":\"Sala 12\",\"neighborhood\":\"Bela Vista\",\"city\":\"S\u00e3o Paulo\",\"state\":\"SP\"}}"
                         },
-                        "description": "Substitui\u00e7\u00e3o completa (PUT): envie todos os campos. Campos opcionais omitidos (`email`, `description`) s\u00e3o apagados.",
+                        "description": "Substitui\u00e7\u00e3o completa (PUT): envie todos os campos. Campos opcionais omitidos (`email`, `description`) s\u00e3o apagados;\n`address` omitido ou `null` remove o endere\u00e7o. A foto n\u00e3o muda por aqui (use as rotas `\/photo`).",
                         "auth": {
                             "type": "noauth"
                         }
@@ -498,7 +498,7 @@
                         {
                             "header": [],
                             "code": 200,
-                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null}}",
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null, \"address\": {\"cep\": \"01310100\", \"street\": \"Avenida Paulista\", \"number\": \"1578\", \"complement\": \"Sala 12\", \"neighborhood\": \"Bela Vista\", \"city\": \"S\u00e3o Paulo\", \"state\": \"SP\"}, \"photo_url\": \"http:\/\/localhost:8000\/api\/patients\/1\/photo?v=1\"}}",
                             "name": "Paciente atualizado"
                         },
                         {
@@ -561,6 +561,242 @@
                             "code": 404,
                             "body": "{\"message\": \"Paciente n\u00e3o encontrado.\"}",
                             "name": "Paciente n\u00e3o encontrado ou exclu\u00eddo"
+                        }
+                    ]
+                },
+                {
+                    "name": "Foto do paciente",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/patients\/:patient_id\/photo",
+                            "query": [
+                                {
+                                    "key": "v",
+                                    "value": "1",
+                                    "description": "Vers\u00e3o da foto (s\u00f3 para invalidar o cache; ignorada pelo servidor).",
+                                    "disabled": false
+                                }
+                            ],
+                            "raw": "{{baseUrl}}\/api\/patients\/:patient_id\/photo?v=1",
+                            "variable": [
+                                {
+                                    "id": "patient_id",
+                                    "key": "patient_id",
+                                    "value": "1",
+                                    "description": "ID do paciente."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "A foto (JPEG, at\u00e9 512x512) do paciente. A URL com `?v=<vers\u00e3o>` vem em `photo_url` no recurso do paciente;\na vers\u00e3o muda a cada troca, ent\u00e3o a resposta pode ficar em cache no navegador (`Cache-Control: private,\nmax-age=86400`). `404` se o paciente n\u00e3o tiver foto, n\u00e3o existir ou estiver na lixeira.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "<bin\u00e1rio JPEG>",
+                            "name": "Imagem (image\/jpeg)"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Foto n\u00e3o encontrada.\"}",
+                            "name": "Paciente sem foto"
+                        }
+                    ]
+                },
+                {
+                    "name": "Enviar foto do paciente",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/patients\/:patient_id\/photo",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/patients\/:patient_id\/photo",
+                            "variable": [
+                                {
+                                    "id": "patient_id",
+                                    "key": "patient_id",
+                                    "value": "1",
+                                    "description": "ID do paciente."
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "multipart\/form-data"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "photo",
+                                    "src": [],
+                                    "type": "file"
+                                }
+                            ]
+                        },
+                        "description": "Envia ou troca a foto (multipart, campo `photo`): JPEG, PNG ou WebP (tipo conferido pelo conte\u00fado), at\u00e9 2 MB,\nentre 100x100 e 4000x4000 px. A imagem \u00e9 reprocessada no servidor (corte quadrado centralizado, no m\u00e1ximo\n512x512, JPEG), o que remove os metadados EXIF (como a localiza\u00e7\u00e3o), e fica criptografada em disco privado.\nGera um registro `photo` no hist\u00f3rico (sem a imagem). Retorna o paciente com o novo `photo_url`.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": null, \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-11-03T10:00:00-03:00\", \"age\": 30, \"deleted_at\": null, \"address\": null, \"photo_url\": \"http:\/\/localhost:8000\/api\/patients\/1\/photo?v=1\"}}",
+                            "name": "Foto enviada"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Paciente n\u00e3o encontrado.\"}",
+                            "name": "Paciente n\u00e3o encontrado ou exclu\u00eddo"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"A foto deve ser uma imagem JPEG, PNG ou WebP.\", \"errors\": {\"photo\": [\"A foto deve ser uma imagem JPEG, PNG ou WebP.\"]}}",
+                            "name": "Tipo inv\u00e1lido"
+                        }
+                    ]
+                },
+                {
+                    "name": "Remover foto do paciente",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/patients\/:patient_id\/photo",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/patients\/:patient_id\/photo",
+                            "variable": [
+                                {
+                                    "id": "patient_id",
+                                    "key": "patient_id",
+                                    "value": "1",
+                                    "description": "ID do paciente."
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Remove a foto (e o arquivo). Gera um registro `photo` no hist\u00f3rico. `404` se o paciente n\u00e3o tiver foto.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 204,
+                            "body": "",
+                            "name": "Foto removida"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Foto n\u00e3o encontrada.\"}",
+                            "name": "Paciente sem foto"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Endere\u00e7o",
+            "description": "\nConsulta de CEP para preencher o endere\u00e7o do paciente.",
+            "item": [
+                {
+                    "name": "Consultar CEP",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/cep\/:code",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/cep\/:code",
+                            "variable": [
+                                {
+                                    "id": "code",
+                                    "key": "code",
+                                    "value": "01310-100",
+                                    "description": "CEP com 8 d\u00edgitos, com ou sem m\u00e1scara."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Busca o endere\u00e7o de um CEP no ViaCEP (resultado em cache por 24 horas). Aceita m\u00e1scara (`01310-100`).\nCampos vazios no ViaCEP (CEP geral de cidade pequena) voltam como texto vazio. `503` quando o ViaCEP n\u00e3o\nresponde: o endere\u00e7o pode ser preenchido manualmente.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": {\"cep\": \"01310100\", \"street\": \"Avenida Paulista\", \"neighborhood\": \"Bela Vista\", \"city\": \"S\u00e3o Paulo\", \"state\": \"SP\"}}",
+                            "name": "CEP encontrado"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"CEP n\u00e3o encontrado.\"}",
+                            "name": "CEP inexistente"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"O CEP deve ter 8 d\u00edgitos.\", \"errors\": {\"cep\": [\"O CEP deve ter 8 d\u00edgitos.\"]}}",
+                            "name": "Formato inv\u00e1lido"
+                        },
+                        {
+                            "header": [],
+                            "code": 503,
+                            "body": "{\"message\": \"Servi\u00e7o de CEP indispon\u00edvel. Preencha o endere\u00e7o manualmente.\"}",
+                            "name": "ViaCEP indispon\u00edvel"
                         }
                     ]
                 }
@@ -1099,6 +1335,229 @@
                             "code": 422,
                             "body": "{\"message\": \"O atendimento n\u00e3o tem dados de refra\u00e7\u00e3o para gerar a receita.\", \"errors\": {\"eye_exam\": [\"O atendimento n\u00e3o tem dados de refra\u00e7\u00e3o para gerar a receita.\"]}}",
                             "name": "Sem dados de refra\u00e7\u00e3o"
+                        }
+                    ]
+                },
+                {
+                    "name": "Listar anexos do atendimento",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/consultations\/:consultation_id\/attachments",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/consultations\/:consultation_id\/attachments",
+                            "variable": [
+                                {
+                                    "id": "consultation_id",
+                                    "key": "consultation_id",
+                                    "value": "1",
+                                    "description": "ID do atendimento."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Exames anexados ao atendimento (laudos, imagens), do mais recente para o mais antigo, sem pagina\u00e7\u00e3o.\n`404` se o atendimento n\u00e3o existir ou o paciente estiver na lixeira.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": [{\"id\": 3, \"consultation_id\": 1, \"original_name\": \"topografia.pdf\", \"mime_type\": \"application\/pdf\", \"size\": 183245, \"description\": \"Topografia de c\u00f3rnea\", \"download_url\": \"http:\/\/localhost:8000\/api\/attachments\/3\/download\", \"created_at\": \"2026-11-03T15:10:00-03:00\"}]}",
+                            "name": "Sucesso"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Atendimento n\u00e3o encontrado.\"}",
+                            "name": "Atendimento n\u00e3o encontrado"
+                        }
+                    ]
+                },
+                {
+                    "name": "Anexar exame ao atendimento",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/consultations\/:consultation_id\/attachments",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/consultations\/:consultation_id\/attachments",
+                            "variable": [
+                                {
+                                    "id": "consultation_id",
+                                    "key": "consultation_id",
+                                    "value": "1",
+                                    "description": "ID do atendimento."
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "multipart\/form-data"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "description",
+                                    "value": "Topografia de c\u00f3rnea",
+                                    "type": "text",
+                                    "description": "Descri\u00e7\u00e3o do anexo (opcional, at\u00e9 255 caracteres). Must not be greater than 255 characters."
+                                },
+                                {
+                                    "key": "file",
+                                    "src": [],
+                                    "type": "file"
+                                }
+                            ]
+                        },
+                        "description": "Envia um arquivo (multipart, campo `file`): PDF, JPEG ou PNG, at\u00e9 10 MB. O tipo \u00e9 conferido pelo conte\u00fado\n(n\u00e3o s\u00f3 pela extens\u00e3o). Vale para qualquer status de atendimento. O arquivo fica criptografado em disco\nprivado, com nome aleat\u00f3rio; o nome original \u00e9 saneado (e recebe a extens\u00e3o do tipo detectado).",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 201,
+                            "body": "{\"data\": {\"id\": 3, \"consultation_id\": 1, \"original_name\": \"topografia.pdf\", \"mime_type\": \"application\/pdf\", \"size\": 183245, \"description\": \"Topografia de c\u00f3rnea\", \"download_url\": \"http:\/\/localhost:8000\/api\/attachments\/3\/download\", \"created_at\": \"2026-11-03T15:10:00-03:00\"}}",
+                            "name": "Anexo criado"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Atendimento n\u00e3o encontrado.\"}",
+                            "name": "Atendimento n\u00e3o encontrado"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"O arquivo deve ser um PDF, JPEG ou PNG.\", \"errors\": {\"file\": [\"O arquivo deve ser um PDF, JPEG ou PNG.\"]}}",
+                            "name": "Tipo n\u00e3o permitido"
+                        }
+                    ]
+                },
+                {
+                    "name": "Baixar anexo",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/attachments\/:attachment_id\/download",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/attachments\/:attachment_id\/download",
+                            "variable": [
+                                {
+                                    "id": "attachment_id",
+                                    "key": "attachment_id",
+                                    "value": "1",
+                                    "description": "ID do anexo."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "O arquivo original (descriptografado), com o tipo detectado no envio e\n`Content-Disposition: attachment; filename=\"<nome saneado em ASCII>\"; filename*=UTF-8''<nome saneado>`.\nO \"Try it out\" n\u00e3o exibe o arquivo; para baixar, abra a URL no navegador.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "<bin\u00e1rio>",
+                            "name": "Arquivo"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Anexo n\u00e3o encontrado.\"}",
+                            "name": "Anexo n\u00e3o encontrado"
+                        }
+                    ]
+                },
+                {
+                    "name": "Excluir anexo",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/attachments\/:id",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/attachments\/:id",
+                            "variable": [
+                                {
+                                    "id": "id",
+                                    "key": "id",
+                                    "value": "1",
+                                    "description": "The ID of the attachment."
+                                },
+                                {
+                                    "id": "attachment_id",
+                                    "key": "attachment_id",
+                                    "value": "1",
+                                    "description": "ID do anexo."
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Remove o anexo e o arquivo.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 204,
+                            "body": "",
+                            "name": "Anexo exclu\u00eddo"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Anexo n\u00e3o encontrado.\"}",
+                            "name": "Anexo n\u00e3o encontrado"
                         }
                     ]
                 }

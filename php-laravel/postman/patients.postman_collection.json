@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Pacientes API",
-    "description": "CRUD de pacientes (Laravel): listagem com filtros e ordenação, exportação CSV, lixeira, restauração, histórico de alterações, verificação de CPF e atendimentos (agenda, prontuário, receita em PDF e linha do tempo). Contrato: docs/API_CONTRACT.md. Execute em ordem (Runner/newman).",
+    "description": "CRUD de pacientes (Laravel): listagem com filtros e ordenação, exportação CSV, lixeira, restauração, histórico de alterações, verificação de CPF endereço e consulta de CEP, foto do paciente, e atendimentos (agenda, prontuário, receita em PDF, anexos de exames e linha do tempo). Uploads usam os arquivos de postman/fixtures: rode o newman com --working-dir php-laravel/postman. Contrato: docs/API_CONTRACT.md. Execute em ordem (Runner/newman).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -48,6 +48,10 @@
     {
       "key": "professionalSuffix",
       "value": ""
+    },
+    {
+      "key": "attachmentId",
+      "value": ""
     }
   ],
   "item": [
@@ -60,7 +64,8 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Paginated payload', function () { const j = pm.response.json(); pm.expect(j).to.have.keys('data', 'links', 'meta'); });"
+              "pm.test('Paginated payload', function () { const j = pm.response.json(); pm.expect(j).to.have.keys('data', 'links', 'meta'); });",
+              "pm.test('X-Request-Id header', function () { pm.expect(pm.response.headers.get('X-Request-Id')).to.match(/^[A-Za-z0-9._-]{1,64}$/); });"
             ]
           }
         }
@@ -255,6 +260,7 @@
               "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
               "const body = pm.response.json();",
               "pm.test('Stores digits only', function () { pm.expect(body.data.phone).to.eql('11928535718'); pm.expect(body.data.rg).to.eql('35688019X'); });",
+              "pm.test('Address normalized (CEP digits, UF upper-case)', function () { pm.expect(body.data.address.cep).to.eql('01310100'); pm.expect(body.data.address.state).to.eql('SP'); pm.expect(body.data.photo_url).to.eql(null); });",
               "pm.collectionVariables.set('patientId', body.data.id);"
             ]
           }
@@ -296,10 +302,10 @@
             "patients"
           ]
         },
-        "description": "201 com o paciente criado. CPF/RG/celular podem vir com máscara; são armazenados só com dígitos. O pre-request gera um CPF válido em {{cpf}}.",
+        "description": "201 com o paciente criado. CPF/RG/celular podem vir com máscara; são armazenados só com dígitos. O pre-request gera um CPF válido em {{cpf}}. Inclui `address` opcional (CEP com máscara e UF minúscula são normalizados).",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Maria da Silva\",\n  \"cpf\": \"{{cpf}}\",\n  \"rg\": \"35.688.019-X\",\n  \"birth_date\": \"1996-07-20\",\n  \"sex\": \"F\",\n  \"phone\": \"(11) 92853-5718\",\n  \"email\": \"maria@example.com\",\n  \"description\": \"Paciente com miopia leve.\"\n}",
+          "raw": "{\n  \"name\": \"Maria da Silva\",\n  \"cpf\": \"{{cpf}}\",\n  \"rg\": \"35.688.019-X\",\n  \"birth_date\": \"1996-07-20\",\n  \"sex\": \"F\",\n  \"phone\": \"(11) 92853-5718\",\n  \"email\": \"maria@example.com\",\n  \"description\": \"Paciente com miopia leve.\",\n  \"address\": {\n    \"cep\": \"01310-100\",\n    \"street\": \"Avenida Paulista\",\n    \"number\": \"1578\",\n    \"complement\": \"Sala 12\",\n    \"neighborhood\": \"Bela Vista\",\n    \"city\": \"São Paulo\",\n    \"state\": \"sp\"\n  }\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -423,12 +429,12 @@
               "const text = pm.response.text().replace(/^\\uFEFF/, ''); // text() may drop the BOM; the raw bytes are checked below",
               "pm.test('BOM, separator, CRLF and header', function () {",
               "  const raw = pm.response.stream; pm.expect([raw[0], raw[1], raw[2]]).to.eql([0xEF, 0xBB, 0xBF]);",
-              "  pm.expect(text.split('\\r\\n')[0]).to.eql('Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição');",
+              "  pm.expect(text.split('\\r\\n')[0]).to.eql('Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição;CEP;Endereço;Cidade;UF');",
               "});",
               "pm.test('Formatted row for the patient', function () {",
               "  const row = text.split('\\r\\n')[1];",
               "  pm.expect(row).to.include(pm.collectionVariables.get('cpfMasked'));",
-              "  pm.expect(row).to.include(';Feminino;(11) 92853-5718;');",
+              "  pm.expect(row).to.include(';Feminino;(11) 92853-5718;');\n  pm.expect(row).to.include(';01310-100;Avenida Paulista, 1578 - Sala 12 - Bela Vista;São Paulo;SP');",
               "});"
             ]
           }
@@ -679,7 +685,8 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Name updated', function () { pm.expect(pm.response.json().data.name).to.eql('Maria da Silva Souza'); });"
+              "pm.test('Name updated', function () { pm.expect(pm.response.json().data.name).to.eql('Maria da Silva Souza'); });",
+              "pm.test('Address replaced', function () { const a = pm.response.json().data.address; pm.expect(a.cep).to.eql('20040020'); pm.expect(a.number).to.eql('S/N'); pm.expect(a.complement).to.eql(null); });"
             ]
           }
         }
@@ -706,16 +713,290 @@
             "{{patientId}}"
           ]
         },
-        "description": "Substituição completa; envie todos os campos editáveis (opcionais omitidos viram null).",
+        "description": "Substituição completa; envie todos os campos editáveis (opcionais omitidos viram null). `address` omitido ou null remove o endereço.",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Maria da Silva Souza\",\n  \"cpf\": \"{{cpf}}\",\n  \"rg\": \"35.688.019-X\",\n  \"birth_date\": \"1996-07-20\",\n  \"sex\": \"F\",\n  \"phone\": \"11987654321\",\n  \"email\": \"maria@example.com\",\n  \"description\": null\n}",
+          "raw": "{\n  \"name\": \"Maria da Silva Souza\",\n  \"cpf\": \"{{cpf}}\",\n  \"rg\": \"35.688.019-X\",\n  \"birth_date\": \"1996-07-20\",\n  \"sex\": \"F\",\n  \"phone\": \"11987654321\",\n  \"email\": \"maria@example.com\",\n  \"description\": null,\n  \"address\": {\n    \"cep\": \"20040-020\",\n    \"street\": \"Avenida Rio Branco\",\n    \"number\": \"S/N\",\n    \"complement\": null,\n    \"neighborhood\": \"Centro\",\n    \"city\": \"Rio de Janeiro\",\n    \"state\": \"RJ\"\n  }\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
         }
+      }
+    },
+    {
+      "name": "Consultar CEP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// 503 is accepted: ViaCEP may be unreachable (offline runner); the API then asks for manual input.",
+              "pm.test('Status 200 (or 503 when ViaCEP is unavailable)', function () { pm.expect(pm.response.code).to.be.oneOf([200, 503]); });",
+              "if (pm.response.code === 200) {",
+              "  pm.test('Mapped address', function () { const d = pm.response.json().data; pm.expect(d.cep).to.eql('01310100'); pm.expect(d.state).to.eql('SP'); pm.expect(d.city).to.eql('São Paulo'); });",
+              "} else {",
+              "  pm.test('Manual fallback message', function () { pm.expect(pm.response.json().message).to.include('Preencha o endereço manualmente'); });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/cep/01310-100",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "cep",
+            "01310-100"
+          ]
+        },
+        "description": "Proxy do ViaCEP com cache de 24 h. 200 · 404 {\"message\":\"CEP não encontrado.\"} · 422 · 503 (ViaCEP indisponível)."
+      }
+    },
+    {
+      "name": "Consultar CEP (formato inválido - 422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+              "pm.test('Error on cep', function () { pm.expect(pm.response.json().errors.cep[0]).to.eql('O CEP deve ter 8 dígitos.'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/cep/1234",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "cep",
+            "1234"
+          ]
+        },
+        "description": "Validado antes de chamar o ViaCEP."
+      }
+    },
+    {
+      "name": "Enviar foto do paciente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('photo_url with version', function () { pm.expect(pm.response.json().data.photo_url).to.match(/\\/patients\\/\\d+\\/photo\\?v=\\d+$/); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}/photo",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}",
+            "photo"
+          ]
+        },
+        "description": "Multipart, campo `photo` (JPEG, PNG ou WebP, até 2 MB, 100x100 a 4000x4000). Reprocessada no servidor (quadrado, máx. 512x512, JPEG, sem EXIF). Arquivo de exemplo: postman/fixtures/photo.png (rode o newman com --working-dir php-laravel/postman).",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "photo",
+              "type": "file",
+              "src": "fixtures/photo.png"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Enviar foto inválida (texto com extensão .jpg - 422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+              "pm.test('Type checked by content', function () { pm.expect(pm.response.json().errors.photo[0]).to.eql('A foto deve ser uma imagem JPEG, PNG ou WebP.'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}/photo",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}",
+            "photo"
+          ]
+        },
+        "description": "O tipo é conferido pelo conteúdo, não pela extensão.",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "photo",
+              "type": "file",
+              "src": "fixtures/not-an-image.jpg"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Baixar foto do paciente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('JPEG with private cache', function () { pm.expect(pm.response.headers.get('Content-Type')).to.eql('image/jpeg'); pm.expect(pm.response.headers.get('Cache-Control')).to.include('private'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}/photo",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}",
+            "photo"
+          ]
+        },
+        "description": "image/jpeg, Cache-Control: private, max-age=86400. 404 {\"message\":\"Foto não encontrada.\"} sem foto."
+      }
+    },
+    {
+      "name": "Remover foto do paciente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}/photo",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}",
+            "photo"
+          ]
+        },
+        "description": "204 · 404 se não houver foto. Gera um registro `photo` no histórico."
+      }
+    },
+    {
+      "name": "Baixar foto removida (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404', function () { pm.response.to.have.status(404); });",
+              "pm.test('Message', function () { pm.expect(pm.response.json().message).to.eql('Foto não encontrada.'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}/photo",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}",
+            "photo"
+          ]
+        },
+        "description": "Sem foto: 404."
       }
     },
     {
@@ -847,7 +1128,7 @@
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
               "pm.test('Has the Excluído em column', function () {",
               "  const lines = pm.response.text().replace(/^\\uFEFF/, '').split('\\r\\n');",
-              "  pm.expect(lines[0]).to.eql('Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição;Excluído em');",
+              "  pm.expect(lines[0]).to.eql('Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição;CEP;Endereço;Cidade;UF;Excluído em');",
               "  pm.expect(lines[1]).to.match(/;\\d{2}\\/\\d{2}\\/\\d{4} \\d{2}:\\d{2}$/);",
               "});"
             ]
@@ -968,10 +1249,12 @@
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
               "const j = pm.response.json();",
               "pm.test('Paginated payload', function () { pm.expect(j).to.have.keys('data', 'links', 'meta'); });",
-              "pm.test('Newest first: restored, deleted, updated, created', function () { pm.expect(j.data.map(a => a.event)).to.eql(['restored', 'deleted', 'updated', 'created']); });",
-              "pm.test('Update records only changed fields', function () { const u = j.data[2]; pm.expect(u.changes).to.not.have.property('cpf'); pm.expect(u.changes.name).to.eql({ old: 'Maria da Silva', new: 'Maria da Silva Souza' }); });",
-              "pm.test('Created has every field with old null, user_id null', function () { const c = j.data[3]; pm.expect(c.changes.cpf).to.eql({ old: null, new: pm.collectionVariables.get('cpf') }); pm.expect(c.user_id).to.eql(null); });",
-              "pm.test('Deleted/restored have empty changes object', function () { pm.expect(j.data[0].changes).to.eql({}); pm.expect(j.data[1].changes).to.eql({}); });"
+              "// updated entries, newest first: photo removed, photo added, name + address (Atualizar paciente).",
+              "pm.test('Newest first: restored, deleted, 3x updated, created', function () { pm.expect(j.data.map(a => a.event)).to.eql(['restored', 'deleted', 'updated', 'updated', 'updated', 'created']); });",
+              "pm.test('Update records only changed fields (address as address.<field>)', function () { const u = j.data[4]; pm.expect(u.changes).to.not.have.property('cpf'); pm.expect(u.changes.name).to.eql({ old: 'Maria da Silva', new: 'Maria da Silva Souza' }); pm.expect(u.changes['address.cep']).to.eql({ old: '01310100', new: '20040020' }); });",
+              "pm.test('Created has every field with old null, user_id null', function () { const c = j.data[5]; pm.expect(c.changes.cpf).to.eql({ old: null, new: pm.collectionVariables.get('cpf') }); pm.expect(c.user_id).to.eql(null); });",
+              "pm.test('Deleted/restored have empty changes object', function () { pm.expect(j.data[0].changes).to.eql({}); pm.expect(j.data[1].changes).to.eql({}); });",
+              "pm.test('Photo changes carry markers, never the image', function () { pm.expect(j.data[3].changes).to.eql({ photo: { old: null, new: 'adicionada' } }); pm.expect(j.data[2].changes).to.eql({ photo: { old: null, new: 'removida' } }); });"
             ]
           }
         }
@@ -1823,6 +2106,247 @@
               ]
             },
             "description": "Com `patient` e `eye_exam`."
+          }
+        },
+        {
+          "name": "Anexar exame (PDF)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "const a = pm.response.json().data;",
+                  "pm.test('Attachment resource', function () { pm.expect(a.mime_type).to.eql('application/pdf'); pm.expect(a.original_name).to.eql('exam.pdf'); pm.expect(a.download_url).to.include('/attachments/' + a.id + '/download'); });",
+                  "pm.collectionVariables.set('attachmentId', a.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}/attachments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}",
+                "attachments"
+              ]
+            },
+            "description": "Multipart: `file` (PDF, JPEG ou PNG, até 10 MB, tipo conferido pelo conteúdo) e `description` opcional. Arquivo de exemplo: postman/fixtures/exam.pdf.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/exam.pdf"
+                },
+                {
+                  "key": "description",
+                  "value": "Topografia de córnea",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Anexar arquivo não permitido (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Type checked by content', function () { pm.expect(pm.response.json().errors.file[0]).to.eql('O arquivo deve ser um PDF, JPEG ou PNG.'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}/attachments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}",
+                "attachments"
+              ]
+            },
+            "description": "Texto renomeado para .jpg é recusado.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/not-an-image.jpg"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar anexos do atendimento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Contains the attachment', function () { const ids = pm.response.json().data.map(a => a.id); pm.expect(ids).to.include(Number(pm.collectionVariables.get('attachmentId'))); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}/attachments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}",
+                "attachments"
+              ]
+            },
+            "description": "Mais recente primeiro, sem paginação."
+          }
+        },
+        {
+          "name": "Baixar anexo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('PDF download', function () { pm.expect(pm.response.headers.get('Content-Type')).to.eql('application/pdf'); pm.expect(pm.response.headers.get('Content-Disposition')).to.include('attachment; filename=\"exam.pdf\"'); pm.expect(pm.response.text()).to.include('%PDF'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attachments/{{attachmentId}}/download",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attachments",
+                "{{attachmentId}}",
+                "download"
+              ]
+            },
+            "description": "Arquivo original descriptografado, Content-Disposition com filename e filename*."
+          }
+        },
+        {
+          "name": "Excluir anexo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attachments/{{attachmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attachments",
+                "{{attachmentId}}"
+              ]
+            },
+            "description": "Remove o anexo e o arquivo."
+          }
+        },
+        {
+          "name": "Baixar anexo excluído (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Message', function () { pm.expect(pm.response.json().message).to.eql('Anexo não encontrado.'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attachments/{{attachmentId}}/download",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attachments",
+                "{{attachmentId}}",
+                "download"
+              ]
+            },
+            "description": "404 {\"message\":\"Anexo não encontrado.\"}"
           }
         },
         {

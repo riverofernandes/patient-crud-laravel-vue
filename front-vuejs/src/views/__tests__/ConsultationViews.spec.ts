@@ -25,6 +25,9 @@ vi.mock("@/services/consultationService", () => ({
 vi.mock("@/services/patientService", () => ({
   patientService: { get: vi.fn() },
 }));
+vi.mock("@/services/attachmentService", () => ({
+  attachmentService: { list: vi.fn().mockResolvedValue([]) },
+}));
 vi.mock("@/utils/notify", () => ({ notify: vi.fn() }));
 vi.mock("@/utils/download", async () => ({
   ...(await vi.importActual<object>("@/utils/download")),
@@ -174,7 +177,7 @@ describe("ConsultationDetailView", () => {
       "success",
       "Atendimento atualizado com sucesso!"
     );
-    expect(wrapper.find("form").exists()).toBe(false);
+    expect(wrapper.find("form.consultation-form").exists()).toBe(false);
     expect(wrapper.text()).toContain("Paciente remarcou.");
   });
 

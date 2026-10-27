@@ -46,6 +46,12 @@ import {
   BIconPersonX,
   BIconPlus,
   BIconXCircle,
+  BIconCamera,
+  BIconCloudUpload,
+  BIconFileEarmark,
+  BIconFileEarmarkImage,
+  BIconPaperclip,
+  BIconUpload,
 } from "bootstrap-vue";
 
 import App from "./App.vue";
@@ -105,6 +111,12 @@ const icons = {
   BIconPersonX,
   BIconPlus,
   BIconXCircle,
+  BIconCamera,
+  BIconCloudUpload,
+  BIconFileEarmark,
+  BIconFileEarmarkImage,
+  BIconPaperclip,
+  BIconUpload,
 };
 Object.entries(icons).forEach(([name, component]) =>
   Vue.component(name, component)

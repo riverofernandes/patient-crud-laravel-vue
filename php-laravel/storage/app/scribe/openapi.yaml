@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: 'API de Pacientes'
-  description: 'API REST para cadastro, consulta, edição e exclusão (soft delete) de pacientes, atendimentos, prontuário oftalmológico e receita de óculos.'
+  description: 'API REST para cadastro, consulta, edição e exclusão (soft delete) de pacientes (com endereço e foto), atendimentos, prontuário oftalmológico, receita de óculos e anexos de exames.'
   version: 1.0.0
 servers:
   -
@@ -81,7 +81,7 @@ paths:
     get:
       summary: 'Exportar pacientes (CSV)'
       operationId: exportarPacientesCSV
-      description: "Baixa os pacientes em CSV, com os mesmos filtros e ordenação da listagem (`search`, `sex`, `age_min`,\n`age_max`, `sort`, `direction`, `trashed`) e sem paginação. Arquivo UTF-8 com BOM, separador `;` e\nquebra de linha CRLF (abre direto no Excel em pt-BR), nome `pacientes-AAAAMMDD-HHMM.csv` (horário de\nBrasília). Valores formatados: CPF `000.000.000-00`, celular `(00) 00000-0000`, datas `DD/MM/AAAA`,\nsexo `Masculino`/`Feminino`; com `trashed=only` há a coluna extra `Excluído em` (`DD/MM/AAAA HH:MM`).\nCélulas que começam com `=`, `+`, `-`, `@`, tab ou CR recebem um `'` na frente (proteção contra\ninjeção de fórmulas). O \"Try it out\" mostra o CSV como texto; para baixar o arquivo, abra a URL no\nnavegador."
+      description: "Baixa os pacientes em CSV, com os mesmos filtros e ordenação da listagem (`search`, `sex`, `age_min`,\n`age_max`, `sort`, `direction`, `trashed`) e sem paginação. Arquivo UTF-8 com BOM, separador `;` e\nquebra de linha CRLF (abre direto no Excel em pt-BR), nome `pacientes-AAAAMMDD-HHMM.csv` (horário de\nBrasília). Valores formatados: CPF `000.000.000-00`, celular `(00) 00000-0000`, datas `DD/MM/AAAA`,\nsexo `Masculino`/`Feminino`, CEP `00000-000`, endereço \"rua, número - complemento - bairro\"; com `trashed=only` há a coluna extra `Excluído em` (`DD/MM/AAAA HH:MM`).\nCélulas que começam com `=`, `+`, `-`, `@`, tab ou CR recebem um `'` na frente (proteção contra\ninjeção de fórmulas). O \"Try it out\" mostra o CSV como texto; para baixar o arquivo, abra a URL no\nnavegador."
       parameters:
         -
           in: query
@@ -160,7 +160,7 @@ paths:
             text/plain:
               schema:
                 type: string
-                example: "Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição\nMaria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;\"Paciente com miopia leve; retorno anual.\""
+                example: "Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição;CEP;Endereço;Cidade;UF\nMaria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;\"Paciente com miopia leve; retorno anual.\";01310-100;Avenida Paulista, 1578 - Sala 12 - Bela Vista;São Paulo;SP"
       tags:
         - Pacientes
       security: []
@@ -168,7 +168,7 @@ paths:
     get:
       summary: 'Histórico de alterações do paciente'
       operationId: histricoDeAlteraesDoPaciente
-      description: "Lista as alterações do paciente, da mais recente para a mais antiga (desempate por `id` decrescente),\npaginadas como a listagem. Funciona também para pacientes na lixeira. `event` é `created`, `updated`,\n`deleted` ou `restored`; `changes` traz `{campo: {old, new}}` com os valores crus (como na API): todos os\ncampos em `created`, só os alterados em `updated` e `{}` em `deleted`/`restored`. `user_id` é sempre\n`null` enquanto a API não tem autenticação. Os valores ficam criptografados no banco."
+      description: "Lista as alterações do paciente, da mais recente para a mais antiga (desempate por `id` decrescente),\npaginadas como a listagem. Funciona também para pacientes na lixeira. `event` é `created`, `updated`,\n`deleted` ou `restored`; `changes` traz `{campo: {old, new}}` com os valores crus (como na API): todos os\ncampos em `created`, só os alterados em `updated` e `{}` em `deleted`/`restored`. O endereço aparece como\n`address.<campo>` (ex.: `address.cep`) e a foto como `photo` (`{\"old\": null, \"new\": \"adicionada\" | \"alterada\" |\n\"removida\"}`, nunca a imagem). `user_id` é sempre\n`null` enquanto a API não tem autenticação. Os valores ficam criptografados no banco."
       parameters:
         -
           in: query
@@ -481,6 +481,15 @@ paths:
                     updated_at: '2026-10-26T15:45:00-03:00'
                     age: 30
                     deleted_at: null
+                    address:
+                      cep: '01310100'
+                      street: 'Avenida Paulista'
+                      number: '1578'
+                      complement: 'Sala 12'
+                      neighborhood: 'Bela Vista'
+                      city: 'São Paulo'
+                      state: SP
+                    photo_url: 'http://localhost:8000/api/patients/1/photo?v=1'
                 properties:
                   data:
                     type: object
@@ -524,6 +533,33 @@ paths:
                       deleted_at:
                         type: string
                         example: null
+                      address:
+                        type: object
+                        properties:
+                          cep:
+                            type: string
+                            example: '01310100'
+                          street:
+                            type: string
+                            example: 'Avenida Paulista'
+                          number:
+                            type: string
+                            example: '1578'
+                          complement:
+                            type: string
+                            example: 'Sala 12'
+                          neighborhood:
+                            type: string
+                            example: 'Bela Vista'
+                          city:
+                            type: string
+                            example: 'São Paulo'
+                          state:
+                            type: string
+                            example: SP
+                      photo_url:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/photo?v=1'
         404:
           description: 'Paciente não encontrado ou não excluído'
           content:
@@ -679,6 +715,15 @@ paths:
                       updated_at: '2026-10-26T15:30:00-03:00'
                       age: 30
                       deleted_at: null
+                      address:
+                        cep: '01310100'
+                        street: 'Avenida Paulista'
+                        number: '1578'
+                        complement: null
+                        neighborhood: 'Bela Vista'
+                        city: 'São Paulo'
+                        state: SP
+                      photo_url: null
                     -
                       id: 2
                       name: 'João Pereira Santos'
@@ -693,6 +738,8 @@ paths:
                       updated_at: '2026-10-26T15:31:00-03:00'
                       age: 46
                       deleted_at: null
+                      address: null
+                      photo_url: null
                   links:
                     first: 'http://localhost:8000/api/patients?page=1'
                     last: 'http://localhost:8000/api/patients?page=1'
@@ -737,6 +784,15 @@ paths:
                         updated_at: '2026-10-26T15:30:00-03:00'
                         age: 30
                         deleted_at: null
+                        address:
+                          cep: '01310100'
+                          street: 'Avenida Paulista'
+                          number: '1578'
+                          complement: null
+                          neighborhood: 'Bela Vista'
+                          city: 'São Paulo'
+                          state: SP
+                        photo_url: null
                       -
                         id: 2
                         name: 'João Pereira Santos'
@@ -751,6 +807,8 @@ paths:
                         updated_at: '2026-10-26T15:31:00-03:00'
                         age: 46
                         deleted_at: null
+                        address: null
+                        photo_url: null
                     items:
                       type: object
                       properties:
@@ -791,6 +849,33 @@ paths:
                           type: integer
                           example: 30
                         deleted_at:
+                          type: string
+                          example: null
+                        address:
+                          type: object
+                          properties:
+                            cep:
+                              type: string
+                              example: '01310100'
+                            street:
+                              type: string
+                              example: 'Avenida Paulista'
+                            number:
+                              type: string
+                              example: '1578'
+                            complement:
+                              type: string
+                              example: null
+                            neighborhood:
+                              type: string
+                              example: 'Bela Vista'
+                            city:
+                              type: string
+                              example: 'São Paulo'
+                            state:
+                              type: string
+                              example: SP
+                        photo_url:
                           type: string
                           example: null
                   links:
@@ -865,7 +950,7 @@ paths:
     post:
       summary: 'Cadastrar paciente'
       operationId: cadastrarPaciente
-      description: "Cria um paciente. CPF, RG e celular podem ser enviados com máscara; são armazenados só com dígitos.\nO CPF deve ser válido e único entre os pacientes ativos."
+      description: "Cria um paciente. CPF, RG e celular podem ser enviados com máscara; são armazenados só com dígitos.\nO CPF deve ser válido e único entre os pacientes ativos. `address` é opcional (objeto ou `null`); quando\nenviado, todos os subcampos exceto `complement` são obrigatórios e os erros usam chaves com ponto\n(`errors[\"address.cep\"]`). A foto é enviada à parte (`POST /patients/{id}/photo`)."
       parameters: []
       responses:
         201:
@@ -889,6 +974,15 @@ paths:
                     updated_at: '2026-10-26T15:30:00-03:00'
                     age: 30
                     deleted_at: null
+                    address:
+                      cep: '01310100'
+                      street: 'Avenida Paulista'
+                      number: '1578'
+                      complement: 'Sala 12'
+                      neighborhood: 'Bela Vista'
+                      city: 'São Paulo'
+                      state: SP
+                    photo_url: 'http://localhost:8000/api/patients/1/photo?v=1'
                 properties:
                   data:
                     type: object
@@ -932,6 +1026,33 @@ paths:
                       deleted_at:
                         type: string
                         example: null
+                      address:
+                        type: object
+                        properties:
+                          cep:
+                            type: string
+                            example: '01310100'
+                          street:
+                            type: string
+                            example: 'Avenida Paulista'
+                          number:
+                            type: string
+                            example: '1578'
+                          complement:
+                            type: string
+                            example: 'Sala 12'
+                          neighborhood:
+                            type: string
+                            example: 'Bela Vista'
+                          city:
+                            type: string
+                            example: 'São Paulo'
+                          state:
+                            type: string
+                            example: SP
+                      photo_url:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/photo?v=1'
         422:
           description: 'Erro de validação'
           content:
@@ -1008,6 +1129,67 @@ paths:
                   type: string
                   description: 'Observações sobre o paciente (opcional, até 2000 caracteres). Must not be greater than 2000 characters.'
                   example: 'Paciente com miopia leve, retorno anual.'
+                address:
+                  type: object
+                  description: 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.'
+                  example: null
+                  properties:
+                    cep:
+                      type: string
+                      description: 'CEP com 8 dígitos, com ou sem máscara (`00000-000`). Armazenado só com dígitos. Obrigatório quando `address` é enviado. Must be 8 digits.'
+                      example: 01310-100
+                    street:
+                      type: string
+                      description: 'Logradouro (até 255). Obrigatório quando `address` é enviado. Must not be greater than 255 characters.'
+                      example: 'Avenida Paulista'
+                    number:
+                      type: string
+                      description: 'Número (até 20; aceita "S/N"). Obrigatório quando `address` é enviado. Must not be greater than 20 characters.'
+                      example: '1578'
+                    complement:
+                      type: string
+                      description: 'Complemento (opcional, até 100). Must not be greater than 100 characters.'
+                      example: 'Sala 12'
+                    neighborhood:
+                      type: string
+                      description: 'Bairro (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+                      example: 'Bela Vista'
+                    city:
+                      type: string
+                      description: 'Cidade (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+                      example: 'São Paulo'
+                    state:
+                      type: string
+                      description: 'UF: sigla de estado brasileiro (aceita minúsculas; armazenada em maiúsculas). Obrigatório quando `address` é enviado.'
+                      example: SP
+                      enum:
+                        - AC
+                        - AL
+                        - AP
+                        - AM
+                        - BA
+                        - CE
+                        - DF
+                        - ES
+                        - GO
+                        - MA
+                        - MT
+                        - MS
+                        - MG
+                        - PA
+                        - PB
+                        - PR
+                        - PE
+                        - PI
+                        - RJ
+                        - RN
+                        - RS
+                        - RO
+                        - RR
+                        - SC
+                        - SP
+                        - SE
+                        - TO
               required:
                 - name
                 - cpf
@@ -1044,6 +1226,15 @@ paths:
                     updated_at: '2026-10-26T15:30:00-03:00'
                     age: 30
                     deleted_at: null
+                    address:
+                      cep: '01310100'
+                      street: 'Avenida Paulista'
+                      number: '1578'
+                      complement: 'Sala 12'
+                      neighborhood: 'Bela Vista'
+                      city: 'São Paulo'
+                      state: SP
+                    photo_url: 'http://localhost:8000/api/patients/1/photo?v=1'
                 properties:
                   data:
                     type: object
@@ -1087,6 +1278,33 @@ paths:
                       deleted_at:
                         type: string
                         example: null
+                      address:
+                        type: object
+                        properties:
+                          cep:
+                            type: string
+                            example: '01310100'
+                          street:
+                            type: string
+                            example: 'Avenida Paulista'
+                          number:
+                            type: string
+                            example: '1578'
+                          complement:
+                            type: string
+                            example: 'Sala 12'
+                          neighborhood:
+                            type: string
+                            example: 'Bela Vista'
+                          city:
+                            type: string
+                            example: 'São Paulo'
+                          state:
+                            type: string
+                            example: SP
+                      photo_url:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/photo?v=1'
         404:
           description: 'Paciente não encontrado ou excluído'
           content:
@@ -1105,7 +1323,7 @@ paths:
     put:
       summary: 'Atualizar paciente'
       operationId: atualizarPaciente
-      description: 'Substituição completa (PUT): envie todos os campos. Campos opcionais omitidos (`email`, `description`) são apagados.'
+      description: "Substituição completa (PUT): envie todos os campos. Campos opcionais omitidos (`email`, `description`) são apagados;\n`address` omitido ou `null` remove o endereço. A foto não muda por aqui (use as rotas `/photo`)."
       parameters: []
       responses:
         200:
@@ -1129,6 +1347,15 @@ paths:
                     updated_at: '2026-10-26T15:30:00-03:00'
                     age: 30
                     deleted_at: null
+                    address:
+                      cep: '01310100'
+                      street: 'Avenida Paulista'
+                      number: '1578'
+                      complement: 'Sala 12'
+                      neighborhood: 'Bela Vista'
+                      city: 'São Paulo'
+                      state: SP
+                    photo_url: 'http://localhost:8000/api/patients/1/photo?v=1'
                 properties:
                   data:
                     type: object
@@ -1172,6 +1399,33 @@ paths:
                       deleted_at:
                         type: string
                         example: null
+                      address:
+                        type: object
+                        properties:
+                          cep:
+                            type: string
+                            example: '01310100'
+                          street:
+                            type: string
+                            example: 'Avenida Paulista'
+                          number:
+                            type: string
+                            example: '1578'
+                          complement:
+                            type: string
+                            example: 'Sala 12'
+                          neighborhood:
+                            type: string
+                            example: 'Bela Vista'
+                          city:
+                            type: string
+                            example: 'São Paulo'
+                          state:
+                            type: string
+                            example: SP
+                      photo_url:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/photo?v=1'
         404:
           description: 'Paciente não encontrado ou excluído'
           content:
@@ -1260,6 +1514,67 @@ paths:
                   type: string
                   description: 'Observações sobre o paciente (opcional, até 2000 caracteres). Must not be greater than 2000 characters.'
                   example: 'Paciente com miopia leve, retorno anual.'
+                address:
+                  type: object
+                  description: 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.'
+                  example: null
+                  properties:
+                    cep:
+                      type: string
+                      description: 'CEP com 8 dígitos, com ou sem máscara (`00000-000`). Armazenado só com dígitos. Obrigatório quando `address` é enviado. Must be 8 digits.'
+                      example: 01310-100
+                    street:
+                      type: string
+                      description: 'Logradouro (até 255). Obrigatório quando `address` é enviado. Must not be greater than 255 characters.'
+                      example: 'Avenida Paulista'
+                    number:
+                      type: string
+                      description: 'Número (até 20; aceita "S/N"). Obrigatório quando `address` é enviado. Must not be greater than 20 characters.'
+                      example: '1578'
+                    complement:
+                      type: string
+                      description: 'Complemento (opcional, até 100). Must not be greater than 100 characters.'
+                      example: 'Sala 12'
+                    neighborhood:
+                      type: string
+                      description: 'Bairro (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+                      example: 'Bela Vista'
+                    city:
+                      type: string
+                      description: 'Cidade (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+                      example: 'São Paulo'
+                    state:
+                      type: string
+                      description: 'UF: sigla de estado brasileiro (aceita minúsculas; armazenada em maiúsculas). Obrigatório quando `address` é enviado.'
+                      example: SP
+                      enum:
+                        - AC
+                        - AL
+                        - AP
+                        - AM
+                        - BA
+                        - CE
+                        - DF
+                        - ES
+                        - GO
+                        - MA
+                        - MT
+                        - MS
+                        - MG
+                        - PA
+                        - PB
+                        - PR
+                        - PE
+                        - PI
+                        - RJ
+                        - RN
+                        - RS
+                        - RO
+                        - RR
+                        - SC
+                        - SP
+                        - SE
+                        - TO
               required:
                 - name
                 - cpf
@@ -1300,6 +1615,306 @@ paths:
         required: true
         schema:
           type: integer
+  '/api/patients/{patient_id}/photo':
+    get:
+      summary: 'Foto do paciente'
+      operationId: fotoDoPaciente
+      description: "A foto (JPEG, até 512x512) do paciente. A URL com `?v=<versão>` vem em `photo_url` no recurso do paciente;\na versão muda a cada troca, então a resposta pode ficar em cache no navegador (`Cache-Control: private,\nmax-age=86400`). `404` se o paciente não tiver foto, não existir ou estiver na lixeira."
+      parameters:
+        -
+          in: query
+          name: v
+          description: 'Versão da foto (só para invalidar o cache; ignorada pelo servidor).'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Versão da foto (só para invalidar o cache; ignorada pelo servidor).'
+            example: 1
+      responses:
+        200:
+          description: 'Imagem (image/jpeg)'
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: '<binário JPEG>'
+        404:
+          description: 'Paciente sem foto'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Foto não encontrada.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Foto não encontrada.'
+      tags:
+        - Pacientes
+      security: []
+    post:
+      summary: 'Enviar foto do paciente'
+      operationId: enviarFotoDoPaciente
+      description: "Envia ou troca a foto (multipart, campo `photo`): JPEG, PNG ou WebP (tipo conferido pelo conteúdo), até 2 MB,\nentre 100x100 e 4000x4000 px. A imagem é reprocessada no servidor (corte quadrado centralizado, no máximo\n512x512, JPEG), o que remove os metadados EXIF (como a localização), e fica criptografada em disco privado.\nGera um registro `photo` no histórico (sem a imagem). Retorna o paciente com o novo `photo_url`."
+      parameters: []
+      responses:
+        200:
+          description: 'Foto enviada'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    name: 'Maria da Silva'
+                    cpf: '62518953060'
+                    rg: 35688019X
+                    birth_date: '1996-07-20'
+                    sex: F
+                    phone: '11928535718'
+                    email: maria@example.com
+                    description: null
+                    created_at: '2026-10-26T15:30:00-03:00'
+                    updated_at: '2026-11-03T10:00:00-03:00'
+                    age: 30
+                    deleted_at: null
+                    address: null
+                    photo_url: 'http://localhost:8000/api/patients/1/photo?v=1'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: 'Maria da Silva'
+                      cpf:
+                        type: string
+                        example: '62518953060'
+                      rg:
+                        type: string
+                        example: 35688019X
+                      birth_date:
+                        type: string
+                        example: '1996-07-20'
+                      sex:
+                        type: string
+                        example: F
+                      phone:
+                        type: string
+                        example: '11928535718'
+                      email:
+                        type: string
+                        example: maria@example.com
+                      description:
+                        type: string
+                        example: null
+                      created_at:
+                        type: string
+                        example: '2026-10-26T15:30:00-03:00'
+                      updated_at:
+                        type: string
+                        example: '2026-11-03T10:00:00-03:00'
+                      age:
+                        type: integer
+                        example: 30
+                      deleted_at:
+                        type: string
+                        example: null
+                      address:
+                        type: string
+                        example: null
+                      photo_url:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/photo?v=1'
+        404:
+          description: 'Paciente não encontrado ou excluído'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Paciente não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Paciente não encontrado.'
+        422:
+          description: 'Tipo inválido'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'A foto deve ser uma imagem JPEG, PNG ou WebP.'
+                  errors:
+                    photo:
+                      - 'A foto deve ser uma imagem JPEG, PNG ou WebP.'
+                properties:
+                  message:
+                    type: string
+                    example: 'A foto deve ser uma imagem JPEG, PNG ou WebP.'
+                  errors:
+                    type: object
+                    properties:
+                      photo:
+                        type: array
+                        example:
+                          - 'A foto deve ser uma imagem JPEG, PNG ou WebP.'
+                        items:
+                          type: string
+      tags:
+        - Pacientes
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: 'Imagem JPEG, PNG ou WebP (conferido pelo conteúdo), até 2 MB, entre 100x100 e 4000x4000 px. Reprocessada no servidor: corte quadrado centralizado, no máximo 512x512, JPEG, sem metadados EXIF. Must be a file. Must not be greater than 2048 kilobytes.'
+              required:
+                - photo
+      security: []
+    delete:
+      summary: 'Remover foto do paciente'
+      operationId: removerFotoDoPaciente
+      description: 'Remove a foto (e o arquivo). Gera um registro `photo` no histórico. `404` se o paciente não tiver foto.'
+      parameters: []
+      responses:
+        204:
+          description: 'Foto removida'
+        404:
+          description: 'Paciente sem foto'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Foto não encontrada.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Foto não encontrada.'
+      tags:
+        - Pacientes
+      security: []
+    parameters:
+      -
+        in: path
+        name: patient_id
+        description: 'ID do paciente.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/cep/{code}':
+    get:
+      summary: 'Consultar CEP'
+      operationId: consultarCEP
+      description: "Busca o endereço de um CEP no ViaCEP (resultado em cache por 24 horas). Aceita máscara (`01310-100`).\nCampos vazios no ViaCEP (CEP geral de cidade pequena) voltam como texto vazio. `503` quando o ViaCEP não\nresponde: o endereço pode ser preenchido manualmente."
+      parameters: []
+      responses:
+        200:
+          description: 'CEP encontrado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    cep: '01310100'
+                    street: 'Avenida Paulista'
+                    neighborhood: 'Bela Vista'
+                    city: 'São Paulo'
+                    state: SP
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      cep:
+                        type: string
+                        example: '01310100'
+                      street:
+                        type: string
+                        example: 'Avenida Paulista'
+                      neighborhood:
+                        type: string
+                        example: 'Bela Vista'
+                      city:
+                        type: string
+                        example: 'São Paulo'
+                      state:
+                        type: string
+                        example: SP
+        404:
+          description: 'CEP inexistente'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'CEP não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'CEP não encontrado.'
+        422:
+          description: 'Formato inválido'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'O CEP deve ter 8 dígitos.'
+                  errors:
+                    cep:
+                      - 'O CEP deve ter 8 dígitos.'
+                properties:
+                  message:
+                    type: string
+                    example: 'O CEP deve ter 8 dígitos.'
+                  errors:
+                    type: object
+                    properties:
+                      cep:
+                        type: array
+                        example:
+                          - 'O CEP deve ter 8 dígitos.'
+                        items:
+                          type: string
+        503:
+          description: 'ViaCEP indisponível'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Serviço de CEP indisponível. Preencha o endereço manualmente.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Serviço de CEP indisponível. Preencha o endereço manualmente.'
+      tags:
+        - Endereço
+      security: []
+    parameters:
+      -
+        in: path
+        name: code
+        description: 'CEP com 8 dígitos, com ou sem máscara.'
+        example: 01310-100
+        required: true
+        schema:
+          type: string
   '/api/patients/{patient_id}/consultations':
     get:
       summary: 'Listar atendimentos do paciente'
@@ -2857,6 +3472,279 @@ paths:
         required: true
         schema:
           type: integer
+  '/api/consultations/{consultation_id}/attachments':
+    get:
+      summary: 'Listar anexos do atendimento'
+      operationId: listarAnexosDoAtendimento
+      description: "Exames anexados ao atendimento (laudos, imagens), do mais recente para o mais antigo, sem paginação.\n`404` se o atendimento não existir ou o paciente estiver na lixeira."
+      parameters: []
+      responses:
+        200:
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    -
+                      id: 3
+                      consultation_id: 1
+                      original_name: topografia.pdf
+                      mime_type: application/pdf
+                      size: 183245
+                      description: 'Topografia de córnea'
+                      download_url: 'http://localhost:8000/api/attachments/3/download'
+                      created_at: '2026-11-03T15:10:00-03:00'
+                properties:
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: 3
+                        consultation_id: 1
+                        original_name: topografia.pdf
+                        mime_type: application/pdf
+                        size: 183245
+                        description: 'Topografia de córnea'
+                        download_url: 'http://localhost:8000/api/attachments/3/download'
+                        created_at: '2026-11-03T15:10:00-03:00'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 3
+                        consultation_id:
+                          type: integer
+                          example: 1
+                        original_name:
+                          type: string
+                          example: topografia.pdf
+                        mime_type:
+                          type: string
+                          example: application/pdf
+                        size:
+                          type: integer
+                          example: 183245
+                        description:
+                          type: string
+                          example: 'Topografia de córnea'
+                        download_url:
+                          type: string
+                          example: 'http://localhost:8000/api/attachments/3/download'
+                        created_at:
+                          type: string
+                          example: '2026-11-03T15:10:00-03:00'
+        404:
+          description: 'Atendimento não encontrado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Atendimento não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Atendimento não encontrado.'
+      tags:
+        - Atendimentos
+      security: []
+    post:
+      summary: 'Anexar exame ao atendimento'
+      operationId: anexarExameAoAtendimento
+      description: "Envia um arquivo (multipart, campo `file`): PDF, JPEG ou PNG, até 10 MB. O tipo é conferido pelo conteúdo\n(não só pela extensão). Vale para qualquer status de atendimento. O arquivo fica criptografado em disco\nprivado, com nome aleatório; o nome original é saneado (e recebe a extensão do tipo detectado)."
+      parameters: []
+      responses:
+        201:
+          description: 'Anexo criado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 3
+                    consultation_id: 1
+                    original_name: topografia.pdf
+                    mime_type: application/pdf
+                    size: 183245
+                    description: 'Topografia de córnea'
+                    download_url: 'http://localhost:8000/api/attachments/3/download'
+                    created_at: '2026-11-03T15:10:00-03:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 3
+                      consultation_id:
+                        type: integer
+                        example: 1
+                      original_name:
+                        type: string
+                        example: topografia.pdf
+                      mime_type:
+                        type: string
+                        example: application/pdf
+                      size:
+                        type: integer
+                        example: 183245
+                      description:
+                        type: string
+                        example: 'Topografia de córnea'
+                      download_url:
+                        type: string
+                        example: 'http://localhost:8000/api/attachments/3/download'
+                      created_at:
+                        type: string
+                        example: '2026-11-03T15:10:00-03:00'
+        404:
+          description: 'Atendimento não encontrado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Atendimento não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Atendimento não encontrado.'
+        422:
+          description: 'Tipo não permitido'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'O arquivo deve ser um PDF, JPEG ou PNG.'
+                  errors:
+                    file:
+                      - 'O arquivo deve ser um PDF, JPEG ou PNG.'
+                properties:
+                  message:
+                    type: string
+                    example: 'O arquivo deve ser um PDF, JPEG ou PNG.'
+                  errors:
+                    type: object
+                    properties:
+                      file:
+                        type: array
+                        example:
+                          - 'O arquivo deve ser um PDF, JPEG ou PNG.'
+                        items:
+                          type: string
+      tags:
+        - Atendimentos
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 'Arquivo PDF, JPEG ou PNG, até 10 MB. O tipo é conferido pelo conteúdo, não pela extensão. Must be a file. Must not be greater than 10240 kilobytes.'
+                description:
+                  type: string
+                  description: 'Descrição do anexo (opcional, até 255 caracteres). Must not be greater than 255 characters.'
+                  example: 'Topografia de córnea'
+              required:
+                - file
+      security: []
+    parameters:
+      -
+        in: path
+        name: consultation_id
+        description: 'ID do atendimento.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/attachments/{attachment_id}/download':
+    get:
+      summary: 'Baixar anexo'
+      operationId: baixarAnexo
+      description: "O arquivo original (descriptografado), com o tipo detectado no envio e\n`Content-Disposition: attachment; filename=\"<nome saneado em ASCII>\"; filename*=UTF-8''<nome saneado>`.\nO \"Try it out\" não exibe o arquivo; para baixar, abra a URL no navegador."
+      parameters: []
+      responses:
+        200:
+          description: Arquivo
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: '<binário>'
+        404:
+          description: 'Anexo não encontrado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Anexo não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Anexo não encontrado.'
+      tags:
+        - Atendimentos
+      security: []
+    parameters:
+      -
+        in: path
+        name: attachment_id
+        description: 'ID do anexo.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/attachments/{id}':
+    delete:
+      summary: 'Excluir anexo'
+      operationId: excluirAnexo
+      description: 'Remove o anexo e o arquivo.'
+      parameters: []
+      responses:
+        204:
+          description: 'Anexo excluído'
+        404:
+          description: 'Anexo não encontrado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Anexo não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Anexo não encontrado.'
+      tags:
+        - Atendimentos
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the attachment.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: attachment_id
+        description: 'ID do anexo.'
+        example: 1
+        required: true
+        schema:
+          type: integer
   /api/health:
     get:
       summary: 'Verificar saúde da API'
@@ -2899,6 +3787,9 @@ tags:
   -
     name: Pacientes
     description: "\nCadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,\ncriação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de\ndisponibilidade de CPF."
+  -
+    name: Endereço
+    description: "\nConsulta de CEP para preencher o endereço do paciente."
   -
     name: Atendimentos
     description: "\nAtendimentos (consultas) dos pacientes: agenda, criação, edição, mudança de status, prontuário oftalmológico,\nreceita de óculos em PDF e linha do tempo. Datas e horas em ISO-8601 com o deslocamento de São Paulo.\nOs campos clínicos livres (`reason`, `notes`, `diagnosis`, `observations`) são armazenados criptografados."

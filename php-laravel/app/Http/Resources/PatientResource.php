@@ -29,6 +29,8 @@ class PatientResource extends JsonResource
             'updated_at' => $this->updated_at?->toIso8601String(),
             'age' => $this->ageOn(),
             'deleted_at' => $this->deleted_at?->toIso8601String(),
+            'address' => $this->address?->toResource(),
+            'photo_url' => $this->photoUrl(),
         ];
     }
 }

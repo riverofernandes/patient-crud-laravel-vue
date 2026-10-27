@@ -13,7 +13,7 @@ class PatientExportTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const HEADER = 'Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição';
+    private const HEADER = 'Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição;CEP;Endereço;Cidade;UF';
 
     protected function tearDown(): void
     {
@@ -71,8 +71,8 @@ class PatientExportTest extends TestCase
         $content = substr($response->streamedContent(), strlen(PatientCsv::BOM));
         $this->assertSame(
             self::HEADER."\r\n"
-            .'José Souza;529.982.247-25;123456;02/01/1980;46;Masculino;(11) 3234-5678;;"Linha 1'."\n".'Linha 2"'."\r\n"
-            .'Maria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;"Miopia; retorno ""anual"""'."\r\n",
+            .'José Souza;529.982.247-25;123456;02/01/1980;46;Masculino;(11) 3234-5678;;"Linha 1'."\n".'Linha 2";;;;'."\r\n"
+            .'Maria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;"Miopia; retorno ""anual""";;;;'."\r\n",
             $content
         );
         $this->assertStringStartsWith(PatientCsv::BOM, $response->streamedContent());
@@ -88,7 +88,7 @@ class PatientExportTest extends TestCase
         $this->assertStringStartsWith('"\'=HYPERLINK(""http://x"")";', $lines[2]);
         $this->assertStringContainsString(";'@evil.example;'+SUM(A1)", $lines[2]);
         $this->assertStringStartsWith("'-2+3;", $lines[1]);
-        $this->assertStringEndsWith(";'\tTab", $lines[1]);
+        $this->assertStringEndsWith(";'\tTab;;;;", $lines[1]);
 
         $this->assertSame("'=1", PatientCsv::guard('=1'));
         $this->assertSame("'\rx", PatientCsv::guard("\rx"));
@@ -151,7 +151,7 @@ class PatientExportTest extends TestCase
         $this->get('/api/patients/export', ['Origin' => 'http://localhost:5173'])
             ->assertOk()
             ->assertHeader('Access-Control-Allow-Origin', 'http://localhost:5173')
-            ->assertHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+            ->assertHeader('Access-Control-Expose-Headers', 'Content-Disposition, X-Request-Id');
     }
 
     public function test_formatters(): void

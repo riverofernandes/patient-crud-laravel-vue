@@ -168,6 +168,8 @@
         />
         <EyeExamView v-else :exam="exam" />
       </section>
+
+      <ConsultationAttachments :consultation-id="consultation.id" />
     </template>
   </section>
 </template>
@@ -177,6 +179,7 @@ import { defineComponent } from "vue";
 import AppBreadcrumb, {
   type BreadcrumbItem,
 } from "@/components/AppBreadcrumb.vue";
+import ConsultationAttachments from "@/components/ConsultationAttachments.vue";
 import ConsultationForm from "@/components/ConsultationForm.vue";
 import ConsultationStatusActions from "@/components/ConsultationStatusActions.vue";
 import DetailItem from "@/components/DetailItem.vue";
@@ -216,6 +219,7 @@ export default defineComponent({
   name: "ConsultationDetailView",
   components: {
     AppBreadcrumb,
+    ConsultationAttachments,
     ConsultationForm,
     ConsultationStatusActions,
     DetailItem,

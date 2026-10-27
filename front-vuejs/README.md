@@ -23,12 +23,15 @@ npm run dev                  # http://localhost:5173 (listens on all interfaces)
 ```
 src/
   services/       api.ts (axios instance + error helpers), patientService.ts (typed CRUD),
-                  consultationService.ts (consultations, agenda, status, eye exam, prescription PDF, timeline)
+                  consultationService.ts (consultations, agenda, status, eye exam, prescription PDF, timeline),
+                  cepService.ts (GET /cep), attachmentService.ts (exam attachments: list, upload, download,
+                  delete); uploads are multipart with progress (multipartConfig in api.ts)
   composables/    usePatient.ts (load one patient: loading / 404 / error)
   components/     AppLayout, AppBreadcrumb, PatientForm, FormField, DetailItem,
                   ConfirmDeleteModal, PageState, PatientFilters, ExportCsvButton, PatientHistory,
                   PatientConsultations, PatientTimeline, ConsultationForm, ConsultationStatusActions,
-                  StatusBadge, EyeExamForm, EyeExamView, DiopterInput
+                  StatusBadge, EyeExamForm, EyeExamView, DiopterInput, AddressFields (address + CEP
+                  lookup), PatientAvatar, PatientPhoto, ConsultationAttachments, UploadProgress
   views/          PatientListView, PatientCreateView, PatientDetailView, PatientEditView, NotFoundView,
                   AgendaView, ConsultationCreateView, ConsultationDetailView
   utils/          format.ts (CPF/RG/phone/date masks, DD/MM/AAAA <-> YYYY-MM-DD, age, date-time),
@@ -37,7 +40,9 @@ src/
                   filters.ts (sex/age filters <-> query, validation), download.ts (CSV filename + save),
                   audit.ts (history labels/formatting), datetime.ts (America/Sao_Paulo dates, week math),
                   consultationStatus.ts (labels, transitions, actions), eyeExam.ts (diopters, rules),
-                  agenda.ts (?semana/?status/?profissional), timeline.ts (keys, merge, day groups)
+                  agenda.ts (?semana/?status/?profissional), timeline.ts (keys, merge, day groups),
+                  address.ts (UFs, CEP mask, validation, payload, one-line format),
+                  files.ts (file size "1,2 MB", photo/attachment checks, initials)
   test/           helpers for component tests (localVue with BootstrapVue, in-memory router)
   styles/         _variables.scss (design tokens + Bootstrap overrides), main.scss
 ```

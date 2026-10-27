@@ -1,10 +1,26 @@
-import { api, parseBlobError } from "./api";
+import {
+  api,
+  multipartConfig,
+  parseBlobError,
+  type UploadOptions,
+} from "./api";
 import {
   exportFilename,
   filenameFromContentDisposition,
 } from "@/utils/download";
 
 export type Sex = "M" | "F";
+
+/** Patient address (Sprint 5). `cep` has digits only, `state` is the UF. */
+export interface Address {
+  cep: string;
+  street: string;
+  number: string;
+  complement: string | null;
+  neighborhood: string;
+  city: string;
+  state: string;
+}
 
 export interface Patient {
   id: number;
@@ -22,12 +38,16 @@ export interface Patient {
   age?: number | null;
   /** ISO-8601, only filled for patients in the trash. */
   deleted_at?: string | null;
+  /** Optional until every API serves it (Sprint 5). */
+  address?: Address | null;
+  /** Read-only absolute URL with `?v=` for cache busting, or null. */
+  photo_url?: string | null;
 }
 
 /** Editable fields sent on POST/PUT. */
 export type PatientPayload = Omit<
   Patient,
-  "id" | "created_at" | "updated_at" | "age" | "deleted_at"
+  "id" | "created_at" | "updated_at" | "age" | "deleted_at" | "photo_url"
 >;
 
 export interface PaginationMeta {
@@ -69,7 +89,12 @@ export interface CsvExport {
   filename: string;
 }
 
-export type AuditEvent = "created" | "updated" | "deleted" | "restored";
+export type AuditEvent =
+  | "created"
+  | "updated"
+  | "deleted"
+  | "restored"
+  | "photo";
 
 export interface AuditChange {
   old: string | null;
@@ -186,6 +211,26 @@ export const patientService = {
       { params: { page: params.page ?? 1, per_page: params.per_page ?? 10 } }
     );
     return data;
+  },
+
+  /** Sends a new photo (JPEG/PNG/WebP, max. 2 MB); returns the updated patient. */
+  async uploadPhoto(
+    id: number | string,
+    file: Blob,
+    options: UploadOptions = {}
+  ): Promise<Patient> {
+    const body = new FormData();
+    body.append("photo", file);
+    const { data } = await api.post<{ data: Patient }>(
+      `${RESOURCE}/${id}/photo`,
+      body,
+      multipartConfig(options)
+    );
+    return data.data;
+  },
+
+  async removePhoto(id: number | string): Promise<void> {
+    await api.delete(`${RESOURCE}/${id}/photo`);
   },
 
   /** Whether a CPF can be used (`ignore` = the patient being edited). */

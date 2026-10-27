@@ -98,6 +98,25 @@
                                                                                 <li class="tocify-item level-2" data-unique="pacientes-DELETEapi-patients--id-">
                                 <a href="#pacientes-DELETEapi-patients--id-">Excluir paciente</a>
                             </li>
+                                                                                <li class="tocify-item level-2" data-unique="pacientes-GETapi-patients--patient_id--photo">
+                                <a href="#pacientes-GETapi-patients--patient_id--photo">Foto do paciente</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="pacientes-POSTapi-patients--patient_id--photo">
+                                <a href="#pacientes-POSTapi-patients--patient_id--photo">Enviar foto do paciente</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="pacientes-DELETEapi-patients--patient_id--photo">
+                                <a href="#pacientes-DELETEapi-patients--patient_id--photo">Remover foto do paciente</a>
+                            </li>
+                                                                        </ul>
+                            </ul>
+                    <ul id="tocify-header-endereco" class="tocify-header">
+                <li class="tocify-item level-1" data-unique="endereco">
+                    <a href="#endereco">Endereço</a>
+                </li>
+                                    <ul id="tocify-subheader-endereco" class="tocify-subheader">
+                                                    <li class="tocify-item level-2" data-unique="endereco-GETapi-cep--code-">
+                                <a href="#endereco-GETapi-cep--code-">Consultar CEP</a>
+                            </li>
                                                                         </ul>
                             </ul>
                     <ul id="tocify-header-atendimentos" class="tocify-header">
@@ -132,6 +151,18 @@
                                                                                 <li class="tocify-item level-2" data-unique="atendimentos-GETapi-consultations--consultation_id--prescription">
                                 <a href="#atendimentos-GETapi-consultations--consultation_id--prescription">Receita de óculos (PDF)</a>
                             </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-GETapi-consultations--consultation_id--attachments">
+                                <a href="#atendimentos-GETapi-consultations--consultation_id--attachments">Listar anexos do atendimento</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-POSTapi-consultations--consultation_id--attachments">
+                                <a href="#atendimentos-POSTapi-consultations--consultation_id--attachments">Anexar exame ao atendimento</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-GETapi-attachments--attachment_id--download">
+                                <a href="#atendimentos-GETapi-attachments--attachment_id--download">Baixar anexo</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-DELETEapi-attachments--id-">
+                                <a href="#atendimentos-DELETEapi-attachments--id-">Excluir anexo</a>
+                            </li>
                                                                         </ul>
                             </ul>
                     <ul id="tocify-header-monitoramento" class="tocify-header">
@@ -161,7 +192,7 @@
     <div class="dark-box"></div>
     <div class="content">
         <h1 id="introduction">Introduction</h1>
-<p>API REST para cadastro, consulta, edição e exclusão (soft delete) de pacientes, atendimentos, prontuário oftalmológico e receita de óculos.</p>
+<p>API REST para cadastro, consulta, edição e exclusão (soft delete) de pacientes (com endereço e foto), atendimentos, prontuário oftalmológico, receita de óculos e anexos de exames.</p>
 <aside>
     <strong>Base URL</strong>: <code>http://localhost:8000</code>
 </aside>
@@ -173,7 +204,11 @@ CPF, RG e celular são armazenados criptografados no banco (a API sempre devolve
 a busca por CPF exige o CPF completo. Cada alteração de paciente fica registrada no histórico (<code>/patients/{id}/audits</code>).</p>
 <p>Atendimentos: datas e horas em ISO-8601, com fuso (<code>2026-11-03T14:30:00-03:00</code>) ou sem fuso (interpretado em
 America/Sao_Paulo); as respostas sempre trazem o deslocamento de São Paulo. Os campos clínicos livres (<code>reason</code>,
-<code>notes</code>, <code>diagnosis</code>, <code>observations</code>) são armazenados criptografados.</p>
+<code>notes</code>, <code>diagnosis</code>, <code>observations</code>) são armazenados criptografados.
+Endereço, foto e anexos: o paciente pode ter um endereço (<code>address</code>, logradouro/número/complemento/bairro
+criptografados) e uma foto (<code>photo_url</code>); atendimentos podem ter anexos de exames (PDF, JPEG ou PNG). Fotos e anexos
+ficam criptografados em disco privado. Uploads usam <code>multipart/form-data</code>. Toda resposta traz o header
+<code>X-Request-Id</code> (o mesmo valor aparece na linha de log da requisição).</p>
 <aside>Os exemplos de requisição (bash e JavaScript) ficam na área escura à direita. Use o botão
 "Try it out" de cada endpoint para enviar uma requisição real à API.</aside>
 
@@ -368,7 +403,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
 <code>age_max</code>, <code>sort</code>, <code>direction</code>, <code>trashed</code>) e sem paginação. Arquivo UTF-8 com BOM, separador <code>;</code> e
 quebra de linha CRLF (abre direto no Excel em pt-BR), nome <code>pacientes-AAAAMMDD-HHMM.csv</code> (horário de
 Brasília). Valores formatados: CPF <code>000.000.000-00</code>, celular <code>(00) 00000-0000</code>, datas <code>DD/MM/AAAA</code>,
-sexo <code>Masculino</code>/<code>Feminino</code>; com <code>trashed=only</code> há a coluna extra <code>Excluído em</code> (<code>DD/MM/AAAA HH:MM</code>).
+sexo <code>Masculino</code>/<code>Feminino</code>, CEP <code>00000-000</code>, endereço &quot;rua, número - complemento - bairro&quot;; com <code>trashed=only</code> há a coluna extra <code>Excluído em</code> (<code>DD/MM/AAAA HH:MM</code>).
 Células que começam com <code>=</code>, <code>+</code>, <code>-</code>, <code>@</code>, tab ou CR recebem um <code>'</code> na frente (proteção contra
 injeção de fórmulas). O &quot;Try it out&quot; mostra o CSV como texto; para baixar o arquivo, abra a URL no
 navegador.</p>
@@ -419,8 +454,8 @@ fetch(url, {
         </blockquote>
                 <pre>
 
-<code class="language-json" style="max-height: 300px;">Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descri&ccedil;&atilde;o
-Maria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;&quot;Paciente com miopia leve; retorno anual.&quot;</code>
+<code class="language-json" style="max-height: 300px;">Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descri&ccedil;&atilde;o;CEP;Endere&ccedil;o;Cidade;UF
+Maria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;&quot;Paciente com miopia leve; retorno anual.&quot;;01310-100;Avenida Paulista, 1578 - Sala 12 - Bela Vista;S&atilde;o Paulo;SP</code>
  </pre>
     </span>
 <span id="execution-results-GETapi-patients-export" hidden>
@@ -580,7 +615,8 @@ You can check the Dev Tools console for debugging information.</code></pre>
 <p>Lista as alterações do paciente, da mais recente para a mais antiga (desempate por <code>id</code> decrescente),
 paginadas como a listagem. Funciona também para pacientes na lixeira. <code>event</code> é <code>created</code>, <code>updated</code>,
 <code>deleted</code> ou <code>restored</code>; <code>changes</code> traz <code>{campo: {old, new}}</code> com os valores crus (como na API): todos os
-campos em <code>created</code>, só os alterados em <code>updated</code> e <code>{}</code> em <code>deleted</code>/<code>restored</code>. <code>user_id</code> é sempre
+campos em <code>created</code>, só os alterados em <code>updated</code> e <code>{}</code> em <code>deleted</code>/<code>restored</code>. O endereço aparece como
+<code>address.&lt;campo&gt;</code> (ex.: <code>address.cep</code>) e a foto como <code>photo</code> (<code>{"old": null, "new": "adicionada" | "alterada" | "removida"}</code>, nunca a imagem). <code>user_id</code> é sempre
 <code>null</code> enquanto a API não tem autenticação. Os valores ficam criptografados no banco.</p>
 
 <span id="example-requests-GETapi-patients--patient_id--audits">
@@ -893,7 +929,17 @@ fetch(url, {
         &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
         &quot;updated_at&quot;: &quot;2026-10-26T15:45:00-03:00&quot;,
         &quot;age&quot;: 30,
-        &quot;deleted_at&quot;: null
+        &quot;deleted_at&quot;: null,
+        &quot;address&quot;: {
+            &quot;cep&quot;: &quot;01310100&quot;,
+            &quot;street&quot;: &quot;Avenida Paulista&quot;,
+            &quot;number&quot;: &quot;1578&quot;,
+            &quot;complement&quot;: &quot;Sala 12&quot;,
+            &quot;neighborhood&quot;: &quot;Bela Vista&quot;,
+            &quot;city&quot;: &quot;S&atilde;o Paulo&quot;,
+            &quot;state&quot;: &quot;SP&quot;
+        },
+        &quot;photo_url&quot;: &quot;http://localhost:8000/api/patients/1/photo?v=1&quot;
     }
 }</code>
  </pre>
@@ -1073,7 +1119,17 @@ fetch(url, {
             &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
             &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
             &quot;age&quot;: 30,
-            &quot;deleted_at&quot;: null
+            &quot;deleted_at&quot;: null,
+            &quot;address&quot;: {
+                &quot;cep&quot;: &quot;01310100&quot;,
+                &quot;street&quot;: &quot;Avenida Paulista&quot;,
+                &quot;number&quot;: &quot;1578&quot;,
+                &quot;complement&quot;: null,
+                &quot;neighborhood&quot;: &quot;Bela Vista&quot;,
+                &quot;city&quot;: &quot;S&atilde;o Paulo&quot;,
+                &quot;state&quot;: &quot;SP&quot;
+            },
+            &quot;photo_url&quot;: null
         },
         {
             &quot;id&quot;: 2,
@@ -1088,7 +1144,9 @@ fetch(url, {
             &quot;created_at&quot;: &quot;2026-10-26T15:31:00-03:00&quot;,
             &quot;updated_at&quot;: &quot;2026-10-26T15:31:00-03:00&quot;,
             &quot;age&quot;: 46,
-            &quot;deleted_at&quot;: null
+            &quot;deleted_at&quot;: null,
+            &quot;address&quot;: null,
+            &quot;photo_url&quot;: null
         }
     ],
     &quot;links&quot;: {
@@ -1303,7 +1361,9 @@ You can check the Dev Tools console for debugging information.</code></pre>
 </p>
 
 <p>Cria um paciente. CPF, RG e celular podem ser enviados com máscara; são armazenados só com dígitos.
-O CPF deve ser válido e único entre os pacientes ativos.</p>
+O CPF deve ser válido e único entre os pacientes ativos. <code>address</code> é opcional (objeto ou <code>null</code>); quando
+enviado, todos os subcampos exceto <code>complement</code> são obrigatórios e os erros usam chaves com ponto
+(<code>errors["address.cep"]</code>). A foto é enviada à parte (<code>POST /patients/{id}/photo</code>).</p>
 
 <span id="example-requests-POSTapi-patients">
 <blockquote>Example request:</blockquote>
@@ -1322,7 +1382,16 @@ O CPF deve ser válido e único entre os pacientes ativos.</p>
     \"sex\": \"F\",
     \"phone\": \"(11) 92853-5718\",
     \"email\": \"maria@example.com\",
-    \"description\": \"Paciente com miopia leve, retorno anual.\"
+    \"description\": \"Paciente com miopia leve, retorno anual.\",
+    \"address\": {
+        \"cep\": \"01310-100\",
+        \"street\": \"Avenida Paulista\",
+        \"number\": \"1578\",
+        \"complement\": \"Sala 12\",
+        \"neighborhood\": \"Bela Vista\",
+        \"city\": \"São Paulo\",
+        \"state\": \"SP\"
+    }
 }"
 </code></pre></div>
 
@@ -1345,7 +1414,16 @@ let body = {
     "sex": "F",
     "phone": "(11) 92853-5718",
     "email": "maria@example.com",
-    "description": "Paciente com miopia leve, retorno anual."
+    "description": "Paciente com miopia leve, retorno anual.",
+    "address": {
+        "cep": "01310-100",
+        "street": "Avenida Paulista",
+        "number": "1578",
+        "complement": "Sala 12",
+        "neighborhood": "Bela Vista",
+        "city": "São Paulo",
+        "state": "SP"
+    }
 };
 
 fetch(url, {
@@ -1376,7 +1454,17 @@ fetch(url, {
         &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
         &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
         &quot;age&quot;: 30,
-        &quot;deleted_at&quot;: null
+        &quot;deleted_at&quot;: null,
+        &quot;address&quot;: {
+            &quot;cep&quot;: &quot;01310100&quot;,
+            &quot;street&quot;: &quot;Avenida Paulista&quot;,
+            &quot;number&quot;: &quot;1578&quot;,
+            &quot;complement&quot;: &quot;Sala 12&quot;,
+            &quot;neighborhood&quot;: &quot;Bela Vista&quot;,
+            &quot;city&quot;: &quot;S&atilde;o Paulo&quot;,
+            &quot;state&quot;: &quot;SP&quot;
+        },
+        &quot;photo_url&quot;: &quot;http://localhost:8000/api/patients/1/photo?v=1&quot;
     }
 }</code>
  </pre>
@@ -1558,6 +1646,96 @@ Must be one of:
     <br>
 <p>Observações sobre o paciente (opcional, até 2000 caracteres). Must not be greater than 2000 characters. Example: <code>Paciente com miopia leve, retorno anual.</code></p>
         </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+        <details>
+            <summary style="padding-bottom: 10px;">
+                <b style="line-height: 2;"><code>address</code></b>&nbsp;&nbsp;
+<small>object</small>&nbsp;
+<i>optional</i> &nbsp;
+<br>
+<p>Endereço (opcional, objeto ou <code>null</code>). No PUT, omitido ou <code>null</code> remove o endereço. Quando enviado, os subcampos (exceto <code>complement</code>) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.</p>
+            </summary>
+                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>cep</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.cep"                data-endpoint="POSTapi-patients"
+               value="01310-100"
+               data-component="body">
+    <br>
+<p>CEP com 8 dígitos, com ou sem máscara (<code>00000-000</code>). Armazenado só com dígitos. Obrigatório quando <code>address</code> é enviado. Must be 8 digits. Example: <code>01310-100</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>street</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.street"                data-endpoint="POSTapi-patients"
+               value="Avenida Paulista"
+               data-component="body">
+    <br>
+<p>Logradouro (até 255). Obrigatório quando <code>address</code> é enviado. Must not be greater than 255 characters. Example: <code>Avenida Paulista</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>number</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.number"                data-endpoint="POSTapi-patients"
+               value="1578"
+               data-component="body">
+    <br>
+<p>Número (até 20; aceita &quot;S/N&quot;). Obrigatório quando <code>address</code> é enviado. Must not be greater than 20 characters. Example: <code>1578</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>complement</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.complement"                data-endpoint="POSTapi-patients"
+               value="Sala 12"
+               data-component="body">
+    <br>
+<p>Complemento (opcional, até 100). Must not be greater than 100 characters. Example: <code>Sala 12</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>neighborhood</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.neighborhood"                data-endpoint="POSTapi-patients"
+               value="Bela Vista"
+               data-component="body">
+    <br>
+<p>Bairro (até 100). Obrigatório quando <code>address</code> é enviado. Must not be greater than 100 characters. Example: <code>Bela Vista</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>city</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.city"                data-endpoint="POSTapi-patients"
+               value="São Paulo"
+               data-component="body">
+    <br>
+<p>Cidade (até 100). Obrigatório quando <code>address</code> é enviado. Must not be greater than 100 characters. Example: <code>São Paulo</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>state</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.state"                data-endpoint="POSTapi-patients"
+               value="SP"
+               data-component="body">
+    <br>
+<p>UF: sigla de estado brasileiro (aceita minúsculas; armazenada em maiúsculas). Obrigatório quando <code>address</code> é enviado. Example: <code>SP</code></p>
+Must be one of:
+<ul style="list-style-type: square;"><li><code>AC</code></li> <li><code>AL</code></li> <li><code>AP</code></li> <li><code>AM</code></li> <li><code>BA</code></li> <li><code>CE</code></li> <li><code>DF</code></li> <li><code>ES</code></li> <li><code>GO</code></li> <li><code>MA</code></li> <li><code>MT</code></li> <li><code>MS</code></li> <li><code>MG</code></li> <li><code>PA</code></li> <li><code>PB</code></li> <li><code>PR</code></li> <li><code>PE</code></li> <li><code>PI</code></li> <li><code>RJ</code></li> <li><code>RN</code></li> <li><code>RS</code></li> <li><code>RO</code></li> <li><code>RR</code></li> <li><code>SC</code></li> <li><code>SP</code></li> <li><code>SE</code></li> <li><code>TO</code></li></ul>
+                    </div>
+                                    </details>
+        </div>
         </form>
 
                     <h2 id="pacientes-GETapi-patients--id-">Detalhar paciente</h2>
@@ -1615,7 +1793,17 @@ fetch(url, {
         &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
         &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
         &quot;age&quot;: 30,
-        &quot;deleted_at&quot;: null
+        &quot;deleted_at&quot;: null,
+        &quot;address&quot;: {
+            &quot;cep&quot;: &quot;01310100&quot;,
+            &quot;street&quot;: &quot;Avenida Paulista&quot;,
+            &quot;number&quot;: &quot;1578&quot;,
+            &quot;complement&quot;: &quot;Sala 12&quot;,
+            &quot;neighborhood&quot;: &quot;Bela Vista&quot;,
+            &quot;city&quot;: &quot;S&atilde;o Paulo&quot;,
+            &quot;state&quot;: &quot;SP&quot;
+        },
+        &quot;photo_url&quot;: &quot;http://localhost:8000/api/patients/1/photo?v=1&quot;
     }
 }</code>
  </pre>
@@ -1717,7 +1905,8 @@ You can check the Dev Tools console for debugging information.</code></pre>
 <p>
 </p>
 
-<p>Substituição completa (PUT): envie todos os campos. Campos opcionais omitidos (<code>email</code>, <code>description</code>) são apagados.</p>
+<p>Substituição completa (PUT): envie todos os campos. Campos opcionais omitidos (<code>email</code>, <code>description</code>) são apagados;
+<code>address</code> omitido ou <code>null</code> remove o endereço. A foto não muda por aqui (use as rotas <code>/photo</code>).</p>
 
 <span id="example-requests-PUTapi-patients--id-">
 <blockquote>Example request:</blockquote>
@@ -1736,7 +1925,16 @@ You can check the Dev Tools console for debugging information.</code></pre>
     \"sex\": \"F\",
     \"phone\": \"(11) 92853-5718\",
     \"email\": \"maria@example.com\",
-    \"description\": \"Paciente com miopia leve, retorno anual.\"
+    \"description\": \"Paciente com miopia leve, retorno anual.\",
+    \"address\": {
+        \"cep\": \"01310-100\",
+        \"street\": \"Avenida Paulista\",
+        \"number\": \"1578\",
+        \"complement\": \"Sala 12\",
+        \"neighborhood\": \"Bela Vista\",
+        \"city\": \"São Paulo\",
+        \"state\": \"SP\"
+    }
 }"
 </code></pre></div>
 
@@ -1759,7 +1957,16 @@ let body = {
     "sex": "F",
     "phone": "(11) 92853-5718",
     "email": "maria@example.com",
-    "description": "Paciente com miopia leve, retorno anual."
+    "description": "Paciente com miopia leve, retorno anual.",
+    "address": {
+        "cep": "01310-100",
+        "street": "Avenida Paulista",
+        "number": "1578",
+        "complement": "Sala 12",
+        "neighborhood": "Bela Vista",
+        "city": "São Paulo",
+        "state": "SP"
+    }
 };
 
 fetch(url, {
@@ -1790,7 +1997,17 @@ fetch(url, {
         &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
         &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
         &quot;age&quot;: 30,
-        &quot;deleted_at&quot;: null
+        &quot;deleted_at&quot;: null,
+        &quot;address&quot;: {
+            &quot;cep&quot;: &quot;01310100&quot;,
+            &quot;street&quot;: &quot;Avenida Paulista&quot;,
+            &quot;number&quot;: &quot;1578&quot;,
+            &quot;complement&quot;: &quot;Sala 12&quot;,
+            &quot;neighborhood&quot;: &quot;Bela Vista&quot;,
+            &quot;city&quot;: &quot;S&atilde;o Paulo&quot;,
+            &quot;state&quot;: &quot;SP&quot;
+        },
+        &quot;photo_url&quot;: &quot;http://localhost:8000/api/patients/1/photo?v=1&quot;
     }
 }</code>
  </pre>
@@ -1997,6 +2214,96 @@ Must be one of:
     <br>
 <p>Observações sobre o paciente (opcional, até 2000 caracteres). Must not be greater than 2000 characters. Example: <code>Paciente com miopia leve, retorno anual.</code></p>
         </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+        <details>
+            <summary style="padding-bottom: 10px;">
+                <b style="line-height: 2;"><code>address</code></b>&nbsp;&nbsp;
+<small>object</small>&nbsp;
+<i>optional</i> &nbsp;
+<br>
+<p>Endereço (opcional, objeto ou <code>null</code>). No PUT, omitido ou <code>null</code> remove o endereço. Quando enviado, os subcampos (exceto <code>complement</code>) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.</p>
+            </summary>
+                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>cep</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.cep"                data-endpoint="PUTapi-patients--id-"
+               value="01310-100"
+               data-component="body">
+    <br>
+<p>CEP com 8 dígitos, com ou sem máscara (<code>00000-000</code>). Armazenado só com dígitos. Obrigatório quando <code>address</code> é enviado. Must be 8 digits. Example: <code>01310-100</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>street</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.street"                data-endpoint="PUTapi-patients--id-"
+               value="Avenida Paulista"
+               data-component="body">
+    <br>
+<p>Logradouro (até 255). Obrigatório quando <code>address</code> é enviado. Must not be greater than 255 characters. Example: <code>Avenida Paulista</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>number</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.number"                data-endpoint="PUTapi-patients--id-"
+               value="1578"
+               data-component="body">
+    <br>
+<p>Número (até 20; aceita &quot;S/N&quot;). Obrigatório quando <code>address</code> é enviado. Must not be greater than 20 characters. Example: <code>1578</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>complement</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.complement"                data-endpoint="PUTapi-patients--id-"
+               value="Sala 12"
+               data-component="body">
+    <br>
+<p>Complemento (opcional, até 100). Must not be greater than 100 characters. Example: <code>Sala 12</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>neighborhood</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.neighborhood"                data-endpoint="PUTapi-patients--id-"
+               value="Bela Vista"
+               data-component="body">
+    <br>
+<p>Bairro (até 100). Obrigatório quando <code>address</code> é enviado. Must not be greater than 100 characters. Example: <code>Bela Vista</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>city</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.city"                data-endpoint="PUTapi-patients--id-"
+               value="São Paulo"
+               data-component="body">
+    <br>
+<p>Cidade (até 100). Obrigatório quando <code>address</code> é enviado. Must not be greater than 100 characters. Example: <code>São Paulo</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>state</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.state"                data-endpoint="PUTapi-patients--id-"
+               value="SP"
+               data-component="body">
+    <br>
+<p>UF: sigla de estado brasileiro (aceita minúsculas; armazenada em maiúsculas). Obrigatório quando <code>address</code> é enviado. Example: <code>SP</code></p>
+Must be one of:
+<ul style="list-style-type: square;"><li><code>AC</code></li> <li><code>AL</code></li> <li><code>AP</code></li> <li><code>AM</code></li> <li><code>BA</code></li> <li><code>CE</code></li> <li><code>DF</code></li> <li><code>ES</code></li> <li><code>GO</code></li> <li><code>MA</code></li> <li><code>MT</code></li> <li><code>MS</code></li> <li><code>MG</code></li> <li><code>PA</code></li> <li><code>PB</code></li> <li><code>PR</code></li> <li><code>PE</code></li> <li><code>PI</code></li> <li><code>RJ</code></li> <li><code>RN</code></li> <li><code>RS</code></li> <li><code>RO</code></li> <li><code>RR</code></li> <li><code>SC</code></li> <li><code>SP</code></li> <li><code>SE</code></li> <li><code>TO</code></li></ul>
+                    </div>
+                                    </details>
+        </div>
         </form>
 
                     <h2 id="pacientes-DELETEapi-patients--id-">Excluir paciente</h2>
@@ -2132,6 +2439,657 @@ You can check the Dev Tools console for debugging information.</code></pre>
                data-component="url">
     <br>
 <p>ID do paciente. Example: <code>1</code></p>
+            </div>
+                    </form>
+
+                    <h2 id="pacientes-GETapi-patients--patient_id--photo">Foto do paciente</h2>
+
+<p>
+</p>
+
+<p>A foto (JPEG, até 512x512) do paciente. A URL com <code>?v=&lt;versão&gt;</code> vem em <code>photo_url</code> no recurso do paciente;
+a versão muda a cada troca, então a resposta pode ficar em cache no navegador (<code>Cache-Control: private, max-age=86400</code>). <code>404</code> se o paciente não tiver foto, não existir ou estiver na lixeira.</p>
+
+<span id="example-requests-GETapi-patients--patient_id--photo">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/patients/1/photo?v=1" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/patients/1/photo"
+);
+
+const params = {
+    "v": "1",
+};
+Object.keys(params)
+    .forEach(key =&gt; url.searchParams.append(key, params[key]));
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-patients--patient_id--photo">
+            <blockquote>
+            <p>Example response (200, Imagem (image/jpeg)):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">&lt;bin&aacute;rio JPEG&gt;</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Paciente sem foto):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Foto n&atilde;o encontrada.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-patients--patient_id--photo" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-patients--patient_id--photo"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-patients--patient_id--photo"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-patients--patient_id--photo" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-patients--patient_id--photo">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-patients--patient_id--photo" data-method="GET"
+      data-path="api/patients/{patient_id}/photo"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-patients--patient_id--photo', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-patients--patient_id--photo"
+                    onclick="tryItOut('GETapi-patients--patient_id--photo');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-patients--patient_id--photo"
+                    onclick="cancelTryOut('GETapi-patients--patient_id--photo');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-patients--patient_id--photo"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/patients/{patient_id}/photo</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-patients--patient_id--photo"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-patients--patient_id--photo"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>patient_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="patient_id"                data-endpoint="GETapi-patients--patient_id--photo"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do paciente. Example: <code>1</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>Query Parameters</b></h4>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>v</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="v"                data-endpoint="GETapi-patients--patient_id--photo"
+               value="1"
+               data-component="query">
+    <br>
+<p>Versão da foto (só para invalidar o cache; ignorada pelo servidor). Example: <code>1</code></p>
+            </div>
+                </form>
+
+                    <h2 id="pacientes-POSTapi-patients--patient_id--photo">Enviar foto do paciente</h2>
+
+<p>
+</p>
+
+<p>Envia ou troca a foto (multipart, campo <code>photo</code>): JPEG, PNG ou WebP (tipo conferido pelo conteúdo), até 2 MB,
+entre 100x100 e 4000x4000 px. A imagem é reprocessada no servidor (corte quadrado centralizado, no máximo
+512x512, JPEG), o que remove os metadados EXIF (como a localização), e fica criptografada em disco privado.
+Gera um registro <code>photo</code> no histórico (sem a imagem). Retorna o paciente com o novo <code>photo_url</code>.</p>
+
+<span id="example-requests-POSTapi-patients--patient_id--photo">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request POST \
+    "http://localhost:8000/api/patients/1/photo" \
+    --header "Content-Type: multipart/form-data" \
+    --header "Accept: application/json" \
+    --form "photo=@/var/www/html/postman/fixtures/photo.png" </code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/patients/1/photo"
+);
+
+const headers = {
+    "Content-Type": "multipart/form-data",
+    "Accept": "application/json",
+};
+
+const body = new FormData();
+body.append('photo', document.querySelector('input[name="photo"]').files[0]);
+
+fetch(url, {
+    method: "POST",
+    headers,
+    body,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-POSTapi-patients--patient_id--photo">
+            <blockquote>
+            <p>Example response (200, Foto enviada):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: {
+        &quot;id&quot;: 1,
+        &quot;name&quot;: &quot;Maria da Silva&quot;,
+        &quot;cpf&quot;: &quot;62518953060&quot;,
+        &quot;rg&quot;: &quot;35688019X&quot;,
+        &quot;birth_date&quot;: &quot;1996-07-20&quot;,
+        &quot;sex&quot;: &quot;F&quot;,
+        &quot;phone&quot;: &quot;11928535718&quot;,
+        &quot;email&quot;: &quot;maria@example.com&quot;,
+        &quot;description&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
+        &quot;updated_at&quot;: &quot;2026-11-03T10:00:00-03:00&quot;,
+        &quot;age&quot;: 30,
+        &quot;deleted_at&quot;: null,
+        &quot;address&quot;: null,
+        &quot;photo_url&quot;: &quot;http://localhost:8000/api/patients/1/photo?v=1&quot;
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Paciente não encontrado ou excluído):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Paciente n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (422, Tipo inválido):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;A foto deve ser uma imagem JPEG, PNG ou WebP.&quot;,
+    &quot;errors&quot;: {
+        &quot;photo&quot;: [
+            &quot;A foto deve ser uma imagem JPEG, PNG ou WebP.&quot;
+        ]
+    }
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-POSTapi-patients--patient_id--photo" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-POSTapi-patients--patient_id--photo"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-POSTapi-patients--patient_id--photo"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-POSTapi-patients--patient_id--photo" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-POSTapi-patients--patient_id--photo">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-POSTapi-patients--patient_id--photo" data-method="POST"
+      data-path="api/patients/{patient_id}/photo"
+      data-authed="0"
+      data-hasfiles="1"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('POSTapi-patients--patient_id--photo', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-POSTapi-patients--patient_id--photo"
+                    onclick="tryItOut('POSTapi-patients--patient_id--photo');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-POSTapi-patients--patient_id--photo"
+                    onclick="cancelTryOut('POSTapi-patients--patient_id--photo');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-POSTapi-patients--patient_id--photo"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-black">POST</small>
+            <b><code>api/patients/{patient_id}/photo</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="POSTapi-patients--patient_id--photo"
+               value="multipart/form-data"
+               data-component="header">
+    <br>
+<p>Example: <code>multipart/form-data</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="POSTapi-patients--patient_id--photo"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>patient_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="patient_id"                data-endpoint="POSTapi-patients--patient_id--photo"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do paciente. Example: <code>1</code></p>
+            </div>
+                            <h4 class="fancy-heading-panel"><b>Body Parameters</b></h4>
+        <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>photo</code></b>&nbsp;&nbsp;
+<small>file</small>&nbsp;
+ &nbsp;
+                <input type="file" style="display: none"
+                              name="photo"                data-endpoint="POSTapi-patients--patient_id--photo"
+               value=""
+               data-component="body">
+    <br>
+<p>Imagem JPEG, PNG ou WebP (conferido pelo conteúdo), até 2 MB, entre 100x100 e 4000x4000 px. Reprocessada no servidor: corte quadrado centralizado, no máximo 512x512, JPEG, sem metadados EXIF. Must be a file. Must not be greater than 2048 kilobytes. Example: <code>postman/fixtures/photo.png</code></p>
+        </div>
+        </form>
+
+                    <h2 id="pacientes-DELETEapi-patients--patient_id--photo">Remover foto do paciente</h2>
+
+<p>
+</p>
+
+<p>Remove a foto (e o arquivo). Gera um registro <code>photo</code> no histórico. <code>404</code> se o paciente não tiver foto.</p>
+
+<span id="example-requests-DELETEapi-patients--patient_id--photo">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request DELETE \
+    "http://localhost:8000/api/patients/1/photo" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/patients/1/photo"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "DELETE",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-DELETEapi-patients--patient_id--photo">
+            <blockquote>
+            <p>Example response (204, Foto removida):</p>
+        </blockquote>
+                <pre>
+<code>Empty response</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Paciente sem foto):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Foto n&atilde;o encontrada.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-DELETEapi-patients--patient_id--photo" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-DELETEapi-patients--patient_id--photo"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-DELETEapi-patients--patient_id--photo"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-DELETEapi-patients--patient_id--photo" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-DELETEapi-patients--patient_id--photo">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-DELETEapi-patients--patient_id--photo" data-method="DELETE"
+      data-path="api/patients/{patient_id}/photo"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('DELETEapi-patients--patient_id--photo', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-DELETEapi-patients--patient_id--photo"
+                    onclick="tryItOut('DELETEapi-patients--patient_id--photo');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-DELETEapi-patients--patient_id--photo"
+                    onclick="cancelTryOut('DELETEapi-patients--patient_id--photo');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-DELETEapi-patients--patient_id--photo"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-red">DELETE</small>
+            <b><code>api/patients/{patient_id}/photo</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="DELETEapi-patients--patient_id--photo"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="DELETEapi-patients--patient_id--photo"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>patient_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="patient_id"                data-endpoint="DELETEapi-patients--patient_id--photo"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do paciente. Example: <code>1</code></p>
+            </div>
+                    </form>
+
+                <h1 id="endereco">Endereço</h1>
+
+    <p>Consulta de CEP para preencher o endereço do paciente.</p>
+
+                                <h2 id="endereco-GETapi-cep--code-">Consultar CEP</h2>
+
+<p>
+</p>
+
+<p>Busca o endereço de um CEP no ViaCEP (resultado em cache por 24 horas). Aceita máscara (<code>01310-100</code>).
+Campos vazios no ViaCEP (CEP geral de cidade pequena) voltam como texto vazio. <code>503</code> quando o ViaCEP não
+responde: o endereço pode ser preenchido manualmente.</p>
+
+<span id="example-requests-GETapi-cep--code-">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/cep/01310-100" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/cep/01310-100"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-cep--code-">
+            <blockquote>
+            <p>Example response (200, CEP encontrado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: {
+        &quot;cep&quot;: &quot;01310100&quot;,
+        &quot;street&quot;: &quot;Avenida Paulista&quot;,
+        &quot;neighborhood&quot;: &quot;Bela Vista&quot;,
+        &quot;city&quot;: &quot;S&atilde;o Paulo&quot;,
+        &quot;state&quot;: &quot;SP&quot;
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, CEP inexistente):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;CEP n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (422, Formato inválido):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;O CEP deve ter 8 d&iacute;gitos.&quot;,
+    &quot;errors&quot;: {
+        &quot;cep&quot;: [
+            &quot;O CEP deve ter 8 d&iacute;gitos.&quot;
+        ]
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (503, ViaCEP indisponível):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Servi&ccedil;o de CEP indispon&iacute;vel. Preencha o endere&ccedil;o manualmente.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-cep--code-" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-cep--code-"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-cep--code-"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-cep--code-" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-cep--code-">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-cep--code-" data-method="GET"
+      data-path="api/cep/{code}"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-cep--code-', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-cep--code-"
+                    onclick="tryItOut('GETapi-cep--code-');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-cep--code-"
+                    onclick="cancelTryOut('GETapi-cep--code-');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-cep--code-"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/cep/{code}</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-cep--code-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-cep--code-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>code</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="code"                data-endpoint="GETapi-cep--code-"
+               value="01310-100"
+               data-component="url">
+    <br>
+<p>CEP com 8 dígitos, com ou sem máscara. Example: <code>01310-100</code></p>
             </div>
                     </form>
 
@@ -4250,6 +5208,633 @@ You can check the Dev Tools console for debugging information.</code></pre>
                data-component="url">
     <br>
 <p>ID do atendimento. Example: <code>1</code></p>
+            </div>
+                    </form>
+
+                    <h2 id="atendimentos-GETapi-consultations--consultation_id--attachments">Listar anexos do atendimento</h2>
+
+<p>
+</p>
+
+<p>Exames anexados ao atendimento (laudos, imagens), do mais recente para o mais antigo, sem paginação.
+<code>404</code> se o atendimento não existir ou o paciente estiver na lixeira.</p>
+
+<span id="example-requests-GETapi-consultations--consultation_id--attachments">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/consultations/1/attachments" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/consultations/1/attachments"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-consultations--consultation_id--attachments">
+            <blockquote>
+            <p>Example response (200, Sucesso):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: [
+        {
+            &quot;id&quot;: 3,
+            &quot;consultation_id&quot;: 1,
+            &quot;original_name&quot;: &quot;topografia.pdf&quot;,
+            &quot;mime_type&quot;: &quot;application/pdf&quot;,
+            &quot;size&quot;: 183245,
+            &quot;description&quot;: &quot;Topografia de c&oacute;rnea&quot;,
+            &quot;download_url&quot;: &quot;http://localhost:8000/api/attachments/3/download&quot;,
+            &quot;created_at&quot;: &quot;2026-11-03T15:10:00-03:00&quot;
+        }
+    ]
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Atendimento não encontrado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Atendimento n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-consultations--consultation_id--attachments" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-consultations--consultation_id--attachments"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-consultations--consultation_id--attachments"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-consultations--consultation_id--attachments" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-consultations--consultation_id--attachments">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-consultations--consultation_id--attachments" data-method="GET"
+      data-path="api/consultations/{consultation_id}/attachments"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-consultations--consultation_id--attachments', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-consultations--consultation_id--attachments"
+                    onclick="tryItOut('GETapi-consultations--consultation_id--attachments');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-consultations--consultation_id--attachments"
+                    onclick="cancelTryOut('GETapi-consultations--consultation_id--attachments');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-consultations--consultation_id--attachments"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/consultations/{consultation_id}/attachments</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-consultations--consultation_id--attachments"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-consultations--consultation_id--attachments"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>consultation_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="consultation_id"                data-endpoint="GETapi-consultations--consultation_id--attachments"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do atendimento. Example: <code>1</code></p>
+            </div>
+                    </form>
+
+                    <h2 id="atendimentos-POSTapi-consultations--consultation_id--attachments">Anexar exame ao atendimento</h2>
+
+<p>
+</p>
+
+<p>Envia um arquivo (multipart, campo <code>file</code>): PDF, JPEG ou PNG, até 10 MB. O tipo é conferido pelo conteúdo
+(não só pela extensão). Vale para qualquer status de atendimento. O arquivo fica criptografado em disco
+privado, com nome aleatório; o nome original é saneado (e recebe a extensão do tipo detectado).</p>
+
+<span id="example-requests-POSTapi-consultations--consultation_id--attachments">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request POST \
+    "http://localhost:8000/api/consultations/1/attachments" \
+    --header "Content-Type: multipart/form-data" \
+    --header "Accept: application/json" \
+    --form "description=Topografia de córnea"\
+    --form "file=@/var/www/html/postman/fixtures/exam.pdf" </code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/consultations/1/attachments"
+);
+
+const headers = {
+    "Content-Type": "multipart/form-data",
+    "Accept": "application/json",
+};
+
+const body = new FormData();
+body.append('description', 'Topografia de córnea');
+body.append('file', document.querySelector('input[name="file"]').files[0]);
+
+fetch(url, {
+    method: "POST",
+    headers,
+    body,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-POSTapi-consultations--consultation_id--attachments">
+            <blockquote>
+            <p>Example response (201, Anexo criado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: {
+        &quot;id&quot;: 3,
+        &quot;consultation_id&quot;: 1,
+        &quot;original_name&quot;: &quot;topografia.pdf&quot;,
+        &quot;mime_type&quot;: &quot;application/pdf&quot;,
+        &quot;size&quot;: 183245,
+        &quot;description&quot;: &quot;Topografia de c&oacute;rnea&quot;,
+        &quot;download_url&quot;: &quot;http://localhost:8000/api/attachments/3/download&quot;,
+        &quot;created_at&quot;: &quot;2026-11-03T15:10:00-03:00&quot;
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Atendimento não encontrado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Atendimento n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (422, Tipo não permitido):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;O arquivo deve ser um PDF, JPEG ou PNG.&quot;,
+    &quot;errors&quot;: {
+        &quot;file&quot;: [
+            &quot;O arquivo deve ser um PDF, JPEG ou PNG.&quot;
+        ]
+    }
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-POSTapi-consultations--consultation_id--attachments" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-POSTapi-consultations--consultation_id--attachments"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-POSTapi-consultations--consultation_id--attachments"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-POSTapi-consultations--consultation_id--attachments" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-POSTapi-consultations--consultation_id--attachments">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-POSTapi-consultations--consultation_id--attachments" data-method="POST"
+      data-path="api/consultations/{consultation_id}/attachments"
+      data-authed="0"
+      data-hasfiles="1"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('POSTapi-consultations--consultation_id--attachments', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-POSTapi-consultations--consultation_id--attachments"
+                    onclick="tryItOut('POSTapi-consultations--consultation_id--attachments');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-POSTapi-consultations--consultation_id--attachments"
+                    onclick="cancelTryOut('POSTapi-consultations--consultation_id--attachments');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-POSTapi-consultations--consultation_id--attachments"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-black">POST</small>
+            <b><code>api/consultations/{consultation_id}/attachments</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="POSTapi-consultations--consultation_id--attachments"
+               value="multipart/form-data"
+               data-component="header">
+    <br>
+<p>Example: <code>multipart/form-data</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="POSTapi-consultations--consultation_id--attachments"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>consultation_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="consultation_id"                data-endpoint="POSTapi-consultations--consultation_id--attachments"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do atendimento. Example: <code>1</code></p>
+            </div>
+                            <h4 class="fancy-heading-panel"><b>Body Parameters</b></h4>
+        <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>file</code></b>&nbsp;&nbsp;
+<small>file</small>&nbsp;
+ &nbsp;
+                <input type="file" style="display: none"
+                              name="file"                data-endpoint="POSTapi-consultations--consultation_id--attachments"
+               value=""
+               data-component="body">
+    <br>
+<p>Arquivo PDF, JPEG ou PNG, até 10 MB. O tipo é conferido pelo conteúdo, não pela extensão. Must be a file. Must not be greater than 10240 kilobytes. Example: <code>postman/fixtures/exam.pdf</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>description</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="description"                data-endpoint="POSTapi-consultations--consultation_id--attachments"
+               value="Topografia de córnea"
+               data-component="body">
+    <br>
+<p>Descrição do anexo (opcional, até 255 caracteres). Must not be greater than 255 characters. Example: <code>Topografia de córnea</code></p>
+        </div>
+        </form>
+
+                    <h2 id="atendimentos-GETapi-attachments--attachment_id--download">Baixar anexo</h2>
+
+<p>
+</p>
+
+<p>O arquivo original (descriptografado), com o tipo detectado no envio e
+<code>Content-Disposition: attachment; filename="&lt;nome saneado em ASCII&gt;"; filename*=UTF-8''&lt;nome saneado&gt;</code>.
+O &quot;Try it out&quot; não exibe o arquivo; para baixar, abra a URL no navegador.</p>
+
+<span id="example-requests-GETapi-attachments--attachment_id--download">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/attachments/1/download" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/attachments/1/download"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-attachments--attachment_id--download">
+            <blockquote>
+            <p>Example response (200, Arquivo):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">&lt;bin&aacute;rio&gt;</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Anexo não encontrado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Anexo n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-attachments--attachment_id--download" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-attachments--attachment_id--download"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-attachments--attachment_id--download"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-attachments--attachment_id--download" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-attachments--attachment_id--download">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-attachments--attachment_id--download" data-method="GET"
+      data-path="api/attachments/{attachment_id}/download"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-attachments--attachment_id--download', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-attachments--attachment_id--download"
+                    onclick="tryItOut('GETapi-attachments--attachment_id--download');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-attachments--attachment_id--download"
+                    onclick="cancelTryOut('GETapi-attachments--attachment_id--download');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-attachments--attachment_id--download"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/attachments/{attachment_id}/download</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-attachments--attachment_id--download"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-attachments--attachment_id--download"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>attachment_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="attachment_id"                data-endpoint="GETapi-attachments--attachment_id--download"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do anexo. Example: <code>1</code></p>
+            </div>
+                    </form>
+
+                    <h2 id="atendimentos-DELETEapi-attachments--id-">Excluir anexo</h2>
+
+<p>
+</p>
+
+<p>Remove o anexo e o arquivo.</p>
+
+<span id="example-requests-DELETEapi-attachments--id-">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request DELETE \
+    "http://localhost:8000/api/attachments/1" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/attachments/1"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "DELETE",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-DELETEapi-attachments--id-">
+            <blockquote>
+            <p>Example response (204, Anexo excluído):</p>
+        </blockquote>
+                <pre>
+<code>Empty response</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Anexo não encontrado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Anexo n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-DELETEapi-attachments--id-" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-DELETEapi-attachments--id-"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-DELETEapi-attachments--id-"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-DELETEapi-attachments--id-" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-DELETEapi-attachments--id-">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-DELETEapi-attachments--id-" data-method="DELETE"
+      data-path="api/attachments/{id}"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('DELETEapi-attachments--id-', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-DELETEapi-attachments--id-"
+                    onclick="tryItOut('DELETEapi-attachments--id-');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-DELETEapi-attachments--id-"
+                    onclick="cancelTryOut('DELETEapi-attachments--id-');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-DELETEapi-attachments--id-"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-red">DELETE</small>
+            <b><code>api/attachments/{id}</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="DELETEapi-attachments--id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="DELETEapi-attachments--id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="id"                data-endpoint="DELETEapi-attachments--id-"
+               value="1"
+               data-component="url">
+    <br>
+<p>The ID of the attachment. Example: <code>1</code></p>
+            </div>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>attachment_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="attachment_id"                data-endpoint="DELETEapi-attachments--id-"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do anexo. Example: <code>1</code></p>
             </div>
                     </form>
 

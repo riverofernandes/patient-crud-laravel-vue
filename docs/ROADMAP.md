@@ -36,9 +36,9 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
 | 2.3 | ✅ **Filtros** | Recortes como "mulheres acima de 60 anos" | M | `sex`, `age_min`/`age_max` (convertidos em faixa de `birth_date`); painel de filtros sincronizado com a URL |
 | 2.4 | ✅ **Itens por página** | Controle do usuário sobre a listagem | P | Select 10/25/50 ligado ao `per_page` que a API já aceita |
 | 2.5 | ✅ **Idade calculada** | Informação mais usada no atendimento | P | Campo `age` no `PatientResource`; exibir na listagem e nos detalhes |
-| 2.6 | **Endereço com busca de CEP** | Cadastro completo | M | Campos de endereço (tabela própria `addresses` 1:1); autopreenchimento via ViaCEP no front |
+| 2.6 | ✅ **Endereço com busca de CEP** | Cadastro completo | M | Campos de endereço (tabela própria `addresses` 1:1); autopreenchimento via ViaCEP no front |
 | 2.7 | ✅ **Verificação de CPF em tempo real** | Avisa duplicidade antes de salvar | P | `GET /patients/cpf-availability?cpf=` chamado no blur do campo |
-| 2.8 | **Foto do paciente** | Identificação visual na recepção | M | Upload com validação de tipo/tamanho, armazenamento no `storage` (S3/MinIO depois); avatar com iniciais como fallback |
+| 2.8 | ✅ **Foto do paciente** | Identificação visual na recepção | M | Upload com validação de tipo/tamanho, armazenamento no `storage` (S3/MinIO depois); avatar com iniciais como fallback |
 | 2.9 | ✅ **Exportar CSV** | Relatórios e integração com planilhas | P | `GET /patients/export?search=...` respeitando filtros, com stream de resposta |
 
 ## Fase 3 — Segurança e LGPD
@@ -59,7 +59,7 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
 | 4.1 | ✅ **Agendamento de consultas** | Primeiro passo do atendimento | G | Entidades `appointments` e `professionals`; calendário semanal; status (agendada, confirmada, realizada, faltou) |
 | 4.2 | ✅ **Prontuário oftalmológico** | Diferencial forte para o domínio da empresa | G | Registro por consulta: acuidade visual, refração (esférico, cilíndrico, eixo, adição) para OD e OE, pressão intraocular, observações |
 | 4.3 | ✅ **Receita de óculos em PDF** | Entregável direto ao paciente | M | Gerar PDF a partir da refração (DomPDF) com dados do profissional |
-| 4.4 | **Anexos de exames** | Centraliza laudos e imagens | M | Upload por consulta com pré-visualização de PDF/imagem |
+| 4.4 | ✅ **Anexos de exames** | Centraliza laudos e imagens | M | Upload por consulta com pré-visualização de PDF/imagem |
 | 4.5 | ✅ **Linha do tempo do paciente** | Visão única do histórico | M | Na tela de detalhes: consultas, exames e alterações em ordem cronológica |
 | 4.6 | **Lembretes de consulta** | Reduz faltas | M | Filas (Redis + Horizon) disparando e-mail/WhatsApp 24h antes |
 
@@ -70,7 +70,7 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
 | 5.1 | ✅ **Documentação OpenAPI** | API autodocumentada, complementa o Postman | P | Scribe gerando a doc a partir dos FormRequests e Resources, publicada em `/docs` |
 | 5.2 | **Camada de serviço / actions** | Regras fora do controller, mais fáceis de testar | M | `CreatePatient`, `UpdatePatient`, `DeletePatient` como Actions; controller só orquestra |
 | 5.3 | ✅ **Front em modo produção** | Hoje o container roda o Vite de desenvolvimento | P | Dockerfile multi-stage (build → nginx) e `docker-compose.prod.yml`; `APP_DEBUG=false` |
-| 5.4 | 🟡 **Observabilidade** (health check feito) | Saber quando algo quebra em produção | P | Sentry no back e no front; logs estruturados em JSON; endpoint `/api/health` |
+| 5.4 | 🟡 **Observabilidade** (health check, X-Request-Id e logs JSON feitos; falta Sentry) | Saber quando algo quebra em produção | P | Sentry no back e no front; logs estruturados em JSON; endpoint `/api/health` |
 | 5.5 | **Cache e performance** | Listagem rápida com muitos registros | M | Índice FULLTEXT ou Meilisearch/Scout para busca por nome; Redis para cache |
 | 5.6 | **Deploy com demo pública** | Avaliador testa sem instalar nada | M | Render/Fly.io/Railway com deploy automático pelo CI a partir da `main` |
 | 5.7 | **Migração para Vue 3** | Vue 2 está sem suporte desde 31/12/2023 | G | Vue 3 + Vite atual + Pinia, trocando BootstrapVue por Bootstrap-Vue-Next ou Vuetify 3 (fora do escopo do desafio, que exige Vue 2) |
@@ -85,6 +85,8 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
    (3.1, 3.2, 3.5 e 3.6 ficam adiadas: autenticação não faz parte desta fase da avaliação)
 4. ✅ **Sprint 4 — produto clínico, com a API aberta:** concluída — 4.1 agendamento (atendimentos por paciente + agenda semanal; profissional como texto livre enquanto não há login) · 4.2 prontuário · 4.3 receita em PDF · 4.5 linha do tempo
    (4.4 anexos e 4.6 lembretes ficam para depois)
+5. ✅ **Sprint 5 — arquivos, endereço e observabilidade, com a API aberta:** concluída — 2.6 endereço com CEP · 2.8 foto · 4.4 anexos de exames · 5.4 logs estruturados com X-Request-Id
+   (4.6 lembretes, que exigem fila e e-mail, e Sentry ficam para depois)
 
 A Sprint 1 é a que mais pesa numa avaliação técnica: mostra automação, testes de ponta a ponta e um
 link funcionando, sem mudar o escopo pedido.

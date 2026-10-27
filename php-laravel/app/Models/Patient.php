@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Support\CpfBlindIndex;
+use App\Support\EncryptedFiles;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -22,9 +24,12 @@ use Illuminate\Support\Carbon;
  * @property string $phone
  * @property string|null $email
  * @property string|null $description
+ * @property string|null $photo_path
+ * @property int $photo_version
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
+ * @property-read PatientAddress|null $address
  *
  * @method static Builder<static> search(mixed $term)
  * @method static Builder<static> ofSex(mixed $sex)
@@ -62,18 +67,41 @@ class Patient extends Model
 
     protected $hidden = [
         'cpf_hash',
+        'photo_path',
+    ];
+
+    /** @var array<string, mixed> */
+    protected $attributes = [
+        'photo_version' => 0,
     ];
 
     protected $casts = [
         'birth_date' => 'date',
+        'photo_version' => 'integer',
         // Encrypted at rest with APP_KEY; CPF lookups go through cpf_hash (blind index).
         'cpf' => 'encrypted',
         'rg' => 'encrypted',
         'phone' => 'encrypted',
     ];
 
+    /**
+     * Extra `changes` for the next audit written by PatientObserver (e.g. `address.<field>`, which live in another
+     * table). Not an attribute: never persisted; the observer clears it after recording.
+     *
+     * @var array<string, array{old: mixed, new: mixed}>
+     */
+    public array $pendingAuditChanges = [];
+
     protected static function booted(): void
     {
+        // A hard delete (e.g. a future LGPD erasure) cascades the rows in the database, which fires no model
+        // events: remove the encrypted files (photo and attachments) here. Soft deletes keep them.
+        static::forceDeleting(function (Patient $patient) {
+            // get() (not each(), which pages by offset and would skip rows deleted while paging).
+            $patient->consultations()->get()->each(fn (Consultation $consultation) => $consultation->delete());
+            EncryptedFiles::delete($patient->photo_path);
+        });
+
         // Keeps the blind index in sync with the CPF (encrypted casts compare decrypted values, so
         // re-saving the same CPF is not "dirty").
         static::saving(function (Patient $patient) {
@@ -89,6 +117,26 @@ class Patient extends Model
     public function consultations(): HasMany
     {
         return $this->hasMany(Consultation::class);
+    }
+
+    /**
+     * @return HasOne<PatientAddress>
+     */
+    public function address(): HasOne
+    {
+        return $this->hasOne(PatientAddress::class);
+    }
+
+    /**
+     * Absolute URL of GET /api/patients/{id}/photo with ?v=<version> (cache busting), or null without a photo.
+     */
+    public function photoUrl(): ?string
+    {
+        if ($this->photo_path === null) {
+            return null;
+        }
+
+        return route('patients.photo.show', ['patient' => $this->id, 'v' => $this->photo_version]);
     }
 
     /**

@@ -166,6 +166,14 @@
           @input="clearError('description')"
         />
       </FormField>
+
+      <AddressFields
+        :value="form.address"
+        :errors="addressErrors"
+        :removable="!!patient"
+        @input="form.address = $event"
+        @clear-error="clearAddressError"
+      />
     </div>
 
     <!-- Announces the asynchronous CPF availability result (the field error
@@ -191,6 +199,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from "vue";
 import type Vue from "vue";
+import AddressFields from "@/components/AddressFields.vue";
 import FormField from "@/components/FormField.vue";
 import type { Patient, PatientPayload, Sex } from "@/services/patientService";
 import type { ValidationErrors } from "@/services/api";
@@ -208,11 +217,24 @@ import {
   todayIso,
 } from "@/utils/format";
 import { isValidCpf, isValidEmail } from "@/utils/validation";
+import {
+  ADDRESS_FIELDS,
+  addressErrorField,
+  toAddressForm,
+  toAddressPayload,
+  validateAddress,
+  type AddressErrors,
+  type AddressField,
+  type AddressForm,
+} from "@/utils/address";
 import { notify } from "@/utils/notify";
 import { debounce } from "@/utils/debounce";
 import { patientService } from "@/services/patientService";
 
-type FieldName = keyof PatientPayload;
+/** Payload fields plus the API's dotted address keys ("address.cep"). */
+type FieldName =
+  | Exclude<keyof PatientPayload, "address">
+  | `address.${AddressField}`;
 type FieldErrors = Partial<Record<FieldName, string>>;
 
 interface FormState {
@@ -224,6 +246,7 @@ interface FormState {
   phone: string;
   email: string;
   description: string;
+  address: AddressForm;
 }
 
 const REQUIRED = "Campo obrigatório";
@@ -240,12 +263,13 @@ function toFormState(patient: Patient | null): FormState {
     phone: maskPhone(patient?.phone),
     email: patient?.email ?? "",
     description: patient?.description ?? "",
+    address: toAddressForm(patient?.address),
   };
 }
 
 export default defineComponent({
   name: "PatientForm",
-  components: { FormField },
+  components: { AddressFields, FormField },
   props: {
     title: { type: String, required: true },
     submitLabel: { type: String, required: true },
@@ -279,6 +303,15 @@ export default defineComponent({
         ? `Abrir calendário, data selecionada ${this.form.birthDate}`
         : "Abrir calendário";
     },
+    /** Address errors keyed by sub-field, for AddressFields. */
+    addressErrors(): AddressErrors {
+      const errors: AddressErrors = {};
+      ADDRESS_FIELDS.forEach(({ key }) => {
+        const message = this.errors[`address.${key}`];
+        if (message) errors[key] = message;
+      });
+      return errors;
+    },
     birthDateIso(): string {
       return isValidBrDate(this.form.birthDate)
         ? brToIso(this.form.birthDate)
@@ -296,7 +329,13 @@ export default defineComponent({
       if (!value) return;
       const mapped: FieldErrors = {};
       Object.entries(value).forEach(([field, messages]) => {
-        if (messages?.length) mapped[field as FieldName] = messages[0];
+        if (!messages?.length) return;
+        // "address.cep" (or a bare "address") -> the matching address field.
+        const sub = field.startsWith("address")
+          ? addressErrorField(field)
+          : null;
+        const key = (sub ? `address.${sub}` : field) as FieldName;
+        if (!mapped[key]) mapped[key] = messages[0];
       });
       this.errors = mapped;
       this.focusFirstError();
@@ -339,6 +378,9 @@ export default defineComponent({
     },
     clearError(field: FieldName): void {
       if (this.errors[field]) this.$delete(this.errors, field);
+    },
+    clearAddressError(field: AddressField): void {
+      this.clearError(`address.${field}`);
     },
     onCpfInput(): void {
       this.clearError("cpf");
@@ -434,6 +476,11 @@ export default defineComponent({
       if (f.email.trim() && !isValidEmail(f.email)) {
         errors.email = "E-mail inválido";
       }
+      const address = validateAddress(f.address);
+      (Object.keys(address.errors) as AddressField[]).forEach((key) => {
+        errors[`address.${key}`] = address.errors[key];
+      });
+      if (address.missingRequired) missingRequired = true;
       return { errors, missingRequired };
     },
     toPayload(): PatientPayload {
@@ -447,6 +494,7 @@ export default defineComponent({
         phone: onlyDigits(f.phone),
         email: f.email.trim() || null,
         description: f.description.trim() || null,
+        address: toAddressPayload(f.address),
       };
     },
     submit(): void {

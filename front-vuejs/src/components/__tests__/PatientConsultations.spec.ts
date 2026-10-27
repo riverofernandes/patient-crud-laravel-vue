@@ -48,7 +48,10 @@ beforeEach(() => {
   timeline.mockReset();
   vi.mocked(notify).mockReset();
 });
-afterEach(() => wrapper?.destroy());
+afterEach(() => {
+  wrapper?.destroy();
+  vi.useRealTimers();
+});
 
 describe("PatientConsultations", () => {
   it("lists consultations with status, excerpt and exam indicator, then loads more", async () => {
@@ -162,6 +165,9 @@ describe("PatientTimeline", () => {
   });
 
   it("groups by day, renders consultations (with refraction) and audits, loads more into the same day", async () => {
+    // Pin "today" so neither fixture day gets the "Hoje, " prefix.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-12-01T12:00:00-03:00"));
     timeline.mockResolvedValueOnce(
       page(
         [

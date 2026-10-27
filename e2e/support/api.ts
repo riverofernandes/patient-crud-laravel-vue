@@ -1,6 +1,6 @@
 import { request, type APIRequestContext, type APIResponse } from "@playwright/test";
 import { API_URL } from "./env";
-import { buildPatient, type PatientPayload } from "./data";
+import { buildPatient, type Address, type PatientPayload } from "./data";
 
 export type ConsultationStatus = "scheduled" | "confirmed" | "completed" | "no_show" | "cancelled";
 
@@ -51,6 +51,28 @@ export interface Patient extends PatientPayload {
   id: number;
   age: number;
   deleted_at: string | null;
+  address: Address | null;
+  /** Absolute URL of GET /patients/{id}/photo with ?v=<version>, or null. */
+  photo_url: string | null;
+}
+
+/** Exam attachment of a consultation (Sprint 5). */
+export interface Attachment {
+  id: number;
+  consultation_id: number;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  description: string | null;
+  download_url: string;
+  created_at: string;
+}
+
+/** A file to upload (multipart). */
+export interface UploadFile {
+  name: string;
+  mimeType: string;
+  buffer: Buffer;
 }
 
 const MAX_ATTEMPTS = 6;
@@ -133,6 +155,8 @@ export class PatientApi {
       phone: patient.phone,
       email: patient.email,
       description: patient.description,
+      // PUT is a full replacement: leaving the address out would remove it.
+      address: patient.address ?? null,
       ...changes,
     };
     const res = await this.send("put", `patients/${patient.id}`, { data: payload });
@@ -219,6 +243,58 @@ export class PatientApi {
   /** GET /patients/{id}/timeline (raw response). */
   async timeline(patientId: number, params: Record<string, string | number> = {}): Promise<APIResponse> {
     return this.send("get", `patients/${patientId}/timeline`, { params });
+  }
+
+  /* ---------- Photo and attachments (Sprint 5) ---------- */
+
+  /** POST /patients/{id}/photo (raw response, so callers can assert 200/422). */
+  async uploadPhotoRaw(patientId: number, file: UploadFile): Promise<APIResponse> {
+    return this.send("post", `patients/${patientId}/photo`, { multipart: { photo: file } });
+  }
+
+  async uploadPhoto(patientId: number, file: UploadFile): Promise<Patient> {
+    const res = await this.uploadPhotoRaw(patientId, file);
+    if (res.status() !== 200) {
+      throw new Error(`POST /patients/${patientId}/photo failed: ${res.status()} ${await res.text()}`);
+    }
+    return (await res.json()).data as Patient;
+  }
+
+  /** GET of a photo URL as returned in `photo_url` (raw response). */
+  async getUrl(url: string): Promise<APIResponse> {
+    return this.send("get", url, { headers: { Accept: "*/*" } });
+  }
+
+  /** POST /consultations/{id}/attachments (raw response, so callers can assert 201/422). */
+  async uploadAttachmentRaw(consultationId: number, file: UploadFile, description?: string): Promise<APIResponse> {
+    const multipart: Record<string, string | UploadFile> = { file };
+    if (description) multipart.description = description;
+    return this.send("post", `consultations/${consultationId}/attachments`, { multipart });
+  }
+
+  async uploadAttachment(consultationId: number, file: UploadFile, description?: string): Promise<Attachment> {
+    const res = await this.uploadAttachmentRaw(consultationId, file, description);
+    if (res.status() !== 201) {
+      throw new Error(
+        `POST /consultations/${consultationId}/attachments failed: ${res.status()} ${await res.text()}`
+      );
+    }
+    return (await res.json()).data as Attachment;
+  }
+
+  async attachments(consultationId: number): Promise<Attachment[]> {
+    const res = await this.send("get", `consultations/${consultationId}/attachments`);
+    if (!res.ok()) throw new Error(`GET /consultations/${consultationId}/attachments failed: ${res.status()}`);
+    return (await res.json()).data as Attachment[];
+  }
+
+  /** Arbitrary request (raw response), e.g. to check headers such as X-Request-Id. */
+  async raw(
+    method: "get" | "post" | "put" | "patch" | "delete",
+    url: string,
+    options: Parameters<APIRequestContext["fetch"]>[1] = {}
+  ): Promise<APIResponse> {
+    return this.send(method, url, options);
   }
 
   /** Registers a patient created through the UI so it gets cleaned up. */

@@ -101,7 +101,7 @@ endpoints:
         `age_max`, `sort`, `direction`, `trashed`) e sem paginação. Arquivo UTF-8 com BOM, separador `;` e
         quebra de linha CRLF (abre direto no Excel em pt-BR), nome `pacientes-AAAAMMDD-HHMM.csv` (horário de
         Brasília). Valores formatados: CPF `000.000.000-00`, celular `(00) 00000-0000`, datas `DD/MM/AAAA`,
-        sexo `Masculino`/`Feminino`; com `trashed=only` há a coluna extra `Excluído em` (`DD/MM/AAAA HH:MM`).
+        sexo `Masculino`/`Feminino`, CEP `00000-000`, endereço "rua, número - complemento - bairro"; com `trashed=only` há a coluna extra `Excluído em` (`DD/MM/AAAA HH:MM`).
         Células que começam com `=`, `+`, `-`, `@`, tab ou CR recebem um `'` na frente (proteção contra
         injeção de fórmulas). O "Try it out" mostra o CSV como texto; para baixar o arquivo, abra a URL no
         navegador.
@@ -191,8 +191,8 @@ endpoints:
       -
         status: 200
         content: |-
-          Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição
-          Maria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;"Paciente com miopia leve; retorno anual."
+          Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição;CEP;Endereço;Cidade;UF
+          Maria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;"Paciente com miopia leve; retorno anual.";01310-100;Avenida Paulista, 1578 - Sala 12 - Bela Vista;São Paulo;SP
         headers: []
         description: 'CSV (com BOM UTF-8)'
         custom: []
@@ -220,7 +220,9 @@ endpoints:
         Lista as alterações do paciente, da mais recente para a mais antiga (desempate por `id` decrescente),
         paginadas como a listagem. Funciona também para pacientes na lixeira. `event` é `created`, `updated`,
         `deleted` ou `restored`; `changes` traz `{campo: {old, new}}` com os valores crus (como na API): todos os
-        campos em `created`, só os alterados em `updated` e `{}` em `deleted`/`restored`. `user_id` é sempre
+        campos em `created`, só os alterados em `updated` e `{}` em `deleted`/`restored`. O endereço aparece como
+        `address.<campo>` (ex.: `address.cep`) e a foto como `photo` (`{"old": null, "new": "adicionada" | "alterada" |
+        "removida"}`, nunca a imagem). `user_id` é sempre
         `null` enquanto a API não tem autenticação. Os valores ficam criptografados no banco.
       authenticated: false
       custom: []
@@ -325,7 +327,7 @@ endpoints:
     responses:
       -
         status: 200
-        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:45:00-03:00", "age": 30, "deleted_at": null}}'
+        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:45:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}'
         headers: []
         description: 'Paciente restaurado'
         custom: []
@@ -488,7 +490,17 @@ endpoints:
                       "created_at": "2026-10-26T15:30:00-03:00",
                       "updated_at": "2026-10-26T15:30:00-03:00",
                       "age": 30,
-                      "deleted_at": null
+                      "deleted_at": null,
+                      "address": {
+                          "cep": "01310100",
+                          "street": "Avenida Paulista",
+                          "number": "1578",
+                          "complement": null,
+                          "neighborhood": "Bela Vista",
+                          "city": "São Paulo",
+                          "state": "SP"
+                      },
+                      "photo_url": null
                   },
                   {
                       "id": 2,
@@ -503,7 +515,9 @@ endpoints:
                       "created_at": "2026-10-26T15:31:00-03:00",
                       "updated_at": "2026-10-26T15:31:00-03:00",
                       "age": 46,
-                      "deleted_at": null
+                      "deleted_at": null,
+                      "address": null,
+                      "photo_url": null
                   }
               ],
               "links": {
@@ -564,7 +578,9 @@ endpoints:
       title: 'Cadastrar paciente'
       description: |-
         Cria um paciente. CPF, RG e celular podem ser enviados com máscara; são armazenados só com dígitos.
-        O CPF deve ser válido e único entre os pacientes ativos.
+        O CPF deve ser válido e único entre os pacientes ativos. `address` é opcional (objeto ou `null`); quando
+        enviado, todos os subcampos exceto `complement` são obrigatórios e os erros usam chaves com ponto
+        (`errors["address.cep"]`). A foto é enviada à parte (`POST /patients/{id}/photo`).
       authenticated: false
       custom: []
     headers:
@@ -649,6 +665,105 @@ endpoints:
         enumValues: []
         exampleWasSpecified: false
         custom: []
+      address:
+        name: address
+        description: 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.'
+        required: false
+        example: null
+        type: object
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.cep:
+        name: address.cep
+        description: 'CEP com 8 dígitos, com ou sem máscara (`00000-000`). Armazenado só com dígitos. Obrigatório quando `address` é enviado. Must be 8 digits.'
+        required: false
+        example: 01310-100
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.street:
+        name: address.street
+        description: 'Logradouro (até 255). Obrigatório quando `address` é enviado. Must not be greater than 255 characters.'
+        required: false
+        example: 'Avenida Paulista'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.number:
+        name: address.number
+        description: 'Número (até 20; aceita "S/N"). Obrigatório quando `address` é enviado. Must not be greater than 20 characters.'
+        required: false
+        example: '1578'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.complement:
+        name: address.complement
+        description: 'Complemento (opcional, até 100). Must not be greater than 100 characters.'
+        required: false
+        example: 'Sala 12'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.neighborhood:
+        name: address.neighborhood
+        description: 'Bairro (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+        required: false
+        example: 'Bela Vista'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.city:
+        name: address.city
+        description: 'Cidade (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+        required: false
+        example: 'São Paulo'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.state:
+        name: address.state
+        description: 'UF: sigla de estado brasileiro (aceita minúsculas; armazenada em maiúsculas). Obrigatório quando `address` é enviado.'
+        required: false
+        example: SP
+        type: string
+        enumValues:
+          - AC
+          - AL
+          - AP
+          - AM
+          - BA
+          - CE
+          - DF
+          - ES
+          - GO
+          - MA
+          - MT
+          - MS
+          - MG
+          - PA
+          - PB
+          - PR
+          - PE
+          - PI
+          - RJ
+          - RN
+          - RS
+          - RO
+          - RR
+          - SC
+          - SP
+          - SE
+          - TO
+        exampleWasSpecified: false
+        custom: []
     cleanBodyParameters:
       name: 'Maria da Silva'
       cpf: 625.189.530-60
@@ -658,11 +773,19 @@ endpoints:
       phone: '(11) 92853-5718'
       email: maria@example.com
       description: 'Paciente com miopia leve, retorno anual.'
+      address:
+        cep: 01310-100
+        street: 'Avenida Paulista'
+        number: '1578'
+        complement: 'Sala 12'
+        neighborhood: 'Bela Vista'
+        city: 'São Paulo'
+        state: SP
     fileParameters: []
     responses:
       -
         status: 201
-        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null}}'
+        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}'
         headers: []
         description: 'Paciente criado'
         custom: []
@@ -718,7 +841,7 @@ endpoints:
     responses:
       -
         status: 200
-        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null}}'
+        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}'
         headers: []
         description: Sucesso
         custom: []
@@ -749,7 +872,9 @@ endpoints:
       subgroup: ''
       subgroupDescription: ''
       title: 'Atualizar paciente'
-      description: 'Substituição completa (PUT): envie todos os campos. Campos opcionais omitidos (`email`, `description`) são apagados.'
+      description: |-
+        Substituição completa (PUT): envie todos os campos. Campos opcionais omitidos (`email`, `description`) são apagados;
+        `address` omitido ou `null` remove o endereço. A foto não muda por aqui (use as rotas `/photo`).
       authenticated: false
       custom: []
     headers:
@@ -844,6 +969,105 @@ endpoints:
         enumValues: []
         exampleWasSpecified: false
         custom: []
+      address:
+        name: address
+        description: 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.'
+        required: false
+        example: null
+        type: object
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.cep:
+        name: address.cep
+        description: 'CEP com 8 dígitos, com ou sem máscara (`00000-000`). Armazenado só com dígitos. Obrigatório quando `address` é enviado. Must be 8 digits.'
+        required: false
+        example: 01310-100
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.street:
+        name: address.street
+        description: 'Logradouro (até 255). Obrigatório quando `address` é enviado. Must not be greater than 255 characters.'
+        required: false
+        example: 'Avenida Paulista'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.number:
+        name: address.number
+        description: 'Número (até 20; aceita "S/N"). Obrigatório quando `address` é enviado. Must not be greater than 20 characters.'
+        required: false
+        example: '1578'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.complement:
+        name: address.complement
+        description: 'Complemento (opcional, até 100). Must not be greater than 100 characters.'
+        required: false
+        example: 'Sala 12'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.neighborhood:
+        name: address.neighborhood
+        description: 'Bairro (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+        required: false
+        example: 'Bela Vista'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.city:
+        name: address.city
+        description: 'Cidade (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+        required: false
+        example: 'São Paulo'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.state:
+        name: address.state
+        description: 'UF: sigla de estado brasileiro (aceita minúsculas; armazenada em maiúsculas). Obrigatório quando `address` é enviado.'
+        required: false
+        example: SP
+        type: string
+        enumValues:
+          - AC
+          - AL
+          - AP
+          - AM
+          - BA
+          - CE
+          - DF
+          - ES
+          - GO
+          - MA
+          - MT
+          - MS
+          - MG
+          - PA
+          - PB
+          - PR
+          - PE
+          - PI
+          - RJ
+          - RN
+          - RS
+          - RO
+          - RR
+          - SC
+          - SP
+          - SE
+          - TO
+        exampleWasSpecified: false
+        custom: []
     cleanBodyParameters:
       name: 'Maria da Silva'
       cpf: 625.189.530-60
@@ -853,11 +1077,19 @@ endpoints:
       phone: '(11) 92853-5718'
       email: maria@example.com
       description: 'Paciente com miopia leve, retorno anual.'
+      address:
+        cep: 01310-100
+        street: 'Avenida Paulista'
+        number: '1578'
+        complement: 'Sala 12'
+        neighborhood: 'Bela Vista'
+        city: 'São Paulo'
+        state: SP
     fileParameters: []
     responses:
       -
         status: 200
-        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null}}'
+        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}'
         headers: []
         description: 'Paciente atualizado'
         custom: []
@@ -930,6 +1162,195 @@ endpoints:
         content: '{"message": "Paciente não encontrado."}'
         headers: []
         description: 'Paciente não encontrado ou excluído'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - GET
+    uri: 'api/patients/{patient_id}/photo'
+    metadata:
+      groupName: Pacientes
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Foto do paciente'
+      description: |-
+        A foto (JPEG, até 512x512) do paciente. A URL com `?v=<versão>` vem em `photo_url` no recurso do paciente;
+        a versão muda a cada troca, então a resposta pode ficar em cache no navegador (`Cache-Control: private,
+        max-age=86400`). `404` se o paciente não tiver foto, não existir ou estiver na lixeira.
+      authenticated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      patient_id:
+        name: patient_id
+        description: 'ID do paciente.'
+        required: true
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+    cleanUrlParameters:
+      patient_id: 1
+    queryParameters:
+      v:
+        name: v
+        description: 'Versão da foto (só para invalidar o cache; ignorada pelo servidor).'
+        required: false
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+    cleanQueryParameters:
+      v: 1
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: '<binário JPEG>'
+        headers: []
+        description: 'Imagem (image/jpeg)'
+        custom: []
+      -
+        status: 404
+        content: '{"message": "Foto não encontrada."}'
+        headers: []
+        description: 'Paciente sem foto'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: 'api/patients/{patient_id}/photo'
+    metadata:
+      groupName: Pacientes
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Enviar foto do paciente'
+      description: |-
+        Envia ou troca a foto (multipart, campo `photo`): JPEG, PNG ou WebP (tipo conferido pelo conteúdo), até 2 MB,
+        entre 100x100 e 4000x4000 px. A imagem é reprocessada no servidor (corte quadrado centralizado, no máximo
+        512x512, JPEG), o que remove os metadados EXIF (como a localização), e fica criptografada em disco privado.
+        Gera um registro `photo` no histórico (sem a imagem). Retorna o paciente com o novo `photo_url`.
+      authenticated: false
+      custom: []
+    headers:
+      Content-Type: multipart/form-data
+      Accept: application/json
+    urlParameters:
+      patient_id:
+        name: patient_id
+        description: 'ID do paciente.'
+        required: true
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+    cleanUrlParameters:
+      patient_id: 1
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      photo:
+        name: photo
+        description: 'Imagem JPEG, PNG ou WebP (conferido pelo conteúdo), até 2 MB, entre 100x100 e 4000x4000 px. Reprocessada no servidor: corte quadrado centralizado, no máximo 512x512, JPEG, sem metadados EXIF. Must be a file. Must not be greater than 2048 kilobytes.'
+        required: true
+        example: null
+        type: file
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+    cleanBodyParameters: []
+    fileParameters:
+      photo: null
+    responses:
+      -
+        status: 200
+        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": null, "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-11-03T10:00:00-03:00", "age": 30, "deleted_at": null, "address": null, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}'
+        headers: []
+        description: 'Foto enviada'
+        custom: []
+      -
+        status: 404
+        content: '{"message": "Paciente não encontrado."}'
+        headers: []
+        description: 'Paciente não encontrado ou excluído'
+        custom: []
+      -
+        status: 422
+        content: '{"message": "A foto deve ser uma imagem JPEG, PNG ou WebP.", "errors": {"photo": ["A foto deve ser uma imagem JPEG, PNG ou WebP."]}}'
+        headers: []
+        description: 'Tipo inválido'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - DELETE
+    uri: 'api/patients/{patient_id}/photo'
+    metadata:
+      groupName: Pacientes
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Remover foto do paciente'
+      description: 'Remove a foto (e o arquivo). Gera um registro `photo` no histórico. `404` se o paciente não tiver foto.'
+      authenticated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      patient_id:
+        name: patient_id
+        description: 'ID do paciente.'
+        required: true
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+    cleanUrlParameters:
+      patient_id: 1
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 204
+        content: ''
+        headers: []
+        description: 'Foto removida'
+        custom: []
+      -
+        status: 404
+        content: '{"message": "Foto não encontrada."}'
+        headers: []
+        description: 'Paciente sem foto'
         custom: []
     responseFields: []
     auth: []

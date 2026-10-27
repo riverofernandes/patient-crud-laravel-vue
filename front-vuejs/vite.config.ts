@@ -64,11 +64,11 @@ export default defineConfig({
         "src/**/*.d.ts",
       ],
       // Set slightly below the measured values: fails on regressions.
-      // Measured (Sprint 4): statements 84.1, branches 78.6, functions 86.3, lines 84.1.
-      statements: 83,
-      branches: 77,
-      functions: 85,
-      lines: 83,
+      // Measured (Sprint 5): statements 87.3, branches 81.6, functions 88.3, lines 87.4.
+      statements: 86,
+      branches: 80,
+      functions: 87,
+      lines: 86,
     },
   },
 });

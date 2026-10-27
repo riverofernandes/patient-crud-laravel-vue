@@ -180,7 +180,11 @@ function validateEye(eye: EyeForm, prefix: Eye, errors: EyeExamErrors): void {
     if (!text) return;
     const n = Number(text);
     // Same rule as the API: no leading zero ("20/040" is rejected).
-    if (!/^[1-9]\d*$/.test(text) || n < ACUITY_RANGE.min || n > ACUITY_RANGE.max) {
+    if (
+      !/^[1-9]\d*$/.test(text) ||
+      n < ACUITY_RANGE.min ||
+      n > ACUITY_RANGE.max
+    ) {
       errors[`${prefix}.${field}`] = "Use 20/N, com N entre 10 e 400";
     }
   });

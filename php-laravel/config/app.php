@@ -123,6 +123,9 @@ return [
 
     'api_rate_limit' => (int) env('API_RATE_LIMIT', 300),
 
+    // Patient photo GETs use their own budget (one per avatar on screen).
+    'photo_rate_limit' => (int) env('PHOTO_RATE_LIMIT', 1200),
+
     /*
     |--------------------------------------------------------------------------
     | Encryption Key

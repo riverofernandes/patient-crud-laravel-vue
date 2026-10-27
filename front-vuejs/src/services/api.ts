@@ -1,4 +1,5 @@
 import axios, { AxiosError } from "axios";
+import { progressPercent } from "@/utils/files";
 
 export const API_URL: string = (
   import.meta.env.VITE_API_URL || "http://localhost:8000/api"
@@ -68,4 +69,30 @@ export async function parseBlobError(error: unknown): Promise<never> {
     }
   }
   throw error;
+}
+
+export interface UploadOptions {
+  /** 0–100 while the request body is sent. */
+  onProgress?: (percent: number) => void;
+  signal?: AbortSignal;
+}
+
+/** Uploads can take much longer than a JSON request. */
+export const UPLOAD_TIMEOUT = 120000;
+
+/**
+ * Multipart request config. The instance defaults to JSON, and axios would
+ * serialize a FormData body as JSON with that header: override it (axios then
+ * lets the browser set the multipart boundary).
+ */
+export function multipartConfig(options: UploadOptions = {}) {
+  return {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: UPLOAD_TIMEOUT,
+    signal: options.signal,
+    onUploadProgress: (event: { loaded: number; total?: number }) => {
+      if (options.onProgress && event.total)
+        options.onProgress(progressPercent(event));
+    },
+  };
 }
