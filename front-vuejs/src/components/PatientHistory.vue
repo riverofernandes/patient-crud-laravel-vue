@@ -48,7 +48,10 @@
               >
                 <span class="history-change__field">{{ change.label }}</span
                 ><span class="sr-only">{{ ": " }}</span>
-                <span class="history-change__values">
+                <span v-if="change.summary" class="history-change__summary">{{
+                  change.summary
+                }}</span>
+                <span v-else class="history-change__values">
                   <span class="sr-only">{{ "de " }}</span>
                   <del class="history-change__old">{{ change.old }}</del>
                   <b-icon-arrow-right
@@ -61,7 +64,7 @@
               </li>
             </ul>
             <p v-else class="history-item__text">
-              {{ eventDescription(audit.event) }}
+              {{ eventDescription(audit.event, audit) }}
             </p>
           </div>
         </li>
@@ -365,5 +368,10 @@ export default defineComponent({
   .history-change {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.history-change__summary {
+  color: $text;
+  font-weight: 600;
 }
 </style>

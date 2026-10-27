@@ -114,7 +114,12 @@
                         change.label
                       }}</span
                       ><span class="sr-only">{{ ": " }}</span>
-                      <span class="timeline-change__values">
+                      <span
+                        v-if="change.summary"
+                        class="timeline-change__summary"
+                        >{{ change.summary }}</span
+                      >
+                      <span v-else class="timeline-change__values">
                         <span class="sr-only">{{ "de " }}</span>
                         <del>{{ change.old }}</del>
                         <b-icon-arrow-right
@@ -127,7 +132,7 @@
                     </li>
                   </ul>
                   <p v-else class="timeline-item__text">
-                    {{ eventDescription(item.audit.event) }}
+                    {{ eventDescription(item.audit.event, item.audit) }}
                   </p>
                 </div>
               </template>
@@ -496,5 +501,10 @@ export default defineComponent({
   .timeline-change {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.timeline-change__summary {
+  color: $text;
+  font-weight: 600;
 }
 </style>

@@ -25,7 +25,19 @@
     </PageState>
 
     <article v-else-if="patient" class="app-card patient-detail">
-      <h1 class="card-title-lg">{{ patient.name }}</h1>
+      <header class="patient-detail__header">
+        <PatientAvatar
+          size="lg"
+          :name="patient.name"
+          :photo-url="patient.photo_url"
+        />
+        <div class="patient-detail__heading">
+          <h1 class="card-title-lg patient-detail__title">
+            {{ patient.name }}
+          </h1>
+          <PatientPhoto :patient="patient" @updated="onPhotoUpdated" />
+        </div>
+      </header>
 
       <b-tabs
         v-model="tabIndex"
@@ -58,6 +70,7 @@
                 :value="patient.description"
                 multiline
               />
+              <DetailItem label="Endereço" :value="addressText" />
             </dl>
           </div>
         </b-tab>
@@ -102,12 +115,15 @@ import AppBreadcrumb, {
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal.vue";
 import DetailItem from "@/components/DetailItem.vue";
 import PageState from "@/components/PageState.vue";
+import PatientAvatar from "@/components/PatientAvatar.vue";
 import PatientConsultations from "@/components/PatientConsultations.vue";
+import PatientPhoto from "@/components/PatientPhoto.vue";
 import PatientHistory from "@/components/PatientHistory.vue";
 import PatientTimeline from "@/components/PatientTimeline.vue";
 import { usePatient } from "@/composables/usePatient";
 import { focusHeadingIfParked } from "@/utils/routeFocus";
 import type { Patient } from "@/services/patientService";
+import { formatAddress } from "@/utils/address";
 import {
   formatSex,
   isoToBr,
@@ -127,8 +143,10 @@ export default defineComponent({
     ConfirmDeleteModal,
     DetailItem,
     PageState,
+    PatientAvatar,
     PatientConsultations,
     PatientHistory,
+    PatientPhoto,
     PatientTimeline,
   },
   props: {
@@ -160,6 +178,10 @@ export default defineComponent({
         this.$router.replace({ query }).catch(() => undefined);
       },
     },
+    /** One-line address, or "—" when the patient has none. */
+    addressText(): string {
+      return formatAddress(this.patient?.address) || "—";
+    },
     breadcrumb(): BreadcrumbItem[] {
       return [
         { text: "Pacientes", to: { name: "patients.index" } },
@@ -188,6 +210,9 @@ export default defineComponent({
     isoToBr,
     formatSex,
     patientAge,
+    onPhotoUpdated(updated: Patient): void {
+      if (this.patient) this.patient = { ...this.patient, ...updated };
+    },
     onDeleted(): void {
       this.$router.push({ name: "patients.index" });
     },
@@ -202,6 +227,25 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 190px);
+}
+
+.patient-detail__header {
+  display: flex;
+  gap: 16px 20px;
+  align-items: center;
+  padding: 4px 0 24px;
+  border-bottom: 2px solid $border-light;
+}
+
+.patient-detail__heading {
+  min-width: 0;
+}
+
+.patient-detail__title {
+  margin-bottom: 8px;
+  padding: 0;
+  overflow-wrap: anywhere;
+  border-bottom: 0;
 }
 
 .patient-detail__body {
