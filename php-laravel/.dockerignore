@@ -19,4 +19,6 @@ storage/framework/cache/*
 storage/framework/sessions/*
 storage/framework/views/*
 storage/framework/testing/*
+# Encrypted patient files of the dev environment must never be baked into an image.
+storage/app/private/*
 # NOT ignored on purpose: storage/app/scribe (OpenAPI/Postman served by /docs.openapi and /docs.postman).

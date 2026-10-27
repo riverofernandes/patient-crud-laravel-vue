@@ -12,8 +12,13 @@
 # ---------------------------------------------------------------------------
 FROM php:8.2-fpm-alpine AS prod-base
 
-RUN apk add --no-cache nginx supervisor \
-    && docker-php-ext-install pdo_mysql opcache \
+# GD (JPEG/PNG/WebP) reprocesses patient photos; exif reads the camera orientation before it is stripped.
+# The -dev packages are only needed to compile the extensions; the runtime libraries stay.
+RUN apk add --no-cache nginx supervisor libpng libjpeg-turbo libwebp \
+    && apk add --no-cache --virtual .build-deps libpng-dev libjpeg-turbo-dev libwebp-dev \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install pdo_mysql opcache gd exif \
+    && apk del .build-deps \
     && cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
 COPY docker/prod/php.ini "$PHP_INI_DIR/conf.d/zz-app.ini"
@@ -38,16 +43,20 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-in
 COPY . .
 # Runs post-autoload-dump (package:discover), regenerating bootstrap/cache without dev-only providers.
 RUN composer dump-autoload --optimize --no-dev --no-interaction \
-    && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+    && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    # Encrypted patient photos and exam attachments. Must exist in the image (owned by www-data below) so a
+    # named volume mounted here inherits the ownership instead of being created root-owned.
+       storage/app/private
 
 # ---------------------------------------------------------------------------
 # prod: final production image
 # ---------------------------------------------------------------------------
 FROM prod-base AS prod
 
+# LOG_CHANNEL=json: one JSON object per line on stderr (see config/logging.php).
 ENV APP_ENV=production \
     APP_DEBUG=false \
-    LOG_CHANNEL=stderr
+    LOG_CHANNEL=json
 
 # Code is owned by root (read-only for the app); only the runtime-writable dirs belong to www-data.
 COPY --from=prod-build /var/www/html /var/www/html
@@ -73,7 +82,9 @@ FROM php:8.2-cli AS dev
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git unzip libzip-dev libsqlite3-dev default-mysql-client \
-    && docker-php-ext-install pdo_mysql pdo_sqlite zip \
+        libpng-dev libjpeg62-turbo-dev libwebp-dev \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install pdo_mysql pdo_sqlite zip gd exif \
     && rm -rf /var/lib/apt/lists/*
 
 # Code coverage driver for `php artisan test --coverage` (dev only; never installed in the prod image).
@@ -81,7 +92,8 @@ RUN pecl install pcov-1.0.12 \
     && docker-php-ext-enable pcov \
     && rm -rf /tmp/pear \
     # The CLI default (128M) is too small for a cold Larastan run (`vendor/bin/phpstan analyse`).
-    && echo 'memory_limit=512M' > "$PHP_INI_DIR/conf.d/zz-dev.ini"
+    # Uploads: photos up to 2 MB, attachments up to 10 MB (+ multipart overhead), same limits as docker/prod/php.ini.
+    && printf 'memory_limit=512M\nupload_max_filesize=11M\npost_max_size=12M\n' > "$PHP_INI_DIR/conf.d/zz-dev.ini"
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
