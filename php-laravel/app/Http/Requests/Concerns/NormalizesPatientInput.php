@@ -8,7 +8,9 @@ namespace App\Http\Requests\Concerns;
 trait NormalizesPatientInput
 {
     /**
-     * Strip masks: CPF and phone keep only digits; RG keeps digits and the letter X.
+     * Strip masks: CPF and phone keep only digits; RG keeps digits and the letter X. Address: the CEP mask
+     * (`00000-000`, dots and spaces) is removed (letters are kept, so they still fail validation) and the
+     * state is upper-cased.
      */
     protected function prepareForValidation(): void
     {
@@ -20,6 +22,20 @@ trait NormalizesPatientInput
             if (is_string($value)) {
                 $sanitized[$field] = preg_replace($pattern, '', strtoupper($value));
             }
+        }
+
+        $address = $this->input('address');
+
+        if (is_array($address)) {
+            if (is_string($address['cep'] ?? null)) {
+                $address['cep'] = preg_replace('/[\s.\-]/', '', $address['cep']);
+            }
+
+            if (is_string($address['state'] ?? null)) {
+                $address['state'] = strtoupper(trim($address['state']));
+            }
+
+            $sanitized['address'] = $address;
         }
 
         $this->merge($sanitized);
@@ -50,6 +66,14 @@ trait NormalizesPatientInput
             'phone' => 'celular',
             'email' => 'e-mail',
             'description' => 'descrição',
+            'address' => 'endereço',
+            'address.cep' => 'CEP',
+            'address.street' => 'logradouro',
+            'address.number' => 'número',
+            'address.complement' => 'complemento',
+            'address.neighborhood' => 'bairro',
+            'address.city' => 'cidade',
+            'address.state' => 'UF',
         ];
     }
 }

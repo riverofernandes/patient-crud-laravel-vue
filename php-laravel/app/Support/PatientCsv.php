@@ -16,7 +16,7 @@ final class PatientCsv
 
     public const EOL = "\r\n";
 
-    private const HEADER = ['Nome', 'CPF', 'RG', 'Data de nascimento', 'Idade', 'Sexo', 'Celular', 'E-mail', 'Descrição'];
+    private const HEADER = ['Nome', 'CPF', 'RG', 'Data de nascimento', 'Idade', 'Sexo', 'Celular', 'E-mail', 'Descrição', 'CEP', 'Endereço', 'Cidade', 'UF'];
 
     private const DELETED_AT_HEADER = 'Excluído em';
 
@@ -48,6 +48,10 @@ final class PatientCsv
             self::formatPhone($patient->phone),
             $patient->email ?? '',
             $patient->description ?? '',
+            self::formatCep($patient->address?->cep),
+            $patient->address?->oneLine() ?? '',
+            $patient->address?->city ?? '',
+            $patient->address?->state ?? '',
         ];
 
         if ($withDeletedAt) {
@@ -96,6 +100,18 @@ final class PatientCsv
     public static function formatCpf(string $cpf): string
     {
         return preg_match('/^(\d{3})(\d{3})(\d{3})(\d{2})$/', $cpf, $m) ? "{$m[1]}.{$m[2]}.{$m[3]}-{$m[4]}" : $cpf;
+    }
+
+    /**
+     * 00000-000; empty when there is no address.
+     */
+    public static function formatCep(?string $cep): string
+    {
+        if ($cep === null) {
+            return '';
+        }
+
+        return preg_match('/^(\d{5})(\d{3})$/', $cep, $m) ? "{$m[1]}-{$m[2]}" : $cep;
     }
 
     /**

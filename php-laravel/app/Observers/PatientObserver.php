@@ -8,11 +8,22 @@ use DateTimeInterface;
 
 /**
  * Writes the patient change history (patient_audits): created / updated / deleted / restored.
+ *
+ * Besides the patient's own fields, `changes` may hold:
+ * - `address.<field>` (cep, street, ...): handed over by the controller through Patient::$pendingAuditChanges,
+ *   so a request that changes the patient and the address writes a single audit;
+ * - `photo`: {"old": null, "new": "adicionada" | "alterada" | "removida"} when the photo changes (never the image).
  */
 class PatientObserver
 {
     /** Fields recorded in `changes` (raw values, as returned by the API). */
     public const AUDITED_FIELDS = ['name', 'cpf', 'rg', 'birth_date', 'sex', 'phone', 'email', 'description'];
+
+    public const PHOTO_ADDED = 'adicionada';
+
+    public const PHOTO_CHANGED = 'alterada';
+
+    public const PHOTO_REMOVED = 'removida';
 
     private const USER_AGENT_MAX = 255;
 
@@ -47,7 +58,7 @@ class PatientObserver
             $changes[$field] = ['old' => null, 'new' => self::value($patient->getAttribute($field))];
         }
 
-        $this->record($patient, PatientAudit::CREATED, $changes);
+        $this->record($patient, PatientAudit::CREATED, $changes + self::pullPending($patient));
     }
 
     public function updated(Patient $patient): void
@@ -62,9 +73,28 @@ class PatientObserver
             ];
         }
 
+        if ($patient->wasChanged('photo_path')) {
+            $changes['photo'] = ['old' => null, 'new' => self::photoMarker($patient)];
+        }
+
+        $changes += self::pullPending($patient);
+
         // restore() saves deleted_at only: that is the "restored" event, not an update.
         if ($changes !== []) {
             $this->record($patient, PatientAudit::UPDATED, $changes);
+        }
+    }
+
+    /**
+     * Records the pending changes the model events did not consume (e.g. a PUT that changes only the address
+     * leaves the patient row clean, so no `updated` event fires) as one `updated` entry.
+     */
+    public static function flushPending(Patient $patient): void
+    {
+        $pending = self::pullPending($patient);
+
+        if ($pending !== []) {
+            (new self())->record($patient, PatientAudit::UPDATED, $pending);
         }
     }
 
@@ -102,6 +132,26 @@ class PatientObserver
             'user_agent' => $userAgent === null || $userAgent === '' ? null : mb_substr($userAgent, 0, self::USER_AGENT_MAX),
             'user_id' => null,
         ]);
+    }
+
+    /**
+     * @return array<string, array{old: mixed, new: mixed}>
+     */
+    private static function pullPending(Patient $patient): array
+    {
+        $pending = $patient->pendingAuditChanges;
+        $patient->pendingAuditChanges = [];
+
+        return $pending;
+    }
+
+    private static function photoMarker(Patient $patient): string
+    {
+        return match (true) {
+            $patient->photo_path === null => self::PHOTO_REMOVED,
+            $patient->getOriginal('photo_path') === null => self::PHOTO_ADDED,
+            default => self::PHOTO_CHANGED,
+        };
     }
 
     private static function value(mixed $value): mixed

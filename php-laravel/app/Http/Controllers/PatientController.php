@@ -7,6 +7,8 @@ use App\Http\Requests\PatientRequest;
 use App\Http\Resources\AuditResource;
 use App\Http\Resources\PatientResource;
 use App\Models\Patient;
+use App\Models\PatientAddress;
+use App\Observers\PatientObserver;
 use App\Rules\UniqueActiveCpf;
 use App\Support\PatientCsv;
 use App\Support\PerPage;
@@ -17,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -68,7 +71,7 @@ class PatientController extends Controller
      * `age_max`, `sort`, `direction`, `trashed`) e sem paginação. Arquivo UTF-8 com BOM, separador `;` e
      * quebra de linha CRLF (abre direto no Excel em pt-BR), nome `pacientes-AAAAMMDD-HHMM.csv` (horário de
      * Brasília). Valores formatados: CPF `000.000.000-00`, celular `(00) 00000-0000`, datas `DD/MM/AAAA`,
-     * sexo `Masculino`/`Feminino`; com `trashed=only` há a coluna extra `Excluído em` (`DD/MM/AAAA HH:MM`).
+     * sexo `Masculino`/`Feminino`, CEP `00000-000`, endereço "rua, número - complemento - bairro"; com `trashed=only` há a coluna extra `Excluído em` (`DD/MM/AAAA HH:MM`).
      * Células que começam com `=`, `+`, `-`, `@`, tab ou CR recebem um `'` na frente (proteção contra
      * injeção de fórmulas). O "Try it out" mostra o CSV como texto; para baixar o arquivo, abra a URL no
      * navegador.
@@ -81,8 +84,8 @@ class PatientController extends Controller
      * @queryParam direction string `asc` ou `desc`. Padrão: `asc`. Example: asc
      * @queryParam trashed string `only` exporta apenas a lixeira (com a coluna `Excluído em`). Example: only
      *
-     * @response 200 scenario="CSV (com BOM UTF-8)" Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição
-     * Maria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;"Paciente com miopia leve; retorno anual."
+     * @response 200 scenario="CSV (com BOM UTF-8)" Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição;CEP;Endereço;Cidade;UF
+     * Maria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;"Paciente com miopia leve; retorno anual.";01310-100;Avenida Paulista, 1578 - Sala 12 - Bela Vista;São Paulo;SP
      */
     public function export(Request $request): StreamedResponse
     {
@@ -118,16 +121,31 @@ class PatientController extends Controller
      * Cadastrar paciente
      *
      * Cria um paciente. CPF, RG e celular podem ser enviados com máscara; são armazenados só com dígitos.
-     * O CPF deve ser válido e único entre os pacientes ativos.
+     * O CPF deve ser válido e único entre os pacientes ativos. `address` é opcional (objeto ou `null`); quando
+     * enviado, todos os subcampos exceto `complement` são obrigatórios e os erros usam chaves com ponto
+     * (`errors["address.cep"]`). A foto é enviada à parte (`POST /patients/{id}/photo`).
      *
-     * @response 201 scenario="Paciente criado" {"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null}}
+     * @response 201 scenario="Paciente criado" {"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}
      * @response 422 scenario="Erro de validação" {"message": "O campo nome completo é obrigatório. (and 1 more error)", "errors": {"name": ["O campo nome completo é obrigatório."], "cpf": ["O CPF informado é inválido."]}}
      */
     public function store(PatientRequest $request): PatientResource
     {
-        $patient = Patient::create($request->validated());
+        $address = $request->addressData();
 
-        return new PatientResource($patient);
+        $patient = DB::transaction(function () use ($request, $address) {
+            $patient = new Patient($request->patientData());
+            // Recorded in the same "created" audit as the patient fields.
+            $patient->pendingAuditChanges = PatientAddress::auditChanges(null, $address);
+            $patient->save();
+
+            if ($address !== null) {
+                $patient->address()->create($address);
+            }
+
+            return $patient;
+        });
+
+        return new PatientResource($patient->load('address'));
     }
 
     /**
@@ -135,7 +153,7 @@ class PatientController extends Controller
      *
      * @urlParam id integer required ID do paciente. Example: 1
      *
-     * @response 200 scenario="Sucesso" {"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null}}
+     * @response 200 scenario="Sucesso" {"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}
      * @response 404 scenario="Paciente não encontrado ou excluído" {"message": "Paciente não encontrado."}
      */
     public function show(Patient $patient): PatientResource
@@ -146,20 +164,43 @@ class PatientController extends Controller
     /**
      * Atualizar paciente
      *
-     * Substituição completa (PUT): envie todos os campos. Campos opcionais omitidos (`email`, `description`) são apagados.
+     * Substituição completa (PUT): envie todos os campos. Campos opcionais omitidos (`email`, `description`) são apagados;
+     * `address` omitido ou `null` remove o endereço. A foto não muda por aqui (use as rotas `/photo`).
      *
      * @urlParam id integer required ID do paciente. Example: 1
      *
-     * @response 200 scenario="Paciente atualizado" {"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null}}
+     * @response 200 scenario="Paciente atualizado" {"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}
      * @response 404 scenario="Paciente não encontrado ou excluído" {"message": "Paciente não encontrado."}
      * @response 422 scenario="Erro de validação" {"message": "O campo nome completo é obrigatório. (and 1 more error)", "errors": {"name": ["O campo nome completo é obrigatório."], "cpf": ["O CPF informado é inválido."]}}
      */
     public function update(PatientRequest $request, Patient $patient): PatientResource
     {
-        // PUT is a full replacement: optional fields left out are cleared.
-        $patient->update(array_merge(['email' => null, 'description' => null], $request->validated()));
+        $address = $request->addressData();
 
-        return new PatientResource($patient);
+        DB::transaction(function () use ($request, $patient, $address) {
+            // PUT is a full replacement: optional fields left out are cleared (an omitted address is removed).
+            $patient->fill(array_merge(['email' => null, 'description' => null], $request->patientData()));
+            $patient->pendingAuditChanges = PatientAddress::auditChanges($patient->address?->toResource(), $address);
+
+            if (! $patient->isDirty() && $patient->pendingAuditChanges !== []) {
+                $patient->updateTimestamps(); // an address change also changes the patient record
+            }
+
+            $patient->save();
+            // One audit per request: the address changes go with the patient's (or alone when only the address
+            // changed and no "updated" event fired).
+            PatientObserver::flushPending($patient);
+
+            if ($address === null) {
+                $patient->address?->delete();
+            } elseif ($patient->address !== null) {
+                $patient->address->update($address);
+            } else {
+                $patient->address()->create($address);
+            }
+        });
+
+        return new PatientResource($patient->unsetRelation('address')->load('address'));
     }
 
     /**
@@ -188,7 +229,7 @@ class PatientController extends Controller
      *
      * @urlParam patient_id integer required ID do paciente excluído. Example: 1
      *
-     * @response 200 scenario="Paciente restaurado" {"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:45:00-03:00", "age": 30, "deleted_at": null}}
+     * @response 200 scenario="Paciente restaurado" {"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:45:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}
      * @response 404 scenario="Paciente não encontrado ou não excluído" {"message": "Paciente não encontrado."}
      * @response 409 scenario="CPF em uso por outro paciente ativo" {"message": "Já existe um paciente ativo com este CPF."}
      */
@@ -234,7 +275,9 @@ class PatientController extends Controller
      * Lista as alterações do paciente, da mais recente para a mais antiga (desempate por `id` decrescente),
      * paginadas como a listagem. Funciona também para pacientes na lixeira. `event` é `created`, `updated`,
      * `deleted` ou `restored`; `changes` traz `{campo: {old, new}}` com os valores crus (como na API): todos os
-     * campos em `created`, só os alterados em `updated` e `{}` em `deleted`/`restored`. `user_id` é sempre
+     * campos em `created`, só os alterados em `updated` e `{}` em `deleted`/`restored`. O endereço aparece como
+     * `address.<campo>` (ex.: `address.cep`) e a foto como `photo` (`{"old": null, "new": "adicionada" | "alterada" |
+     * "removida"}`, nunca a imagem). `user_id` é sempre
      * `null` enquanto a API não tem autenticação. Os valores ficam criptografados no banco.
      *
      * @urlParam patient_id integer required ID do paciente (ativo ou na lixeira). Example: 1
@@ -263,7 +306,7 @@ class PatientController extends Controller
      */
     private function filteredQuery(Request $request): Builder
     {
-        $query = Patient::query();
+        $query = Patient::query()->with('address');
 
         if ($request->query('trashed') === 'only') {
             $query->onlyTrashed();
