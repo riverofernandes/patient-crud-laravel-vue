@@ -25,7 +25,9 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => ['Content-Disposition'], // lets the SPA read the CSV export filename
+    // Content-Disposition: lets the SPA read download filenames (CSV export, attachments).
+    // X-Request-Id: lets the SPA show/report the id of a failed request (matches the server log line).
+    'exposed_headers' => ['Content-Disposition', 'X-Request-Id'],
 
     'max_age' => 0,
 
