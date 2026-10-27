@@ -56,11 +56,11 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
 
 | # | Item | Valor | Esforço | Como |
 |---|------|-------|---------|------|
-| 4.1 | **Agendamento de consultas** | Primeiro passo do atendimento | G | Entidades `appointments` e `professionals`; calendário semanal; status (agendada, confirmada, realizada, faltou) |
-| 4.2 | **Prontuário oftalmológico** | Diferencial forte para o domínio da empresa | G | Registro por consulta: acuidade visual, refração (esférico, cilíndrico, eixo, adição) para OD e OE, pressão intraocular, observações |
-| 4.3 | **Receita de óculos em PDF** | Entregável direto ao paciente | M | Gerar PDF a partir da refração (DomPDF) com dados do profissional |
+| 4.1 | ✅ **Agendamento de consultas** | Primeiro passo do atendimento | G | Entidades `appointments` e `professionals`; calendário semanal; status (agendada, confirmada, realizada, faltou) |
+| 4.2 | ✅ **Prontuário oftalmológico** | Diferencial forte para o domínio da empresa | G | Registro por consulta: acuidade visual, refração (esférico, cilíndrico, eixo, adição) para OD e OE, pressão intraocular, observações |
+| 4.3 | ✅ **Receita de óculos em PDF** | Entregável direto ao paciente | M | Gerar PDF a partir da refração (DomPDF) com dados do profissional |
 | 4.4 | **Anexos de exames** | Centraliza laudos e imagens | M | Upload por consulta com pré-visualização de PDF/imagem |
-| 4.5 | **Linha do tempo do paciente** | Visão única do histórico | M | Na tela de detalhes: consultas, exames e alterações em ordem cronológica |
+| 4.5 | ✅ **Linha do tempo do paciente** | Visão única do histórico | M | Na tela de detalhes: consultas, exames e alterações em ordem cronológica |
 | 4.6 | **Lembretes de consulta** | Reduz faltas | M | Filas (Redis + Horizon) disparando e-mail/WhatsApp 24h antes |
 
 ## Fase 5 — Arquitetura e infraestrutura
@@ -83,7 +83,8 @@ o **esforço** estimado (P = horas, M = 1–2 dias, G = 3+ dias) e o que precisa
 2. ✅ **Sprint 2 — cadastro completo (3–4 dias):** concluída — 2.1 lixeira · 2.2 ordenação · 2.4 itens por página · 2.5 idade · 2.7 CPF em tempo real · 1.3 testes de componentes
 3. ✅ **Sprint 3 — rastreabilidade e qualidade (4–5 dias), com a API aberta:** concluída — 3.3 auditoria · 3.4 criptografia com blind index · 2.3 filtros · 2.9 exportar CSV · 1.4 cobertura · 1.5 Larastan
    (3.1, 3.2, 3.5 e 3.6 ficam adiadas: autenticação não faz parte desta fase da avaliação)
-4. **Sprint 4+ — produto clínico:** 4.1 agendamento · 4.2 prontuário · 4.5 linha do tempo · 4.3 receita em PDF
+4. ✅ **Sprint 4 — produto clínico, com a API aberta:** concluída — 4.1 agendamento (atendimentos por paciente + agenda semanal; profissional como texto livre enquanto não há login) · 4.2 prontuário · 4.3 receita em PDF · 4.5 linha do tempo
+   (4.4 anexos e 4.6 lembretes ficam para depois)
 
 A Sprint 1 é a que mais pesa numa avaliação técnica: mostra automação, testes de ponta a ponta e um
 link funcionando, sem mudar o escopo pedido.
