@@ -2,6 +2,51 @@ import { request, type APIRequestContext, type APIResponse } from "@playwright/t
 import { API_URL } from "./env";
 import { buildPatient, type PatientPayload } from "./data";
 
+export type ConsultationStatus = "scheduled" | "confirmed" | "completed" | "no_show" | "cancelled";
+
+export interface EyeData {
+  visual_acuity_sc?: string | null;
+  visual_acuity_cc?: string | null;
+  spherical?: number | null;
+  cylindrical?: number | null;
+  axis?: number | null;
+  addition?: number | null;
+  iop?: number | null;
+}
+
+export interface EyeExamPayload {
+  od?: EyeData;
+  oe?: EyeData;
+  diagnosis?: string | null;
+  observations?: string | null;
+}
+
+export interface ConsultationPayload {
+  /** ISO-8601; without offset it is read as America/Sao_Paulo. */
+  scheduled_at: string;
+  duration_minutes?: number;
+  professional_name: string;
+  professional_crm?: string | null;
+  reason?: string | null;
+  notes?: string | null;
+}
+
+export interface Consultation {
+  id: number;
+  patient_id: number;
+  patient?: { id: number; name: string };
+  scheduled_at: string;
+  duration_minutes: number;
+  status: ConsultationStatus;
+  professional_name: string;
+  professional_crm: string | null;
+  reason: string | null;
+  notes: string | null;
+  eye_exam: (EyeExamPayload & { updated_at: string }) | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Patient extends PatientPayload {
   id: number;
   age: number;
@@ -36,7 +81,7 @@ export class PatientApi {
 
   /** Retries on 429 (the API rate limit is shared with the browser). */
   private async send(
-    method: "get" | "post" | "put" | "delete",
+    method: "get" | "post" | "put" | "patch" | "delete",
     url: string,
     options: Parameters<APIRequestContext["fetch"]>[1] = {}
   ): Promise<APIResponse> {
@@ -129,6 +174,51 @@ export class PatientApi {
     const res = await this.send("post", `patients/${id}/restore`);
     if (res.status() === 200) this.trashed.delete(id);
     return res;
+  }
+
+  /* ---------- Consultations (Sprint 4) ----------
+   * No cleanup of their own: soft-deleting the patient hides its consultations from the agenda and
+   * makes the nested routes 404 (and stops them from blocking time slots).
+   */
+
+  async createConsultation(patientId: number, payload: ConsultationPayload): Promise<Consultation> {
+    const res = await this.send("post", `patients/${patientId}/consultations`, { data: payload });
+    if (res.status() !== 201) {
+      throw new Error(`POST /patients/${patientId}/consultations failed: ${res.status()} ${await res.text()}`);
+    }
+    return (await res.json()).data as Consultation;
+  }
+
+  /** PATCH /consultations/{id}/status (one transition). */
+  async setStatus(id: number, status: ConsultationStatus): Promise<Consultation> {
+    const res = await this.send("patch", `consultations/${id}/status`, { data: { status } });
+    if (res.status() !== 200) {
+      throw new Error(`PATCH /consultations/${id}/status failed: ${res.status()} ${await res.text()}`);
+    }
+    return (await res.json()).data as Consultation;
+  }
+
+  async saveEyeExam(id: number, exam: EyeExamPayload): Promise<Consultation> {
+    const res = await this.send("put", `consultations/${id}/eye-exam`, { data: exam });
+    if (res.status() !== 200) {
+      throw new Error(`PUT /consultations/${id}/eye-exam failed: ${res.status()} ${await res.text()}`);
+    }
+    return (await res.json()).data as Consultation;
+  }
+
+  /** GET /consultations/{id} (raw response). */
+  async getConsultation(id: number): Promise<APIResponse> {
+    return this.send("get", `consultations/${id}`);
+  }
+
+  /** GET /consultations (agenda) with arbitrary query params (raw response). */
+  async agenda(params: Record<string, string>): Promise<APIResponse> {
+    return this.send("get", "consultations", { params });
+  }
+
+  /** GET /patients/{id}/timeline (raw response). */
+  async timeline(patientId: number, params: Record<string, string | number> = {}): Promise<APIResponse> {
+    return this.send("get", `patients/${patientId}/timeline`, { params });
   }
 
   /** Registers a patient created through the UI so it gets cleaned up. */

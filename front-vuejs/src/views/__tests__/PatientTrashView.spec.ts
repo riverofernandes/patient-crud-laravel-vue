@@ -57,3 +57,40 @@ describe("PatientTrashView export", () => {
     });
   });
 });
+
+describe("PatientTrashView deletion date", () => {
+  it("shows Data de exclusão in São Paulo time, whatever the browser zone", async () => {
+    vi.mocked(patientService.list).mockResolvedValueOnce({
+      data: [
+        {
+          id: 3,
+          name: "Ana Souza",
+          cpf: "52998224725",
+          rg: "123456789",
+          birth_date: "1990-01-01",
+          sex: "F",
+          phone: "11987654321",
+          email: null,
+          description: null,
+          created_at: "",
+          updated_at: "",
+          // 02:00 UTC = previous day 23:00 in São Paulo.
+          deleted_at: "2026-10-27T02:00:00Z",
+        },
+      ],
+      meta: {
+        current_page: 1,
+        last_page: 1,
+        per_page: 10,
+        total: 1,
+        from: 1,
+        to: 1,
+      },
+    });
+    const router = makeRouter();
+    await router.push("/pacientes/lixeira");
+    wrapper = mount(PatientTrashView as never, { localVue, router });
+    await flushPromises();
+    expect(wrapper.find("tbody").text()).toContain("26/10/2026 23:00");
+  });
+});

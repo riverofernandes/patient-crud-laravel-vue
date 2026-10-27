@@ -84,6 +84,14 @@ class Patient extends Model
     }
 
     /**
+     * @return HasMany<Consultation>
+     */
+    public function consultations(): HasMany
+    {
+        return $this->hasMany(Consultation::class);
+    }
+
+    /**
      * @return HasMany<PatientAudit>
      */
     public function audits(): HasMany

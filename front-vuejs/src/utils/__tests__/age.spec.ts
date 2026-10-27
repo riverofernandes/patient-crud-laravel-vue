@@ -27,9 +27,18 @@ describe("age helpers", () => {
     expect(patientAge({ birth_date: "1900-01-01" })).toMatch(/^\d+ anos$/);
   });
 
-  it("formats an ISO datetime as DD/MM/AAAA HH:mm (local time)", () => {
-    const local = new Date(2026, 9, 5, 9, 7);
-    expect(formatDateTime(local.toISOString())).toBe("05/10/2026 09:07");
+  it("formats an ISO datetime as DD/MM/AAAA HH:mm in São Paulo time", () => {
+    expect(formatDateTime("2026-10-05T09:07:00-03:00")).toBe(
+      "05/10/2026 09:07"
+    );
+    // 02:00 UTC is still the previous day, 23:00, in São Paulo.
+    expect(formatDateTime("2026-10-27T02:00:00Z")).toBe("26/10/2026 23:00");
+    expect(formatDateTime("2026-10-27T02:00:00.000000Z")).toBe(
+      "26/10/2026 23:00"
+    );
+    expect(formatDateTime("2026-01-01T01:30:00+00:00")).toBe(
+      "31/12/2025 22:30"
+    );
     expect(formatDateTime(null)).toBe("");
     expect(formatDateTime("nope")).toBe("");
   });

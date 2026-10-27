@@ -54,3 +54,18 @@ export function getErrorMessage(
   }
   return fallback;
 }
+
+/**
+ * With `responseType: "blob"` an error body is a Blob too: turn it back into
+ * JSON so getErrorMessage() can read the API's `message`.
+ */
+export async function parseBlobError(error: unknown): Promise<never> {
+  if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+    try {
+      error.response.data = JSON.parse(await error.response.data.text());
+    } catch {
+      error.response.data = undefined;
+    }
+  }
+  throw error;
+}

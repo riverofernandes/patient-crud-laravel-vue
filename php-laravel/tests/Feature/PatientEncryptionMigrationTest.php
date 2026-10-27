@@ -10,14 +10,16 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * Converts existing plaintext rows in place and back (migrations 2026_10_26_000001/000002).
+ * Converts existing plaintext rows in place and back (migration 2026_10_26_000001; the later migrations are rolled back and re-run around it).
  */
 class PatientEncryptionMigrationTest extends TestCase
 {
+    private const ENCRYPTION_MIGRATION = '2026_10_26_000001_encrypt_patient_sensitive_columns';
+
     public function test_migration_encrypts_existing_rows_and_rolls_back(): void
     {
         $this->assertSame(0, Artisan::call('migrate:fresh'));
-        $this->assertSame(0, Artisan::call('migrate:rollback', ['--step' => 2]));
+        $this->rollBackToBeforeEncryption();
         $this->assertFalse(Schema::hasColumn('patients', 'cpf_hash'));
 
         $now = now();
@@ -38,12 +40,22 @@ class PatientEncryptionMigrationTest extends TestCase
         $this->assertSame('1132345678', Patient::onlyTrashed()->firstOrFail()->phone);
         $this->getJson('/api/patients?search=625.189.530-60')->assertJsonCount(1, 'data');
 
-        $this->assertSame(0, Artisan::call('migrate:rollback', ['--step' => 2]));
+        $this->rollBackToBeforeEncryption();
 
         $this->assertFalse(Schema::hasColumn('patients', 'cpf_hash'));
         $this->assertSame(
             [['62518953060', '35688019X', '11928535718'], ['52998224725', '123', '1132345678']],
             DB::table('patients')->orderBy('id')->get()->map(fn ($row) => [$row->cpf, $row->rg, $row->phone])->all()
         );
+    }
+
+    /**
+     * Rolls back the encryption migration and every migration that came after it (later sprints add more).
+     */
+    private function rollBackToBeforeEncryption(): void
+    {
+        $steps = DB::table('migrations')->where('migration', '>=', self::ENCRYPTION_MIGRATION)->count();
+
+        $this->assertSame(0, Artisan::call('migrate:rollback', ['--step' => $steps]));
     }
 }

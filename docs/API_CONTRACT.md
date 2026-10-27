@@ -1,6 +1,6 @@
 # Contrato da API — Pacientes
 
-Base URL (dev): `http://localhost:8000/api`
+Base URL (dev): `http://localhost:8000/api` (ou a porta definida em `API_PORT`)
 Todas as respostas são JSON. Header recomendado: `Accept: application/json`.
 
 ## Recurso `Patient`
@@ -117,6 +117,112 @@ Verifica se um CPF pode ser usado (aceita máscara; `ignore` opcional, id inteir
 ### `GET /health`
 Verifica a aplicação e a conexão com o banco. Não passa pelo rate limit.
 `200 { "status": "ok" }` · `503 { "status": "unavailable", "message": "Banco de dados indisponível." }`
+
+## Atendimentos (Sprint 4)
+
+Datas e horas: a API recebe ISO-8601 com fuso (`2026-11-03T14:30:00-03:00`) ou sem fuso (`2026-11-03T14:30`, interpretado em America/Sao_Paulo) e devolve sempre ISO-8601 com o deslocamento de São Paulo. Campos clínicos livres (`reason`, `notes`, `observations`, `diagnosis`) são armazenados **criptografados**.
+
+### Recurso `Consultation`
+
+| Campo               | Tipo                | Regras |
+|---------------------|---------------------|--------|
+| `id`                | int                 | somente leitura |
+| `patient_id`        | int                 | somente leitura (vem da rota) |
+| `patient`           | `{ id, name }`      | somente leitura; presente na agenda (`GET /consultations`) |
+| `scheduled_at`      | ISO-8601            | obrigatório na criação |
+| `duration_minutes`  | int                 | 10–240, padrão 30 |
+| `status`            | enum                | `scheduled` \| `confirmed` \| `completed` \| `no_show` \| `cancelled`; somente leitura (muda por `PATCH .../status`) |
+| `professional_name` | string              | obrigatório, 3–255 |
+| `professional_crm`  | string \| null      | opcional, até 20 |
+| `reason`            | string \| null      | queixa principal, até 2000 |
+| `notes`             | string \| null      | anotações, até 5000 |
+| `eye_exam`          | `EyeExam` \| null   | somente leitura aqui (gravado por `PUT .../eye-exam`) |
+| `created_at`, `updated_at` | ISO-8601     | somente leitura |
+
+Conflito de horário: `422` em `scheduled_at` ("Este profissional já tem um atendimento neste horário.") se o mesmo `professional_name` (sem diferenciar maiúsculas) já tiver atendimento não cancelado e não `no_show` cujo intervalo `[scheduled_at, scheduled_at + duration)` se sobreponha.
+
+Transições de `status` (outras → `422` com `errors.status`):
+
+| De          | Para |
+|-------------|------|
+| `scheduled` | `confirmed`, `completed`, `no_show`, `cancelled` |
+| `confirmed` | `completed`, `no_show`, `cancelled` |
+| `completed`, `no_show`, `cancelled` | — (finais) |
+
+Atendimentos de pacientes na lixeira não aparecem na agenda, e as rotas aninhadas no paciente retornam `404` para eles.
+
+### Recurso `EyeExam` (prontuário oftalmológico)
+
+```json
+{
+  "od": { "visual_acuity_sc": "20/40", "visual_acuity_cc": "20/20", "spherical": -1.25, "cylindrical": -0.5, "axis": 180, "addition": null, "iop": 14 },
+  "oe": { "visual_acuity_sc": "20/50", "visual_acuity_cc": "20/20", "spherical": -1.0, "cylindrical": 0, "axis": null, "addition": null, "iop": 15 },
+  "diagnosis": "Miopia leve com astigmatismo.",
+  "observations": null,
+  "updated_at": "2026-11-03T15:00:00-03:00"
+}
+```
+
+Regras por olho (`od` = olho direito, `oe` = olho esquerdo), todos opcionais:
+
+| Campo | Regra |
+|-------|-------|
+| `visual_acuity_sc` / `visual_acuity_cc` | acuidade sem/com correção, formato Snellen `20/N` (N entre 10 e 400) |
+| `spherical` | −30.00 a +30.00, múltiplo de 0.25 |
+| `cylindrical` | −10.00 a 0.00, múltiplo de 0.25 |
+| `axis` | inteiro 0–180; obrigatório quando `cylindrical` ≠ 0, proibido (`null`) quando `cylindrical` é 0 ou ausente |
+| `addition` | +0.75 a +4.00, múltiplo de 0.25 |
+| `iop` | pressão intraocular em mmHg, inteiro 5–60 |
+
+`diagnosis` até 2000, `observations` até 5000.
+
+### Endpoints
+
+#### `GET /patients/{id}/consultations`
+Atendimentos do paciente, `scheduled_at` decrescente, paginado (`page`, `per_page`), com `eye_exam`.
+
+#### `POST /patients/{id}/consultations`
+Cria com `status = scheduled`. Body: `scheduled_at`, `duration_minutes?`, `professional_name`, `professional_crm?`, `reason?`, `notes?`. `201 { data }` · `404` · `422`.
+
+#### `GET /consultations`
+Agenda. Query: `date_from` e `date_to` (`YYYY-MM-DD`, dias de São Paulo; padrão hoje e hoje + 6; intervalo máximo de 31 dias, senão `422`), `status` (um ou vários separados por vírgula), `professional` (parte do nome). Ordem `scheduled_at` crescente, **sem paginação**, `{ data: Consultation[] }` com `patient`.
+
+#### `GET /consultations/{id}` · `PUT /consultations/{id}`
+Detalhe (com `patient` e `eye_exam`). `PUT` substitui os campos editáveis (mesmos do `POST`); em atendimento final (`completed`, `no_show`, `cancelled`) só `notes` pode mudar, os demais campos diferentes → `422`. `404` se não existir ou se o paciente estiver na lixeira.
+
+#### `PATCH /consultations/{id}/status`
+Body `{ "status": "confirmed" }`. `200 { data }` · `422` em transição inválida.
+
+#### `PUT /consultations/{id}/eye-exam`
+Cria ou substitui o prontuário. Só para `status = completed` (senão `422` com `errors.status`: "O prontuário só pode ser registrado em atendimentos realizados."). `200 { data: Consultation }`.
+
+#### `GET /consultations/{id}/prescription`
+Receita de óculos em PDF (`application/pdf`, `Content-Disposition: attachment; filename="receita-<id-do-atendimento>-AAAAMMDD.pdf"`), com paciente, data, tabela OD/OE (esférico, cilíndrico, eixo, adição), profissional e CRM. `422` se não houver prontuário com ao menos um valor de refração.
+
+#### `GET /patients/{id}/timeline`
+Linha do tempo do paciente, mais recente primeiro, paginada:
+
+```json
+{ "data": [
+  { "type": "consultation", "occurred_at": "2026-11-03T14:30:00-03:00", "consultation": { ...Consultation } },
+  { "type": "audit", "occurred_at": "2026-10-27T10:00:00-03:00", "audit": { ...Audit } }
+], "links": { }, "meta": { } }
+```
+
+`occurred_at` = `scheduled_at` para atendimentos e `created_at` para registros do histórico. Desempate: atendimentos antes de auditorias, depois `id` decrescente.
+
+### Regras complementares (atendimentos)
+
+- **Agenda:** `date_from` e `date_to` inclusivos, até 31 dias; `date_to` antes de `date_from` → `422`. Enviando só uma das datas, a outra vale ±6 dias. Valor desconhecido em `status` → `422`.
+- **Profissional:** a identidade ignora maiúsculas, acentos e espaços extras ("Dr. Érico" = "dr. erico"), tanto no conflito de horário quanto no filtro da agenda.
+- **Conflito de horário:** intervalos semiabertos (14:00–14:30 e 14:30 não conflitam); atendimentos `cancelled`/`no_show` e de pacientes na lixeira não bloqueiam horário; a própria consulta é ignorada na edição.
+- **`scheduled_at` no passado** é aceito (registro retroativo); frações de segundo são descartadas.
+- **`PUT` em atendimento final:** `scheduled_at` é comparado como instante; campo opcional omitido conta como `null` e duração omitida como 30; cada campo alterado (exceto `notes`) gera seu próprio erro.
+- **`PATCH` para o mesmo status** → `422`.
+- **`patient`** também vem nas respostas de `PUT`, `PATCH .../status` e `PUT .../eye-exam`.
+- **Prontuário:** `PUT` é substituição completa (corpo vazio cria prontuário vazio); erros por olho usam chaves com ponto (`errors["od.axis"]`); números voltam como números JSON (`-1.0` → `-1`); Snellen sem zero à esquerda (`20/040` é inválido).
+- **Receita:** a data do nome do arquivo é a do atendimento; o `422` vem como `errors.eye_exam`; basta um valor de refração em qualquer olho (cilíndrico 0 conta).
+- **Linha do tempo:** os registros de histórico são só as alterações do cadastro do paciente; mudanças em atendimentos não geram auditoria.
 
 ## Erro de validação (422)
 Formato padrão do Laravel, mensagens em pt-BR:

@@ -114,7 +114,8 @@ filtros por sexo e idade, ordenação, paginação, cadastro, detalhes, edição
 exportação CSV, histórico de alterações, layout mobile e auditoria de acessibilidade com axe
 (WCAG 2.1 AA) em todas as telas. Cada teste cria e apaga os próprios pacientes via API.
 
-A suíte faz cerca de 425 requisições por execução, acima do limite padrão da API (300/min), então suba
+A suíte (98 testes, incluindo agenda, atendimentos, prontuário, receita em PDF e linha do tempo) faz
+cerca de 660 requisições por execução, acima do limite padrão da API (300/min), então suba
 a stack com o limite maior:
 
 ```bash
@@ -181,6 +182,13 @@ O `APP_URL` fixo mantém a URL base dos arquivos gerados estável mesmo que a st
 | DELETE | `/api/patients/{id}`  | **Soft delete** (204) — o registro permanece com `deleted_at`    |
 | POST   | `/api/patients/{id}/restore` | Restaura um paciente da lixeira (409 se o CPF já estiver em uso) |
 | GET    | `/api/patients/cpf-availability` | Verifica se um CPF está livre (`cpf`, `ignore`)         |
+| GET    | `/api/patients/{id}/consultations` | Atendimentos do paciente (POST cria)                 |
+| GET    | `/api/consultations`  | Agenda por período (`date_from`, `date_to`, `status`, `professional`) |
+| GET    | `/api/consultations/{id}` | Detalhe do atendimento (PUT edita)                           |
+| PATCH  | `/api/consultations/{id}/status` | Muda o status (agendado → confirmado → realizado; falta; cancelado) |
+| PUT    | `/api/consultations/{id}/eye-exam` | Grava o prontuário oftalmológico (só em atendimento realizado) |
+| GET    | `/api/consultations/{id}/prescription` | Receita de óculos em PDF                             |
+| GET    | `/api/patients/{id}/timeline` | Linha do tempo: atendimentos e alterações do cadastro       |
 | GET    | `/api/health`         | Health check com verificação do banco (200 / 503)                |
 
 Validação via FormRequest com mensagens em pt-BR: CPF com dígitos verificadores e único entre pacientes
@@ -193,6 +201,14 @@ um hash HMAC do CPF (*blind index*), com chave definida em `CPF_HASH_KEY` (deriv
 Por isso a busca encontra só o **CPF completo**; a busca por nome continua parcial. Se a chave do hash
 mudar, rode `php artisan patients:rehash-cpf`.
 
+**Atendimentos e prontuário:** cada atendimento tem status (Agendado, Confirmado, Realizado, Faltou,
+Cancelado) com transições validadas e impede dois horários sobrepostos para o mesmo profissional (que,
+sem login, é um nome e CRM em texto livre). Em atendimentos realizados registra-se o prontuário
+oftalmológico por olho (acuidade visual sem/com correção, esférico, cilíndrico, eixo, adição e pressão
+intraocular, com as regras clínicas de cada campo) e gera-se a receita de óculos em PDF (DomPDF). Queixa,
+anotações, diagnóstico e observações ficam criptografados. A agenda trabalha com dias de São Paulo, e o
+seed inclui atendimentos de demonstração na semana corrente.
+
 **Histórico:** cada cadastro, edição (só os campos alterados, com antes e depois), exclusão e restauração
 fica registrado em `patient_audits`, também criptografado. Como a API é aberta nesta fase, o registro não
 tem usuário (`user_id` nulo, pronto para quando houver login).
@@ -203,7 +219,10 @@ tem usuário (`user_id` nulo, pronto para quando houver login).
 |--------------------------|----------------------------------------------------------------------|
 | `/`                      | Listagem com busca (debounce), filtros (sexo, faixa de idade), ordenação por coluna, itens por página, idade, exportação CSV e ações ver / editar / excluir |
 | `/pacientes/novo`        | Cadastro                                                             |
-| `/pacientes/:id`         | Detalhes, com as abas Dados e Histórico (`?aba=historico`)           |
+| `/pacientes/:id`         | Detalhes, com as abas Dados, Histórico, Atendimentos e Linha do tempo (`?aba=`) |
+| `/pacientes/:id/atendimentos/novo` | Novo atendimento                                          |
+| `/atendimentos/:id`      | Atendimento: status, edição, prontuário oftalmológico e receita em PDF |
+| `/agenda`                | Agenda semanal com filtros por status e profissional               |
 | `/pacientes/:id/editar`  | Edição                                                               |
 | `/pacientes/lixeira`     | Pacientes excluídos, com busca, exportação CSV e ação de restaurar   |
 

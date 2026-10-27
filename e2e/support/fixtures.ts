@@ -200,3 +200,96 @@ export function historyChange(entry: Locator, label: string): Locator {
 export async function waitForHistory(page: Page): Promise<void> {
   await expect(page.getByText("Carregando histórico...")).toHaveCount(0);
 }
+
+/* ---------- Consultations / agenda (Sprint 4) ---------- */
+
+/** YYYY-MM-DD plus `days` (pure calendar arithmetic, no timezone involved). */
+export function addDaysIso(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+/** Monday of the week containing `iso`. */
+export function mondayOf(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const weekday = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7; // 0 = Monday
+  return addDaysIso(iso, -weekday);
+}
+
+/**
+ * Monday of a random week 1–4 years ahead. Tests that look at a whole week (agenda, timeline) use
+ * their own far-future week, so "today" (the suite may cross midnight) and other data never matter.
+ */
+export function randomFutureMonday(): string {
+  return mondayOf(addDaysIso(todaySaoPaulo(), 365 + Math.floor(Math.random() * 3 * 365)));
+}
+
+/** "2026-11-03T14:30:00-03:00" -> "03/11/2026" (the API always answers in São Paulo time). */
+export function brDateOf(isoDateTime: string): string {
+  return isoToBrDate(isoDateTime.slice(0, 10));
+}
+
+/** "2026-11-03" -> "03/11/2026". */
+export function isoToBrDate(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split("-");
+  return `${d}/${m}/${y}`;
+}
+
+const WEEKDAYS = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
+
+/** "2026-11-03" -> "Terça-feira, 03/11/2026" (agenda / timeline day headings). */
+export function dayHeading(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const weekday = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+  return `${WEEKDAYS[weekday]}, ${isoToBrDate(iso)}`;
+}
+
+/** Status badge: the visible label is preceded by a visually hidden "Status:" prefix. */
+export function statusBadge(scope: Page | Locator, label: string): Locator {
+  return scope.locator(".status-badge").filter({ hasText: new RegExp(`^\\s*Status:\\s*${label}\\s*$`) });
+}
+
+/** Opens a consultation's detail page and waits for it. */
+export async function gotoConsultation(page: Page, id: number): Promise<void> {
+  await page.goto(`/atendimentos/${id}`);
+  await expect(page.getByRole("heading", { level: 1, name: /^Atendimento \d{2}\/\d{2}\/\d{4}$/ })).toBeVisible();
+}
+
+/** Opens the agenda on a week (any day; the page normalizes to Monday) with optional filters. */
+export async function gotoAgenda(
+  page: Page,
+  query: { semana?: string; status?: string; profissional?: string } = {}
+): Promise<void> {
+  const qs = new URLSearchParams(Object.entries(query).filter(([, v]) => v) as [string, string][]).toString();
+  await page.goto(qs ? `/agenda?${qs}` : "/agenda");
+  await expect(page.getByRole("heading", { level: 1, name: "Agenda", exact: true })).toBeVisible();
+  await waitForAgenda(page);
+}
+
+export async function waitForAgenda(page: Page): Promise<void> {
+  await expect(page.getByText("Carregando agenda...")).toHaveCount(0);
+  await expect(page.locator(".agenda-days")).not.toHaveAttribute("aria-busy", "true");
+}
+
+/** Day section of the agenda (labelled by its heading). */
+export function agendaDay(page: Page, iso: string): Locator {
+  return page.locator(`section[aria-labelledby="agenda-day-${iso}"]`);
+}
+
+/** Agenda entries (one per consultation). */
+export function agendaItems(scope: Page | Locator): Locator {
+  return scope.locator("li.agenda-item");
+}
+
+/** The confirmation modal of "Cancelar atendimento" / "Registrar falta". */
+export function statusDialog(page: Page, title: "Cancelar atendimento" | "Registrar falta"): Locator {
+  return page.getByRole("dialog", { name: title });
+}
+
+/** Waits for Bootstrap's fade-in so the element (or its modal) is fully opaque. */
+export async function waitForFadeIn(locator: Locator): Promise<void> {
+  await expect(locator).toBeVisible();
+  await expect
+    .poll(() => locator.evaluate((el) => getComputedStyle(el.closest(".modal") ?? el).opacity))
+    .toBe("1");
+}

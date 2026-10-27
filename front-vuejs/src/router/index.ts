@@ -41,6 +41,26 @@ const router = new VueRouter({
       meta: { title: "Editar paciente" },
     },
     {
+      path: "/pacientes/:id(\\d+)/atendimentos/novo",
+      name: "consultations.create",
+      component: () => import("@/views/ConsultationCreateView.vue"),
+      props: true,
+      meta: { title: "Novo atendimento" },
+    },
+    {
+      path: "/atendimentos/:id(\\d+)",
+      name: "consultations.show",
+      component: () => import("@/views/ConsultationDetailView.vue"),
+      props: true,
+      meta: { title: "Atendimento" },
+    },
+    {
+      path: "/agenda",
+      name: "agenda",
+      component: () => import("@/views/AgendaView.vue"),
+      meta: { title: "Agenda" },
+    },
+    {
       path: "*",
       name: "not-found",
       component: () => import("@/views/NotFoundView.vue"),

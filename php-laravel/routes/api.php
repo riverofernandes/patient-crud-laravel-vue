@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\ConsultationController;
+use App\Http\Controllers\EyeExamController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\PatientController;
+use App\Http\Controllers\PatientTimelineController;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Route;
 
@@ -37,3 +40,32 @@ Route::post('patients/{patient}/restore', [PatientController::class, 'restore'])
     ->name('patients.restore');
 
 Route::apiResource('patients', PatientController::class);
+
+// Atendimentos (Sprint 4). Nested patient routes do not use withTrashed(): a patient in the trash is a 404.
+Route::get('patients/{patient}/consultations', [ConsultationController::class, 'index'])
+    ->name('patients.consultations.index');
+
+Route::post('patients/{patient}/consultations', [ConsultationController::class, 'store'])
+    ->name('patients.consultations.store');
+
+Route::get('patients/{patient}/timeline', PatientTimelineController::class)
+    ->name('patients.timeline');
+
+Route::get('consultations', [ConsultationController::class, 'agenda'])
+    ->name('consultations.agenda');
+
+// {consultation} only matches numeric ids and is not found when the patient is in the trash (see Consultation).
+Route::get('consultations/{consultation}', [ConsultationController::class, 'show'])
+    ->name('consultations.show');
+
+Route::put('consultations/{consultation}', [ConsultationController::class, 'update'])
+    ->name('consultations.update');
+
+Route::patch('consultations/{consultation}/status', [ConsultationController::class, 'updateStatus'])
+    ->name('consultations.status');
+
+Route::put('consultations/{consultation}/eye-exam', [EyeExamController::class, 'update'])
+    ->name('consultations.eye-exam');
+
+Route::get('consultations/{consultation}/prescription', [EyeExamController::class, 'prescription'])
+    ->name('consultations.prescription');

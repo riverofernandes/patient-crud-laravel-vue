@@ -21,6 +21,19 @@ import {
   BIconTrash,
   BIconTrashFill,
   BIconX,
+  BIconCalendarCheck,
+  BIconCalendarPlus,
+  BIconCalendarWeek,
+  BIconCheckCircle,
+  BIconCircle,
+  BIconClipboardCheck,
+  BIconClock,
+  BIconDash,
+  BIconFileEarmarkMedical,
+  BIconFileEarmarkPdf,
+  BIconPersonX,
+  BIconPlus,
+  BIconXCircle,
 } from "bootstrap-vue";
 import VueRouter from "vue-router";
 
@@ -50,6 +63,19 @@ export function makeLocalVue() {
     BIconTrash,
     BIconTrashFill,
     BIconX,
+    BIconCalendarCheck,
+    BIconCalendarPlus,
+    BIconCalendarWeek,
+    BIconCheckCircle,
+    BIconCircle,
+    BIconClipboardCheck,
+    BIconClock,
+    BIconDash,
+    BIconFileEarmarkMedical,
+    BIconFileEarmarkPdf,
+    BIconPersonX,
+    BIconPlus,
+    BIconXCircle,
   }).forEach(([name, component]) => localVue.component(name, component));
   return localVue;
 }
@@ -75,6 +101,17 @@ export function makeRouter(): VueRouter {
         name: "patients.edit",
         component: Blank,
       },
+      {
+        path: "/pacientes/:id/atendimentos/novo",
+        name: "consultations.create",
+        component: Blank,
+      },
+      {
+        path: "/atendimentos/:id",
+        name: "consultations.show",
+        component: Blank,
+      },
+      { path: "/agenda", name: "agenda", component: Blank },
     ],
   });
 }

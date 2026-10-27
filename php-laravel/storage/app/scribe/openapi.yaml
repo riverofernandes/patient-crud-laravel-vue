@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: 'API de Pacientes'
-  description: 'API REST para cadastro, consulta, edição e exclusão (soft delete) de pacientes.'
+  description: 'API REST para cadastro, consulta, edição e exclusão (soft delete) de pacientes, atendimentos, prontuário oftalmológico e receita de óculos.'
   version: 1.0.0
 servers:
   -
@@ -1300,6 +1300,1563 @@ paths:
         required: true
         schema:
           type: integer
+  '/api/patients/{patient_id}/consultations':
+    get:
+      summary: 'Listar atendimentos do paciente'
+      operationId: listarAtendimentosDoPaciente
+      description: "Atendimentos do paciente, do mais recente para o mais antigo (`scheduled_at` decrescente, desempate por `id`\ndecrescente), paginados como a listagem de pacientes, cada um com `eye_exam` (ou `null`).\nPaciente na lixeira → 404."
+      parameters:
+        -
+          in: query
+          name: page
+          description: 'Página desejada. Padrão: 1.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Página desejada. Padrão: 1.'
+            example: 1
+        -
+          in: query
+          name: per_page
+          description: 'Itens por página. Padrão: 10; máximo: 100.'
+          example: 10
+          required: false
+          schema:
+            type: integer
+            description: 'Itens por página. Padrão: 10; máximo: 100.'
+            example: 10
+      responses:
+        200:
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    -
+                      id: 1
+                      patient_id: 1
+                      scheduled_at: '2026-11-03T14:30:00-03:00'
+                      duration_minutes: 30
+                      status: completed
+                      professional_name: 'Dra. Helena Martins'
+                      professional_crm: 'CRM-SP 123456'
+                      reason: 'Dificuldade para enxergar de longe.'
+                      notes: null
+                      eye_exam:
+                        od:
+                          visual_acuity_sc: 20/40
+                          visual_acuity_cc: 20/20
+                          spherical: -1.25
+                          cylindrical: -0.5
+                          axis: 180
+                          addition: null
+                          iop: 14
+                        oe:
+                          visual_acuity_sc: 20/50
+                          visual_acuity_cc: 20/20
+                          spherical: -1.0
+                          cylindrical: 0.0
+                          axis: null
+                          addition: null
+                          iop: 15
+                        diagnosis: 'Miopia leve com astigmatismo.'
+                        observations: null
+                        updated_at: '2026-11-03T15:00:00-03:00'
+                      created_at: '2026-10-27T10:00:00-03:00'
+                      updated_at: '2026-11-03T15:00:00-03:00'
+                  links:
+                    first: 'http://localhost:8000/api/patients/1/consultations?page=1'
+                    last: 'http://localhost:8000/api/patients/1/consultations?page=1'
+                    prev: null
+                    next: null
+                  meta:
+                    current_page: 1
+                    from: 1
+                    last_page: 1
+                    links: []
+                    path: 'http://localhost:8000/api/patients/1/consultations'
+                    per_page: 10
+                    to: 1
+                    total: 1
+                properties:
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: 1
+                        patient_id: 1
+                        scheduled_at: '2026-11-03T14:30:00-03:00'
+                        duration_minutes: 30
+                        status: completed
+                        professional_name: 'Dra. Helena Martins'
+                        professional_crm: 'CRM-SP 123456'
+                        reason: 'Dificuldade para enxergar de longe.'
+                        notes: null
+                        eye_exam:
+                          od:
+                            visual_acuity_sc: 20/40
+                            visual_acuity_cc: 20/20
+                            spherical: -1.25
+                            cylindrical: -0.5
+                            axis: 180
+                            addition: null
+                            iop: 14
+                          oe:
+                            visual_acuity_sc: 20/50
+                            visual_acuity_cc: 20/20
+                            spherical: -1
+                            cylindrical: 0
+                            axis: null
+                            addition: null
+                            iop: 15
+                          diagnosis: 'Miopia leve com astigmatismo.'
+                          observations: null
+                          updated_at: '2026-11-03T15:00:00-03:00'
+                        created_at: '2026-10-27T10:00:00-03:00'
+                        updated_at: '2026-11-03T15:00:00-03:00'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        patient_id:
+                          type: integer
+                          example: 1
+                        scheduled_at:
+                          type: string
+                          example: '2026-11-03T14:30:00-03:00'
+                        duration_minutes:
+                          type: integer
+                          example: 30
+                        status:
+                          type: string
+                          example: completed
+                        professional_name:
+                          type: string
+                          example: 'Dra. Helena Martins'
+                        professional_crm:
+                          type: string
+                          example: 'CRM-SP 123456'
+                        reason:
+                          type: string
+                          example: 'Dificuldade para enxergar de longe.'
+                        notes:
+                          type: string
+                          example: null
+                        eye_exam:
+                          type: object
+                          properties:
+                            od:
+                              type: object
+                              properties:
+                                visual_acuity_sc:
+                                  type: string
+                                  example: 20/40
+                                visual_acuity_cc:
+                                  type: string
+                                  example: 20/20
+                                spherical:
+                                  type: number
+                                  example: -1.25
+                                cylindrical:
+                                  type: number
+                                  example: -0.5
+                                axis:
+                                  type: integer
+                                  example: 180
+                                addition:
+                                  type: string
+                                  example: null
+                                iop:
+                                  type: integer
+                                  example: 14
+                            oe:
+                              type: object
+                              properties:
+                                visual_acuity_sc:
+                                  type: string
+                                  example: 20/50
+                                visual_acuity_cc:
+                                  type: string
+                                  example: 20/20
+                                spherical:
+                                  type: number
+                                  example: -1.0
+                                cylindrical:
+                                  type: number
+                                  example: 0.0
+                                axis:
+                                  type: string
+                                  example: null
+                                addition:
+                                  type: string
+                                  example: null
+                                iop:
+                                  type: integer
+                                  example: 15
+                            diagnosis:
+                              type: string
+                              example: 'Miopia leve com astigmatismo.'
+                            observations:
+                              type: string
+                              example: null
+                            updated_at:
+                              type: string
+                              example: '2026-11-03T15:00:00-03:00'
+                        created_at:
+                          type: string
+                          example: '2026-10-27T10:00:00-03:00'
+                        updated_at:
+                          type: string
+                          example: '2026-11-03T15:00:00-03:00'
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/consultations?page=1'
+                      last:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/consultations?page=1'
+                      prev:
+                        type: string
+                        example: null
+                      next:
+                        type: string
+                        example: null
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      from:
+                        type: integer
+                        example: 1
+                      last_page:
+                        type: integer
+                        example: 1
+                      links:
+                        type: array
+                        example: []
+                      path:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/consultations'
+                      per_page:
+                        type: integer
+                        example: 10
+                      to:
+                        type: integer
+                        example: 1
+                      total:
+                        type: integer
+                        example: 1
+        404:
+          description: 'Paciente não encontrado ou excluído'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Paciente não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Paciente não encontrado.'
+      tags:
+        - Atendimentos
+      security: []
+    post:
+      summary: 'Agendar atendimento'
+      operationId: agendarAtendimento
+      description: "Cria um atendimento com `status = scheduled`. `422` em `scheduled_at` se o mesmo profissional (nome sem\ndiferenciar maiúsculas nem acentos) já tiver um atendimento não cancelado e não `no_show` com horário sobreposto\n(intervalos `[início, início + duração)`; horários que só se encostam não conflitam)."
+      parameters: []
+      responses:
+        201:
+          description: 'Atendimento criado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    patient_id: 1
+                    scheduled_at: '2026-11-03T14:30:00-03:00'
+                    duration_minutes: 30
+                    status: scheduled
+                    professional_name: 'Dra. Helena Martins'
+                    professional_crm: 'CRM-SP 123456'
+                    reason: 'Dificuldade para enxergar de longe.'
+                    notes: null
+                    eye_exam: null
+                    created_at: '2026-10-27T10:00:00-03:00'
+                    updated_at: '2026-10-27T10:00:00-03:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      patient_id:
+                        type: integer
+                        example: 1
+                      scheduled_at:
+                        type: string
+                        example: '2026-11-03T14:30:00-03:00'
+                      duration_minutes:
+                        type: integer
+                        example: 30
+                      status:
+                        type: string
+                        example: scheduled
+                      professional_name:
+                        type: string
+                        example: 'Dra. Helena Martins'
+                      professional_crm:
+                        type: string
+                        example: 'CRM-SP 123456'
+                      reason:
+                        type: string
+                        example: 'Dificuldade para enxergar de longe.'
+                      notes:
+                        type: string
+                        example: null
+                      eye_exam:
+                        type: string
+                        example: null
+                      created_at:
+                        type: string
+                        example: '2026-10-27T10:00:00-03:00'
+                      updated_at:
+                        type: string
+                        example: '2026-10-27T10:00:00-03:00'
+        404:
+          description: 'Paciente não encontrado ou excluído'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Paciente não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Paciente não encontrado.'
+        422:
+          description: 'Conflito de horário'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Este profissional já tem um atendimento neste horário.'
+                  errors:
+                    scheduled_at:
+                      - 'Este profissional já tem um atendimento neste horário.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Este profissional já tem um atendimento neste horário.'
+                  errors:
+                    type: object
+                    properties:
+                      scheduled_at:
+                        type: array
+                        example:
+                          - 'Este profissional já tem um atendimento neste horário.'
+                        items:
+                          type: string
+      tags:
+        - Atendimentos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scheduled_at:
+                  type: string
+                  description: 'Data e hora de início, ISO-8601 com fuso (`2026-11-03T14:30:00-03:00`) ou sem fuso (`2026-11-03T14:30`, interpretado em America/Sao_Paulo).'
+                  example: '2026-11-03T14:30:00-03:00'
+                duration_minutes:
+                  type: integer
+                  description: 'Duração em minutos (10 a 240). Padrão: 30. Must be between 10 and 240.'
+                  example: 30
+                professional_name:
+                  type: string
+                  description: 'Nome do profissional (3 a 255 caracteres). Um mesmo nome (sem diferenciar maiúsculas nem acentos) não pode ter dois atendimentos ativos com horários sobrepostos. Must be at least 3 characters. Must not be greater than 255 characters.'
+                  example: 'Dra. Helena Martins'
+                professional_crm:
+                  type: string
+                  description: 'CRM do profissional (opcional, até 20 caracteres). Must not be greater than 20 characters.'
+                  example: 'CRM-SP 123456'
+                reason:
+                  type: string
+                  description: 'Queixa principal (opcional, até 2000 caracteres). Armazenada criptografada. Must not be greater than 2000 characters.'
+                  example: 'Dificuldade para enxergar de longe.'
+                notes:
+                  type: string
+                  description: 'Anotações (opcional, até 5000 caracteres). Armazenadas criptografadas. Único campo editável em atendimentos finalizados. Must not be greater than 5000 characters.'
+                  example: 'Paciente usa óculos há 5 anos.'
+              required:
+                - scheduled_at
+                - professional_name
+      security: []
+    parameters:
+      -
+        in: path
+        name: patient_id
+        description: 'ID do paciente.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/patients/{patient_id}/timeline':
+    get:
+      summary: 'Linha do tempo do paciente'
+      operationId: linhaDoTempoDoPaciente
+      description: "Atendimentos e registros do histórico de alterações do paciente numa só lista, do mais recente para o mais\nantigo, paginada (`page`, `per_page` como na listagem). `occurred_at` é o `scheduled_at` do atendimento ou\no `created_at` do registro do histórico. Desempate: atendimentos antes de registros do histórico, depois\n`id` decrescente. Paciente na lixeira → 404."
+      parameters:
+        -
+          in: query
+          name: page
+          description: 'Página desejada. Padrão: 1.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Página desejada. Padrão: 1.'
+            example: 1
+        -
+          in: query
+          name: per_page
+          description: 'Itens por página. Padrão: 10; máximo: 100.'
+          example: 10
+          required: false
+          schema:
+            type: integer
+            description: 'Itens por página. Padrão: 10; máximo: 100.'
+            example: 10
+      responses:
+        200:
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    -
+                      type: consultation
+                      occurred_at: '2026-11-03T14:30:00-03:00'
+                      consultation:
+                        id: 1
+                        patient_id: 1
+                        scheduled_at: '2026-11-03T14:30:00-03:00'
+                        duration_minutes: 30
+                        status: scheduled
+                        professional_name: 'Dra. Helena Martins'
+                        professional_crm: 'CRM-SP 123456'
+                        reason: null
+                        notes: null
+                        eye_exam: null
+                        created_at: '2026-10-27T10:05:00-03:00'
+                        updated_at: '2026-10-27T10:05:00-03:00'
+                    -
+                      type: audit
+                      occurred_at: '2026-10-27T10:00:00-03:00'
+                      audit:
+                        id: 1
+                        event: created
+                        changes:
+                          name:
+                            old: null
+                            new: 'Maria da Silva'
+                        ip: 172.18.0.1
+                        user_agent: 'Mozilla/5.0 (X11; Linux x86_64)'
+                        user_id: null
+                        created_at: '2026-10-27T10:00:00-03:00'
+                  links:
+                    first: 'http://localhost:8000/api/patients/1/timeline?page=1'
+                    last: 'http://localhost:8000/api/patients/1/timeline?page=1'
+                    prev: null
+                    next: null
+                  meta:
+                    current_page: 1
+                    from: 1
+                    last_page: 1
+                    links: []
+                    path: 'http://localhost:8000/api/patients/1/timeline'
+                    per_page: 10
+                    to: 2
+                    total: 2
+                properties:
+                  data:
+                    type: array
+                    example:
+                      -
+                        type: consultation
+                        occurred_at: '2026-11-03T14:30:00-03:00'
+                        consultation:
+                          id: 1
+                          patient_id: 1
+                          scheduled_at: '2026-11-03T14:30:00-03:00'
+                          duration_minutes: 30
+                          status: scheduled
+                          professional_name: 'Dra. Helena Martins'
+                          professional_crm: 'CRM-SP 123456'
+                          reason: null
+                          notes: null
+                          eye_exam: null
+                          created_at: '2026-10-27T10:05:00-03:00'
+                          updated_at: '2026-10-27T10:05:00-03:00'
+                      -
+                        type: audit
+                        occurred_at: '2026-10-27T10:00:00-03:00'
+                        audit:
+                          id: 1
+                          event: created
+                          changes:
+                            name:
+                              old: null
+                              new: 'Maria da Silva'
+                          ip: 172.18.0.1
+                          user_agent: 'Mozilla/5.0 (X11; Linux x86_64)'
+                          user_id: null
+                          created_at: '2026-10-27T10:00:00-03:00'
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          example: consultation
+                        occurred_at:
+                          type: string
+                          example: '2026-11-03T14:30:00-03:00'
+                        consultation:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            patient_id:
+                              type: integer
+                              example: 1
+                            scheduled_at:
+                              type: string
+                              example: '2026-11-03T14:30:00-03:00'
+                            duration_minutes:
+                              type: integer
+                              example: 30
+                            status:
+                              type: string
+                              example: scheduled
+                            professional_name:
+                              type: string
+                              example: 'Dra. Helena Martins'
+                            professional_crm:
+                              type: string
+                              example: 'CRM-SP 123456'
+                            reason:
+                              type: string
+                              example: null
+                            notes:
+                              type: string
+                              example: null
+                            eye_exam:
+                              type: string
+                              example: null
+                            created_at:
+                              type: string
+                              example: '2026-10-27T10:05:00-03:00'
+                            updated_at:
+                              type: string
+                              example: '2026-10-27T10:05:00-03:00'
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/timeline?page=1'
+                      last:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/timeline?page=1'
+                      prev:
+                        type: string
+                        example: null
+                      next:
+                        type: string
+                        example: null
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      from:
+                        type: integer
+                        example: 1
+                      last_page:
+                        type: integer
+                        example: 1
+                      links:
+                        type: array
+                        example: []
+                      path:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/timeline'
+                      per_page:
+                        type: integer
+                        example: 10
+                      to:
+                        type: integer
+                        example: 2
+                      total:
+                        type: integer
+                        example: 2
+        404:
+          description: 'Paciente não encontrado ou excluído'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Paciente não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Paciente não encontrado.'
+      tags:
+        - Atendimentos
+      security: []
+    parameters:
+      -
+        in: path
+        name: patient_id
+        description: 'ID do paciente.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/consultations:
+    get:
+      summary: Agenda
+      operationId: agenda
+      description: "Atendimentos que começam entre `date_from` e `date_to` (dias de São Paulo, inclusive), em ordem crescente de\n`scheduled_at` (desempate por `id`), **sem paginação**, cada um com `patient` (`id` e `name`). Pacientes na\nlixeira não aparecem. Intervalo máximo de 31 dias; `date_to` anterior a `date_from` → 422."
+      parameters:
+        -
+          in: query
+          name: date_from
+          description: 'Primeiro dia (AAAA-MM-DD, dia de São Paulo, inclusive). Padrão: hoje (ou `date_to` - 6 quando só `date_to` é enviado). Must be a valid date in the format <code>Y-m-d</code>.'
+          example: '2026-11-02'
+          required: false
+          schema:
+            type: string
+            description: 'Primeiro dia (AAAA-MM-DD, dia de São Paulo, inclusive). Padrão: hoje (ou `date_to` - 6 quando só `date_to` é enviado). Must be a valid date in the format <code>Y-m-d</code>.'
+            example: '2026-11-02'
+        -
+          in: query
+          name: date_to
+          description: 'Último dia (AAAA-MM-DD, inclusive). Padrão: `date_from` + 6. O intervalo pode ter no máximo 31 dias. Must be a valid date in the format <code>Y-m-d</code>.'
+          example: '2026-11-08'
+          required: false
+          schema:
+            type: string
+            description: 'Último dia (AAAA-MM-DD, inclusive). Padrão: `date_from` + 6. O intervalo pode ter no máximo 31 dias. Must be a valid date in the format <code>Y-m-d</code>.'
+            example: '2026-11-08'
+        -
+          in: query
+          name: status
+          description: 'Um ou vários status separados por vírgula: `scheduled`, `confirmed`, `completed`, `no_show`, `cancelled`. Valor desconhecido → 422.'
+          example: 'scheduled,confirmed'
+          required: false
+          schema:
+            type: string
+            description: 'Um ou vários status separados por vírgula: `scheduled`, `confirmed`, `completed`, `no_show`, `cancelled`. Valor desconhecido → 422.'
+            example: 'scheduled,confirmed'
+        -
+          in: query
+          name: professional
+          description: 'Parte do nome do profissional (sem diferenciar maiúsculas nem acentos). Must not be greater than 255 characters.'
+          example: helena
+          required: false
+          schema:
+            type: string
+            description: 'Parte do nome do profissional (sem diferenciar maiúsculas nem acentos). Must not be greater than 255 characters.'
+            example: helena
+      responses:
+        200:
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    -
+                      id: 2
+                      patient_id: 1
+                      patient:
+                        id: 1
+                        name: 'Maria da Silva'
+                      scheduled_at: '2026-11-04T09:00:00-03:00'
+                      duration_minutes: 30
+                      status: confirmed
+                      professional_name: 'Dra. Helena Martins'
+                      professional_crm: 'CRM-SP 123456'
+                      reason: Retorno.
+                      notes: null
+                      eye_exam: null
+                      created_at: '2026-10-27T10:00:00-03:00'
+                      updated_at: '2026-10-28T08:00:00-03:00'
+                properties:
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: 2
+                        patient_id: 1
+                        patient:
+                          id: 1
+                          name: 'Maria da Silva'
+                        scheduled_at: '2026-11-04T09:00:00-03:00'
+                        duration_minutes: 30
+                        status: confirmed
+                        professional_name: 'Dra. Helena Martins'
+                        professional_crm: 'CRM-SP 123456'
+                        reason: Retorno.
+                        notes: null
+                        eye_exam: null
+                        created_at: '2026-10-27T10:00:00-03:00'
+                        updated_at: '2026-10-28T08:00:00-03:00'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 2
+                        patient_id:
+                          type: integer
+                          example: 1
+                        patient:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1
+                            name:
+                              type: string
+                              example: 'Maria da Silva'
+                        scheduled_at:
+                          type: string
+                          example: '2026-11-04T09:00:00-03:00'
+                        duration_minutes:
+                          type: integer
+                          example: 30
+                        status:
+                          type: string
+                          example: confirmed
+                        professional_name:
+                          type: string
+                          example: 'Dra. Helena Martins'
+                        professional_crm:
+                          type: string
+                          example: 'CRM-SP 123456'
+                        reason:
+                          type: string
+                          example: Retorno.
+                        notes:
+                          type: string
+                          example: null
+                        eye_exam:
+                          type: string
+                          example: null
+                        created_at:
+                          type: string
+                          example: '2026-10-27T10:00:00-03:00'
+                        updated_at:
+                          type: string
+                          example: '2026-10-28T08:00:00-03:00'
+        422:
+          description: 'Intervalo maior que 31 dias'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'O intervalo da agenda não pode passar de 31 dias.'
+                  errors:
+                    date_to:
+                      - 'O intervalo da agenda não pode passar de 31 dias.'
+                properties:
+                  message:
+                    type: string
+                    example: 'O intervalo da agenda não pode passar de 31 dias.'
+                  errors:
+                    type: object
+                    properties:
+                      date_to:
+                        type: array
+                        example:
+                          - 'O intervalo da agenda não pode passar de 31 dias.'
+                        items:
+                          type: string
+      tags:
+        - Atendimentos
+      security: []
+  '/api/consultations/{id}':
+    get:
+      summary: 'Detalhar atendimento'
+      operationId: detalharAtendimento
+      description: 'Com `patient` (`id` e `name`) e `eye_exam`. `404` se não existir ou se o paciente estiver na lixeira.'
+      parameters: []
+      responses:
+        200:
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    patient_id: 1
+                    patient:
+                      id: 1
+                      name: 'Maria da Silva'
+                    scheduled_at: '2026-11-03T14:30:00-03:00'
+                    duration_minutes: 30
+                    status: scheduled
+                    professional_name: 'Dra. Helena Martins'
+                    professional_crm: 'CRM-SP 123456'
+                    reason: 'Dificuldade para enxergar de longe.'
+                    notes: null
+                    eye_exam: null
+                    created_at: '2026-10-27T10:00:00-03:00'
+                    updated_at: '2026-10-27T10:00:00-03:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      patient_id:
+                        type: integer
+                        example: 1
+                      patient:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'Maria da Silva'
+                      scheduled_at:
+                        type: string
+                        example: '2026-11-03T14:30:00-03:00'
+                      duration_minutes:
+                        type: integer
+                        example: 30
+                      status:
+                        type: string
+                        example: scheduled
+                      professional_name:
+                        type: string
+                        example: 'Dra. Helena Martins'
+                      professional_crm:
+                        type: string
+                        example: 'CRM-SP 123456'
+                      reason:
+                        type: string
+                        example: 'Dificuldade para enxergar de longe.'
+                      notes:
+                        type: string
+                        example: null
+                      eye_exam:
+                        type: string
+                        example: null
+                      created_at:
+                        type: string
+                        example: '2026-10-27T10:00:00-03:00'
+                      updated_at:
+                        type: string
+                        example: '2026-10-27T10:00:00-03:00'
+        404:
+          description: 'Atendimento não encontrado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Atendimento não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Atendimento não encontrado.'
+      tags:
+        - Atendimentos
+      security: []
+    put:
+      summary: 'Atualizar atendimento'
+      operationId: atualizarAtendimento
+      description: "Substituição completa (PUT) dos campos editáveis (os mesmos da criação; opcionais omitidos são apagados e\na duração volta a 30). Em atendimento finalizado (`completed`, `no_show`, `cancelled`) só `notes` pode\nmudar: qualquer outro campo diferente do atual → 422 naquele campo. O conflito de horário é verificado\nignorando o próprio atendimento."
+      parameters: []
+      responses:
+        200:
+          description: 'Atendimento atualizado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    patient_id: 1
+                    patient:
+                      id: 1
+                      name: 'Maria da Silva'
+                    scheduled_at: '2026-11-03T15:00:00-03:00'
+                    duration_minutes: 45
+                    status: scheduled
+                    professional_name: 'Dra. Helena Martins'
+                    professional_crm: 'CRM-SP 123456'
+                    reason: 'Dificuldade para enxergar de longe.'
+                    notes: 'Trazer óculos atuais.'
+                    eye_exam: null
+                    created_at: '2026-10-27T10:00:00-03:00'
+                    updated_at: '2026-10-27T11:00:00-03:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      patient_id:
+                        type: integer
+                        example: 1
+                      patient:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'Maria da Silva'
+                      scheduled_at:
+                        type: string
+                        example: '2026-11-03T15:00:00-03:00'
+                      duration_minutes:
+                        type: integer
+                        example: 45
+                      status:
+                        type: string
+                        example: scheduled
+                      professional_name:
+                        type: string
+                        example: 'Dra. Helena Martins'
+                      professional_crm:
+                        type: string
+                        example: 'CRM-SP 123456'
+                      reason:
+                        type: string
+                        example: 'Dificuldade para enxergar de longe.'
+                      notes:
+                        type: string
+                        example: 'Trazer óculos atuais.'
+                      eye_exam:
+                        type: string
+                        example: null
+                      created_at:
+                        type: string
+                        example: '2026-10-27T10:00:00-03:00'
+                      updated_at:
+                        type: string
+                        example: '2026-10-27T11:00:00-03:00'
+        404:
+          description: 'Atendimento não encontrado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Atendimento não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Atendimento não encontrado.'
+        422:
+          description: 'Atendimento finalizado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'O campo data e hora não pode ser alterado em um atendimento finalizado (só as anotações podem mudar).'
+                  errors:
+                    scheduled_at:
+                      - 'O campo data e hora não pode ser alterado em um atendimento finalizado (só as anotações podem mudar).'
+                properties:
+                  message:
+                    type: string
+                    example: 'O campo data e hora não pode ser alterado em um atendimento finalizado (só as anotações podem mudar).'
+                  errors:
+                    type: object
+                    properties:
+                      scheduled_at:
+                        type: array
+                        example:
+                          - 'O campo data e hora não pode ser alterado em um atendimento finalizado (só as anotações podem mudar).'
+                        items:
+                          type: string
+      tags:
+        - Atendimentos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scheduled_at:
+                  type: string
+                  description: 'Data e hora de início, ISO-8601 com fuso (`2026-11-03T14:30:00-03:00`) ou sem fuso (`2026-11-03T14:30`, interpretado em America/Sao_Paulo).'
+                  example: '2026-11-03T14:30:00-03:00'
+                duration_minutes:
+                  type: integer
+                  description: 'Duração em minutos (10 a 240). Padrão: 30. Must be between 10 and 240.'
+                  example: 30
+                professional_name:
+                  type: string
+                  description: 'Nome do profissional (3 a 255 caracteres). Um mesmo nome (sem diferenciar maiúsculas nem acentos) não pode ter dois atendimentos ativos com horários sobrepostos. Must be at least 3 characters. Must not be greater than 255 characters.'
+                  example: 'Dra. Helena Martins'
+                professional_crm:
+                  type: string
+                  description: 'CRM do profissional (opcional, até 20 caracteres). Must not be greater than 20 characters.'
+                  example: 'CRM-SP 123456'
+                reason:
+                  type: string
+                  description: 'Queixa principal (opcional, até 2000 caracteres). Armazenada criptografada. Must not be greater than 2000 characters.'
+                  example: 'Dificuldade para enxergar de longe.'
+                notes:
+                  type: string
+                  description: 'Anotações (opcional, até 5000 caracteres). Armazenadas criptografadas. Único campo editável em atendimentos finalizados. Must not be greater than 5000 characters.'
+                  example: 'Paciente usa óculos há 5 anos.'
+              required:
+                - scheduled_at
+                - professional_name
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'ID do atendimento.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/consultations/{consultation_id}/status':
+    patch:
+      summary: 'Alterar status do atendimento'
+      operationId: alterarStatusDoAtendimento
+      description: "Transições permitidas: `scheduled` → `confirmed`, `completed`, `no_show`, `cancelled`;\n`confirmed` → `completed`, `no_show`, `cancelled`. `completed`, `no_show` e `cancelled` são finais.\nOutras (inclusive para o mesmo status) → 422 em `status`."
+      parameters: []
+      responses:
+        200:
+          description: 'Status alterado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    patient_id: 1
+                    patient:
+                      id: 1
+                      name: 'Maria da Silva'
+                    scheduled_at: '2026-11-03T14:30:00-03:00'
+                    duration_minutes: 30
+                    status: confirmed
+                    professional_name: 'Dra. Helena Martins'
+                    professional_crm: 'CRM-SP 123456'
+                    reason: null
+                    notes: null
+                    eye_exam: null
+                    created_at: '2026-10-27T10:00:00-03:00'
+                    updated_at: '2026-10-28T08:00:00-03:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      patient_id:
+                        type: integer
+                        example: 1
+                      patient:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'Maria da Silva'
+                      scheduled_at:
+                        type: string
+                        example: '2026-11-03T14:30:00-03:00'
+                      duration_minutes:
+                        type: integer
+                        example: 30
+                      status:
+                        type: string
+                        example: confirmed
+                      professional_name:
+                        type: string
+                        example: 'Dra. Helena Martins'
+                      professional_crm:
+                        type: string
+                        example: 'CRM-SP 123456'
+                      reason:
+                        type: string
+                        example: null
+                      notes:
+                        type: string
+                        example: null
+                      eye_exam:
+                        type: string
+                        example: null
+                      created_at:
+                        type: string
+                        example: '2026-10-27T10:00:00-03:00'
+                      updated_at:
+                        type: string
+                        example: '2026-10-28T08:00:00-03:00'
+        404:
+          description: 'Atendimento não encontrado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Atendimento não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Atendimento não encontrado.'
+        422:
+          description: 'Transição inválida'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Não é possível alterar o status de "realizado" para "cancelado".'
+                  errors:
+                    status:
+                      - 'Não é possível alterar o status de "realizado" para "cancelado".'
+                properties:
+                  message:
+                    type: string
+                    example: 'Não é possível alterar o status de "realizado" para "cancelado".'
+                  errors:
+                    type: object
+                    properties:
+                      status:
+                        type: array
+                        example:
+                          - 'Não é possível alterar o status de "realizado" para "cancelado".'
+                        items:
+                          type: string
+      tags:
+        - Atendimentos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: 'Novo status: `confirmed`, `completed`, `no_show` ou `cancelled` (conforme a tabela de transições).'
+                  example: confirmed
+                  enum:
+                    - scheduled
+                    - confirmed
+                    - completed
+                    - no_show
+                    - cancelled
+              required:
+                - status
+      security: []
+    parameters:
+      -
+        in: path
+        name: consultation_id
+        description: 'ID do atendimento.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/consultations/{consultation_id}/eye-exam':
+    put:
+      summary: 'Registrar prontuário oftalmológico'
+      operationId: registrarPronturioOftalmolgico
+      description: "Cria ou substitui (PUT) o prontuário do atendimento: acuidade visual, refração (esférico, cilíndrico, eixo,\nadição) e pressão intraocular de cada olho (`od` = direito, `oe` = esquerdo), diagnóstico e observações.\nTodos os campos são opcionais; os omitidos são apagados. Só para atendimentos `completed` (senão 422 em\n`status`). Retorna o atendimento com o `eye_exam` gravado."
+      parameters: []
+      responses:
+        200:
+          description: 'Prontuário gravado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    patient_id: 1
+                    patient:
+                      id: 1
+                      name: 'Maria da Silva'
+                    scheduled_at: '2026-11-03T14:30:00-03:00'
+                    duration_minutes: 30
+                    status: completed
+                    professional_name: 'Dra. Helena Martins'
+                    professional_crm: 'CRM-SP 123456'
+                    reason: 'Dificuldade para enxergar de longe.'
+                    notes: null
+                    eye_exam:
+                      od:
+                        visual_acuity_sc: 20/40
+                        visual_acuity_cc: 20/20
+                        spherical: -1.25
+                        cylindrical: -0.5
+                        axis: 180
+                        addition: null
+                        iop: 14
+                      oe:
+                        visual_acuity_sc: 20/50
+                        visual_acuity_cc: 20/20
+                        spherical: -1.0
+                        cylindrical: 0.0
+                        axis: null
+                        addition: null
+                        iop: 15
+                      diagnosis: 'Miopia leve com astigmatismo.'
+                      observations: null
+                      updated_at: '2026-11-03T15:00:00-03:00'
+                    created_at: '2026-10-27T10:00:00-03:00'
+                    updated_at: '2026-11-03T15:00:00-03:00'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      patient_id:
+                        type: integer
+                        example: 1
+                      patient:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: 'Maria da Silva'
+                      scheduled_at:
+                        type: string
+                        example: '2026-11-03T14:30:00-03:00'
+                      duration_minutes:
+                        type: integer
+                        example: 30
+                      status:
+                        type: string
+                        example: completed
+                      professional_name:
+                        type: string
+                        example: 'Dra. Helena Martins'
+                      professional_crm:
+                        type: string
+                        example: 'CRM-SP 123456'
+                      reason:
+                        type: string
+                        example: 'Dificuldade para enxergar de longe.'
+                      notes:
+                        type: string
+                        example: null
+                      eye_exam:
+                        type: object
+                        properties:
+                          od:
+                            type: object
+                            properties:
+                              visual_acuity_sc:
+                                type: string
+                                example: 20/40
+                              visual_acuity_cc:
+                                type: string
+                                example: 20/20
+                              spherical:
+                                type: number
+                                example: -1.25
+                              cylindrical:
+                                type: number
+                                example: -0.5
+                              axis:
+                                type: integer
+                                example: 180
+                              addition:
+                                type: string
+                                example: null
+                              iop:
+                                type: integer
+                                example: 14
+                          oe:
+                            type: object
+                            properties:
+                              visual_acuity_sc:
+                                type: string
+                                example: 20/50
+                              visual_acuity_cc:
+                                type: string
+                                example: 20/20
+                              spherical:
+                                type: number
+                                example: -1.0
+                              cylindrical:
+                                type: number
+                                example: 0.0
+                              axis:
+                                type: string
+                                example: null
+                              addition:
+                                type: string
+                                example: null
+                              iop:
+                                type: integer
+                                example: 15
+                          diagnosis:
+                            type: string
+                            example: 'Miopia leve com astigmatismo.'
+                          observations:
+                            type: string
+                            example: null
+                          updated_at:
+                            type: string
+                            example: '2026-11-03T15:00:00-03:00'
+                      created_at:
+                        type: string
+                        example: '2026-10-27T10:00:00-03:00'
+                      updated_at:
+                        type: string
+                        example: '2026-11-03T15:00:00-03:00'
+        404:
+          description: 'Atendimento não encontrado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Atendimento não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Atendimento não encontrado.'
+        422:
+          description: 'Eixo sem cilíndrico'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'O campo eixo (OE) deve ficar vazio quando o cilíndrico é zero ou não informado.'
+                  errors:
+                    oe.axis:
+                      - 'O campo eixo (OE) deve ficar vazio quando o cilíndrico é zero ou não informado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'O campo eixo (OE) deve ficar vazio quando o cilíndrico é zero ou não informado.'
+                  errors:
+                    type: object
+                    properties:
+                      oe.axis:
+                        type: array
+                        example:
+                          - 'O campo eixo (OE) deve ficar vazio quando o cilíndrico é zero ou não informado.'
+                        items:
+                          type: string
+      tags:
+        - Atendimentos
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                diagnosis:
+                  type: string
+                  description: 'Diagnóstico (opcional, até 2000 caracteres). Armazenado criptografado. Must not be greater than 2000 characters.'
+                  example: 'Miopia leve com astigmatismo.'
+                observations:
+                  type: string
+                  description: 'Observações (opcional, até 5000 caracteres). Armazenadas criptografadas. Must not be greater than 5000 characters.'
+                  example: null
+                od:
+                  type: object
+                  description: 'Medidas do olho OD (direito). Todas opcionais.'
+                  example: null
+                  properties:
+                    visual_acuity_sc:
+                      type: string
+                      description: 'Acuidade visual sem correção, Snellen `20/N` (N entre 10 e 400).'
+                      example: 20/40
+                    visual_acuity_cc:
+                      type: string
+                      description: 'Acuidade visual com correção, Snellen `20/N` (N entre 10 e 400).'
+                      example: 20/20
+                    spherical:
+                      type: number
+                      description: 'Esférico, de -30.00 a +30.00, múltiplo de 0.25. Must be between -30 and 30.'
+                      example: -1.25
+                    cylindrical:
+                      type: number
+                      description: 'Cilíndrico, de -10.00 a 0.00, múltiplo de 0.25. Must be between -10 and 0.'
+                      example: -0.5
+                    axis:
+                      type: integer
+                      description: 'Eixo em graus (0 a 180). Obrigatório quando o cilíndrico é diferente de zero; deve ser `null` quando é zero ou ausente. Must be between 0 and 180.'
+                      example: 180
+                    addition:
+                      type: number
+                      description: 'Adição para perto, de +0.75 a +4.00, múltiplo de 0.25. Must be between 0.75 and 4.'
+                      example: null
+                    iop:
+                      type: integer
+                      description: 'Pressão intraocular em mmHg (inteiro, 5 a 60). Must be between 5 and 60.'
+                      example: 14
+                oe:
+                  type: object
+                  description: 'Medidas do olho OE (esquerdo). Todas opcionais.'
+                  example: null
+                  properties:
+                    visual_acuity_sc:
+                      type: string
+                      description: 'Acuidade visual sem correção, Snellen `20/N` (N entre 10 e 400).'
+                      example: 20/50
+                    visual_acuity_cc:
+                      type: string
+                      description: 'Acuidade visual com correção, Snellen `20/N` (N entre 10 e 400).'
+                      example: 20/20
+                    spherical:
+                      type: number
+                      description: 'Esférico, de -30.00 a +30.00, múltiplo de 0.25. Must be between -30 and 30.'
+                      example: -1.0
+                    cylindrical:
+                      type: number
+                      description: 'Cilíndrico, de -10.00 a 0.00, múltiplo de 0.25. Must be between -10 and 0.'
+                      example: 0.0
+                    axis:
+                      type: integer
+                      description: 'Eixo em graus (0 a 180). Obrigatório quando o cilíndrico é diferente de zero; deve ser `null` quando é zero ou ausente. Must be between 0 and 180.'
+                      example: null
+                    addition:
+                      type: number
+                      description: 'Adição para perto, de +0.75 a +4.00, múltiplo de 0.25. Must be between 0.75 and 4.'
+                      example: null
+                    iop:
+                      type: integer
+                      description: 'Pressão intraocular em mmHg (inteiro, 5 a 60). Must be between 5 and 60.'
+                      example: 15
+      security: []
+    parameters:
+      -
+        in: path
+        name: consultation_id
+        description: 'ID do atendimento.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/consultations/{consultation_id}/prescription':
+    get:
+      summary: 'Receita de óculos (PDF)'
+      operationId: receitaDeculosPDF
+      description: "Baixa a receita de óculos do atendimento em PDF (`receita-<id>-AAAAMMDD.pdf`, com a data do atendimento):\npaciente (nome, data de nascimento e idade), data, tabela OD/OE com esférico, cilíndrico, eixo e adição,\nprofissional e CRM, e linha para assinatura. `422` se o atendimento não tiver prontuário com ao menos um\nvalor de refração. O \"Try it out\" não exibe o PDF; para baixar, abra a URL no navegador."
+      parameters: []
+      responses:
+        200:
+          description: 'PDF (application/pdf)'
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: '%PDF-1.7 ...'
+        404:
+          description: 'Atendimento não encontrado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Atendimento não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Atendimento não encontrado.'
+        422:
+          description: 'Sem dados de refração'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'O atendimento não tem dados de refração para gerar a receita.'
+                  errors:
+                    eye_exam:
+                      - 'O atendimento não tem dados de refração para gerar a receita.'
+                properties:
+                  message:
+                    type: string
+                    example: 'O atendimento não tem dados de refração para gerar a receita.'
+                  errors:
+                    type: object
+                    properties:
+                      eye_exam:
+                        type: array
+                        example:
+                          - 'O atendimento não tem dados de refração para gerar a receita.'
+                        items:
+                          type: string
+      tags:
+        - Atendimentos
+      security: []
+    parameters:
+      -
+        in: path
+        name: consultation_id
+        description: 'ID do atendimento.'
+        example: 1
+        required: true
+        schema:
+          type: integer
   /api/health:
     get:
       summary: 'Verificar saúde da API'
@@ -1342,6 +2899,9 @@ tags:
   -
     name: Pacientes
     description: "\nCadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,\ncriação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de\ndisponibilidade de CPF."
+  -
+    name: Atendimentos
+    description: "\nAtendimentos (consultas) dos pacientes: agenda, criação, edição, mudança de status, prontuário oftalmológico,\nreceita de óculos em PDF e linha do tempo. Datas e horas em ISO-8601 com o deslocamento de São Paulo.\nOs campos clínicos livres (`reason`, `notes`, `diagnosis`, `observations`) são armazenados criptografados."
   -
     name: Monitoramento
     description: ''

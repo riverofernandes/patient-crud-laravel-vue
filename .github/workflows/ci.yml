@@ -145,8 +145,8 @@ jobs:
     env:
       E2E_BASE_URL: http://localhost:5173
       E2E_API_URL: http://localhost:8000/api
-      # Read by docker compose for the api service; the suite sends ~425 requests per run, above the
-      # default limit of 300/min.
+      # Read by docker compose for the api service; the suite sends ~660 requests per run (peak ~650/min),
+      # above the default limit of 300/min. Raise to 2000 if a run peaks above ~800/min.
       API_RATE_LIMIT: 1000
     steps:
       - uses: actions/checkout@v7
