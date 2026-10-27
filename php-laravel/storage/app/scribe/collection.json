@@ -11,7 +11,7 @@
     "info": {
         "name": "API de Pacientes",
         "_postman_id": "6f1d2c3e-8a4b-4c5d-9e7f-0a1b2c3d4e5f",
-        "description": "API REST para cadastro, consulta, edi\u00e7\u00e3o e exclus\u00e3o (soft delete) de pacientes.",
+        "description": "API REST para cadastro, consulta, edi\u00e7\u00e3o e exclus\u00e3o (soft delete) de pacientes, atendimentos, prontu\u00e1rio oftalmol\u00f3gico e receita de \u00f3culos.",
         "schema": "https:\/\/schema.getpostman.com\/json\/collection\/v2.1.0\/collection.json"
     },
     "item": [
@@ -561,6 +561,544 @@
                             "code": 404,
                             "body": "{\"message\": \"Paciente n\u00e3o encontrado.\"}",
                             "name": "Paciente n\u00e3o encontrado ou exclu\u00eddo"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Atendimentos",
+            "description": "\nAtendimentos (consultas) dos pacientes: agenda, cria\u00e7\u00e3o, edi\u00e7\u00e3o, mudan\u00e7a de status, prontu\u00e1rio oftalmol\u00f3gico,\nreceita de \u00f3culos em PDF e linha do tempo. Datas e horas em ISO-8601 com o deslocamento de S\u00e3o Paulo.\nOs campos cl\u00ednicos livres (`reason`, `notes`, `diagnosis`, `observations`) s\u00e3o armazenados criptografados.",
+            "item": [
+                {
+                    "name": "Listar atendimentos do paciente",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/patients\/:patient_id\/consultations",
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "P\u00e1gina desejada. Padr\u00e3o: 1.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "10",
+                                    "description": "Itens por p\u00e1gina. Padr\u00e3o: 10; m\u00e1ximo: 100.",
+                                    "disabled": false
+                                }
+                            ],
+                            "raw": "{{baseUrl}}\/api\/patients\/:patient_id\/consultations?page=1&per_page=10",
+                            "variable": [
+                                {
+                                    "id": "patient_id",
+                                    "key": "patient_id",
+                                    "value": "1",
+                                    "description": "ID do paciente."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Atendimentos do paciente, do mais recente para o mais antigo (`scheduled_at` decrescente, desempate por `id`\ndecrescente), paginados como a listagem de pacientes, cada um com `eye_exam` (ou `null`).\nPaciente na lixeira \u2192 404.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": [{\"id\": 1, \"patient_id\": 1, \"scheduled_at\": \"2026-11-03T14:30:00-03:00\", \"duration_minutes\": 30, \"status\": \"completed\", \"professional_name\": \"Dra. Helena Martins\", \"professional_crm\": \"CRM-SP 123456\", \"reason\": \"Dificuldade para enxergar de longe.\", \"notes\": null, \"eye_exam\": {\"od\": {\"visual_acuity_sc\": \"20\/40\", \"visual_acuity_cc\": \"20\/20\", \"spherical\": -1.25, \"cylindrical\": -0.5, \"axis\": 180, \"addition\": null, \"iop\": 14}, \"oe\": {\"visual_acuity_sc\": \"20\/50\", \"visual_acuity_cc\": \"20\/20\", \"spherical\": -1.0, \"cylindrical\": 0.0, \"axis\": null, \"addition\": null, \"iop\": 15}, \"diagnosis\": \"Miopia leve com astigmatismo.\", \"observations\": null, \"updated_at\": \"2026-11-03T15:00:00-03:00\"}, \"created_at\": \"2026-10-27T10:00:00-03:00\", \"updated_at\": \"2026-11-03T15:00:00-03:00\"}], \"links\": {\"first\": \"http:\/\/localhost:8000\/api\/patients\/1\/consultations?page=1\", \"last\": \"http:\/\/localhost:8000\/api\/patients\/1\/consultations?page=1\", \"prev\": null, \"next\": null}, \"meta\": {\"current_page\": 1, \"from\": 1, \"last_page\": 1, \"links\": [], \"path\": \"http:\/\/localhost:8000\/api\/patients\/1\/consultations\", \"per_page\": 10, \"to\": 1, \"total\": 1}}",
+                            "name": "Sucesso"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Paciente n\u00e3o encontrado.\"}",
+                            "name": "Paciente n\u00e3o encontrado ou exclu\u00eddo"
+                        }
+                    ]
+                },
+                {
+                    "name": "Agendar atendimento",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/patients\/:patient_id\/consultations",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/patients\/:patient_id\/consultations",
+                            "variable": [
+                                {
+                                    "id": "patient_id",
+                                    "key": "patient_id",
+                                    "value": "1",
+                                    "description": "ID do paciente."
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"scheduled_at\":\"2026-11-03T14:30:00-03:00\",\"duration_minutes\":30,\"professional_name\":\"Dra. Helena Martins\",\"professional_crm\":\"CRM-SP 123456\",\"reason\":\"Dificuldade para enxergar de longe.\",\"notes\":\"Paciente usa \u00f3culos h\u00e1 5 anos.\"}"
+                        },
+                        "description": "Cria um atendimento com `status = scheduled`. `422` em `scheduled_at` se o mesmo profissional (nome sem\ndiferenciar mai\u00fasculas nem acentos) j\u00e1 tiver um atendimento n\u00e3o cancelado e n\u00e3o `no_show` com hor\u00e1rio sobreposto\n(intervalos `[in\u00edcio, in\u00edcio + dura\u00e7\u00e3o)`; hor\u00e1rios que s\u00f3 se encostam n\u00e3o conflitam).",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 201,
+                            "body": "{\"data\": {\"id\": 1, \"patient_id\": 1, \"scheduled_at\": \"2026-11-03T14:30:00-03:00\", \"duration_minutes\": 30, \"status\": \"scheduled\", \"professional_name\": \"Dra. Helena Martins\", \"professional_crm\": \"CRM-SP 123456\", \"reason\": \"Dificuldade para enxergar de longe.\", \"notes\": null, \"eye_exam\": null, \"created_at\": \"2026-10-27T10:00:00-03:00\", \"updated_at\": \"2026-10-27T10:00:00-03:00\"}}",
+                            "name": "Atendimento criado"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Paciente n\u00e3o encontrado.\"}",
+                            "name": "Paciente n\u00e3o encontrado ou exclu\u00eddo"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"Este profissional j\u00e1 tem um atendimento neste hor\u00e1rio.\", \"errors\": {\"scheduled_at\": [\"Este profissional j\u00e1 tem um atendimento neste hor\u00e1rio.\"]}}",
+                            "name": "Conflito de hor\u00e1rio"
+                        }
+                    ]
+                },
+                {
+                    "name": "Linha do tempo do paciente",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/patients\/:patient_id\/timeline",
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "P\u00e1gina desejada. Padr\u00e3o: 1.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "10",
+                                    "description": "Itens por p\u00e1gina. Padr\u00e3o: 10; m\u00e1ximo: 100.",
+                                    "disabled": false
+                                }
+                            ],
+                            "raw": "{{baseUrl}}\/api\/patients\/:patient_id\/timeline?page=1&per_page=10",
+                            "variable": [
+                                {
+                                    "id": "patient_id",
+                                    "key": "patient_id",
+                                    "value": "1",
+                                    "description": "ID do paciente."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Atendimentos e registros do hist\u00f3rico de altera\u00e7\u00f5es do paciente numa s\u00f3 lista, do mais recente para o mais\nantigo, paginada (`page`, `per_page` como na listagem). `occurred_at` \u00e9 o `scheduled_at` do atendimento ou\no `created_at` do registro do hist\u00f3rico. Desempate: atendimentos antes de registros do hist\u00f3rico, depois\n`id` decrescente. Paciente na lixeira \u2192 404.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": [{\"type\": \"consultation\", \"occurred_at\": \"2026-11-03T14:30:00-03:00\", \"consultation\": {\"id\": 1, \"patient_id\": 1, \"scheduled_at\": \"2026-11-03T14:30:00-03:00\", \"duration_minutes\": 30, \"status\": \"scheduled\", \"professional_name\": \"Dra. Helena Martins\", \"professional_crm\": \"CRM-SP 123456\", \"reason\": null, \"notes\": null, \"eye_exam\": null, \"created_at\": \"2026-10-27T10:05:00-03:00\", \"updated_at\": \"2026-10-27T10:05:00-03:00\"}}, {\"type\": \"audit\", \"occurred_at\": \"2026-10-27T10:00:00-03:00\", \"audit\": {\"id\": 1, \"event\": \"created\", \"changes\": {\"name\": {\"old\": null, \"new\": \"Maria da Silva\"}}, \"ip\": \"172.18.0.1\", \"user_agent\": \"Mozilla\/5.0 (X11; Linux x86_64)\", \"user_id\": null, \"created_at\": \"2026-10-27T10:00:00-03:00\"}}], \"links\": {\"first\": \"http:\/\/localhost:8000\/api\/patients\/1\/timeline?page=1\", \"last\": \"http:\/\/localhost:8000\/api\/patients\/1\/timeline?page=1\", \"prev\": null, \"next\": null}, \"meta\": {\"current_page\": 1, \"from\": 1, \"last_page\": 1, \"links\": [], \"path\": \"http:\/\/localhost:8000\/api\/patients\/1\/timeline\", \"per_page\": 10, \"to\": 2, \"total\": 2}}",
+                            "name": "Sucesso"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Paciente n\u00e3o encontrado.\"}",
+                            "name": "Paciente n\u00e3o encontrado ou exclu\u00eddo"
+                        }
+                    ]
+                },
+                {
+                    "name": "Agenda",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/consultations",
+                            "query": [
+                                {
+                                    "key": "date_from",
+                                    "value": "2026-11-02",
+                                    "description": "Primeiro dia (AAAA-MM-DD, dia de S\u00e3o Paulo, inclusive). Padr\u00e3o: hoje (ou `date_to` - 6 quando s\u00f3 `date_to` \u00e9 enviado). Must be a valid date in the format Y-m-d.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "date_to",
+                                    "value": "2026-11-08",
+                                    "description": "\u00daltimo dia (AAAA-MM-DD, inclusive). Padr\u00e3o: `date_from` + 6. O intervalo pode ter no m\u00e1ximo 31 dias. Must be a valid date in the format Y-m-d.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "scheduled%2Cconfirmed",
+                                    "description": "Um ou v\u00e1rios status separados por v\u00edrgula: `scheduled`, `confirmed`, `completed`, `no_show`, `cancelled`. Valor desconhecido \u2192 422.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "professional",
+                                    "value": "helena",
+                                    "description": "Parte do nome do profissional (sem diferenciar mai\u00fasculas nem acentos). Must not be greater than 255 characters.",
+                                    "disabled": false
+                                }
+                            ],
+                            "raw": "{{baseUrl}}\/api\/consultations?date_from=2026-11-02&date_to=2026-11-08&status=scheduled%2Cconfirmed&professional=helena"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Atendimentos que come\u00e7am entre `date_from` e `date_to` (dias de S\u00e3o Paulo, inclusive), em ordem crescente de\n`scheduled_at` (desempate por `id`), **sem pagina\u00e7\u00e3o**, cada um com `patient` (`id` e `name`). Pacientes na\nlixeira n\u00e3o aparecem. Intervalo m\u00e1ximo de 31 dias; `date_to` anterior a `date_from` \u2192 422.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": [{\"id\": 2, \"patient_id\": 1, \"patient\": {\"id\": 1, \"name\": \"Maria da Silva\"}, \"scheduled_at\": \"2026-11-04T09:00:00-03:00\", \"duration_minutes\": 30, \"status\": \"confirmed\", \"professional_name\": \"Dra. Helena Martins\", \"professional_crm\": \"CRM-SP 123456\", \"reason\": \"Retorno.\", \"notes\": null, \"eye_exam\": null, \"created_at\": \"2026-10-27T10:00:00-03:00\", \"updated_at\": \"2026-10-28T08:00:00-03:00\"}]}",
+                            "name": "Sucesso"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"O intervalo da agenda n\u00e3o pode passar de 31 dias.\", \"errors\": {\"date_to\": [\"O intervalo da agenda n\u00e3o pode passar de 31 dias.\"]}}",
+                            "name": "Intervalo maior que 31 dias"
+                        }
+                    ]
+                },
+                {
+                    "name": "Detalhar atendimento",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/consultations\/:id",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/consultations\/:id",
+                            "variable": [
+                                {
+                                    "id": "id",
+                                    "key": "id",
+                                    "value": "1",
+                                    "description": "ID do atendimento."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Com `patient` (`id` e `name`) e `eye_exam`. `404` se n\u00e3o existir ou se o paciente estiver na lixeira.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": {\"id\": 1, \"patient_id\": 1, \"patient\": {\"id\": 1, \"name\": \"Maria da Silva\"}, \"scheduled_at\": \"2026-11-03T14:30:00-03:00\", \"duration_minutes\": 30, \"status\": \"scheduled\", \"professional_name\": \"Dra. Helena Martins\", \"professional_crm\": \"CRM-SP 123456\", \"reason\": \"Dificuldade para enxergar de longe.\", \"notes\": null, \"eye_exam\": null, \"created_at\": \"2026-10-27T10:00:00-03:00\", \"updated_at\": \"2026-10-27T10:00:00-03:00\"}}",
+                            "name": "Sucesso"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Atendimento n\u00e3o encontrado.\"}",
+                            "name": "Atendimento n\u00e3o encontrado"
+                        }
+                    ]
+                },
+                {
+                    "name": "Atualizar atendimento",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/consultations\/:id",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/consultations\/:id",
+                            "variable": [
+                                {
+                                    "id": "id",
+                                    "key": "id",
+                                    "value": "1",
+                                    "description": "ID do atendimento."
+                                }
+                            ]
+                        },
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"scheduled_at\":\"2026-11-03T14:30:00-03:00\",\"duration_minutes\":30,\"professional_name\":\"Dra. Helena Martins\",\"professional_crm\":\"CRM-SP 123456\",\"reason\":\"Dificuldade para enxergar de longe.\",\"notes\":\"Paciente usa \u00f3culos h\u00e1 5 anos.\"}"
+                        },
+                        "description": "Substitui\u00e7\u00e3o completa (PUT) dos campos edit\u00e1veis (os mesmos da cria\u00e7\u00e3o; opcionais omitidos s\u00e3o apagados e\na dura\u00e7\u00e3o volta a 30). Em atendimento finalizado (`completed`, `no_show`, `cancelled`) s\u00f3 `notes` pode\nmudar: qualquer outro campo diferente do atual \u2192 422 naquele campo. O conflito de hor\u00e1rio \u00e9 verificado\nignorando o pr\u00f3prio atendimento.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": {\"id\": 1, \"patient_id\": 1, \"patient\": {\"id\": 1, \"name\": \"Maria da Silva\"}, \"scheduled_at\": \"2026-11-03T15:00:00-03:00\", \"duration_minutes\": 45, \"status\": \"scheduled\", \"professional_name\": \"Dra. Helena Martins\", \"professional_crm\": \"CRM-SP 123456\", \"reason\": \"Dificuldade para enxergar de longe.\", \"notes\": \"Trazer \u00f3culos atuais.\", \"eye_exam\": null, \"created_at\": \"2026-10-27T10:00:00-03:00\", \"updated_at\": \"2026-10-27T11:00:00-03:00\"}}",
+                            "name": "Atendimento atualizado"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Atendimento n\u00e3o encontrado.\"}",
+                            "name": "Atendimento n\u00e3o encontrado"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"O campo data e hora n\u00e3o pode ser alterado em um atendimento finalizado (s\u00f3 as anota\u00e7\u00f5es podem mudar).\", \"errors\": {\"scheduled_at\": [\"O campo data e hora n\u00e3o pode ser alterado em um atendimento finalizado (s\u00f3 as anota\u00e7\u00f5es podem mudar).\"]}}",
+                            "name": "Atendimento finalizado"
+                        }
+                    ]
+                },
+                {
+                    "name": "Alterar status do atendimento",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/consultations\/:consultation_id\/status",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/consultations\/:consultation_id\/status",
+                            "variable": [
+                                {
+                                    "id": "consultation_id",
+                                    "key": "consultation_id",
+                                    "value": "1",
+                                    "description": "ID do atendimento."
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"status\":\"confirmed\"}"
+                        },
+                        "description": "Transi\u00e7\u00f5es permitidas: `scheduled` \u2192 `confirmed`, `completed`, `no_show`, `cancelled`;\n`confirmed` \u2192 `completed`, `no_show`, `cancelled`. `completed`, `no_show` e `cancelled` s\u00e3o finais.\nOutras (inclusive para o mesmo status) \u2192 422 em `status`.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": {\"id\": 1, \"patient_id\": 1, \"patient\": {\"id\": 1, \"name\": \"Maria da Silva\"}, \"scheduled_at\": \"2026-11-03T14:30:00-03:00\", \"duration_minutes\": 30, \"status\": \"confirmed\", \"professional_name\": \"Dra. Helena Martins\", \"professional_crm\": \"CRM-SP 123456\", \"reason\": null, \"notes\": null, \"eye_exam\": null, \"created_at\": \"2026-10-27T10:00:00-03:00\", \"updated_at\": \"2026-10-28T08:00:00-03:00\"}}",
+                            "name": "Status alterado"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Atendimento n\u00e3o encontrado.\"}",
+                            "name": "Atendimento n\u00e3o encontrado"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"N\u00e3o \u00e9 poss\u00edvel alterar o status de \\\"realizado\\\" para \\\"cancelado\\\".\", \"errors\": {\"status\": [\"N\u00e3o \u00e9 poss\u00edvel alterar o status de \\\"realizado\\\" para \\\"cancelado\\\".\"]}}",
+                            "name": "Transi\u00e7\u00e3o inv\u00e1lida"
+                        }
+                    ]
+                },
+                {
+                    "name": "Registrar prontu\u00e1rio oftalmol\u00f3gico",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/consultations\/:consultation_id\/eye-exam",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/consultations\/:consultation_id\/eye-exam",
+                            "variable": [
+                                {
+                                    "id": "consultation_id",
+                                    "key": "consultation_id",
+                                    "value": "1",
+                                    "description": "ID do atendimento."
+                                }
+                            ]
+                        },
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"diagnosis\":\"Miopia leve com astigmatismo.\",\"od\":{\"visual_acuity_sc\":\"20\\\/40\",\"visual_acuity_cc\":\"20\\\/20\",\"spherical\":-1.25,\"cylindrical\":-0.5,\"axis\":180,\"iop\":14},\"oe\":{\"visual_acuity_sc\":\"20\\\/50\",\"visual_acuity_cc\":\"20\\\/20\",\"spherical\":-1,\"cylindrical\":0,\"iop\":15}}"
+                        },
+                        "description": "Cria ou substitui (PUT) o prontu\u00e1rio do atendimento: acuidade visual, refra\u00e7\u00e3o (esf\u00e9rico, cil\u00edndrico, eixo,\nadi\u00e7\u00e3o) e press\u00e3o intraocular de cada olho (`od` = direito, `oe` = esquerdo), diagn\u00f3stico e observa\u00e7\u00f5es.\nTodos os campos s\u00e3o opcionais; os omitidos s\u00e3o apagados. S\u00f3 para atendimentos `completed` (sen\u00e3o 422 em\n`status`). Retorna o atendimento com o `eye_exam` gravado.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": {\"id\": 1, \"patient_id\": 1, \"patient\": {\"id\": 1, \"name\": \"Maria da Silva\"}, \"scheduled_at\": \"2026-11-03T14:30:00-03:00\", \"duration_minutes\": 30, \"status\": \"completed\", \"professional_name\": \"Dra. Helena Martins\", \"professional_crm\": \"CRM-SP 123456\", \"reason\": \"Dificuldade para enxergar de longe.\", \"notes\": null, \"eye_exam\": {\"od\": {\"visual_acuity_sc\": \"20\/40\", \"visual_acuity_cc\": \"20\/20\", \"spherical\": -1.25, \"cylindrical\": -0.5, \"axis\": 180, \"addition\": null, \"iop\": 14}, \"oe\": {\"visual_acuity_sc\": \"20\/50\", \"visual_acuity_cc\": \"20\/20\", \"spherical\": -1.0, \"cylindrical\": 0.0, \"axis\": null, \"addition\": null, \"iop\": 15}, \"diagnosis\": \"Miopia leve com astigmatismo.\", \"observations\": null, \"updated_at\": \"2026-11-03T15:00:00-03:00\"}, \"created_at\": \"2026-10-27T10:00:00-03:00\", \"updated_at\": \"2026-11-03T15:00:00-03:00\"}}",
+                            "name": "Prontu\u00e1rio gravado"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Atendimento n\u00e3o encontrado.\"}",
+                            "name": "Atendimento n\u00e3o encontrado"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"O prontu\u00e1rio s\u00f3 pode ser registrado em atendimentos realizados.\", \"errors\": {\"status\": [\"O prontu\u00e1rio s\u00f3 pode ser registrado em atendimentos realizados.\"]}}",
+                            "name": "Atendimento n\u00e3o realizado"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"O campo eixo (OE) deve ficar vazio quando o cil\u00edndrico \u00e9 zero ou n\u00e3o informado.\", \"errors\": {\"oe.axis\": [\"O campo eixo (OE) deve ficar vazio quando o cil\u00edndrico \u00e9 zero ou n\u00e3o informado.\"]}}",
+                            "name": "Eixo sem cil\u00edndrico"
+                        }
+                    ]
+                },
+                {
+                    "name": "Receita de \u00f3culos (PDF)",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/consultations\/:consultation_id\/prescription",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/consultations\/:consultation_id\/prescription",
+                            "variable": [
+                                {
+                                    "id": "consultation_id",
+                                    "key": "consultation_id",
+                                    "value": "1",
+                                    "description": "ID do atendimento."
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": null,
+                        "description": "Baixa a receita de \u00f3culos do atendimento em PDF (`receita-<id>-AAAAMMDD.pdf`, com a data do atendimento):\npaciente (nome, data de nascimento e idade), data, tabela OD\/OE com esf\u00e9rico, cil\u00edndrico, eixo e adi\u00e7\u00e3o,\nprofissional e CRM, e linha para assinatura. `422` se o atendimento n\u00e3o tiver prontu\u00e1rio com ao menos um\nvalor de refra\u00e7\u00e3o. O \"Try it out\" n\u00e3o exibe o PDF; para baixar, abra a URL no navegador.",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "%PDF-1.7 ...",
+                            "name": "PDF (application\/pdf)"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Atendimento n\u00e3o encontrado.\"}",
+                            "name": "Atendimento n\u00e3o encontrado"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"O atendimento n\u00e3o tem dados de refra\u00e7\u00e3o para gerar a receita.\", \"errors\": {\"eye_exam\": [\"O atendimento n\u00e3o tem dados de refra\u00e7\u00e3o para gerar a receita.\"]}}",
+                            "name": "Sem dados de refra\u00e7\u00e3o"
                         }
                     ]
                 }

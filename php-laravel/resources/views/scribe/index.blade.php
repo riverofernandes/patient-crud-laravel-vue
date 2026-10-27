@@ -100,6 +100,40 @@
                             </li>
                                                                         </ul>
                             </ul>
+                    <ul id="tocify-header-atendimentos" class="tocify-header">
+                <li class="tocify-item level-1" data-unique="atendimentos">
+                    <a href="#atendimentos">Atendimentos</a>
+                </li>
+                                    <ul id="tocify-subheader-atendimentos" class="tocify-subheader">
+                                                    <li class="tocify-item level-2" data-unique="atendimentos-GETapi-patients--patient_id--consultations">
+                                <a href="#atendimentos-GETapi-patients--patient_id--consultations">Listar atendimentos do paciente</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-POSTapi-patients--patient_id--consultations">
+                                <a href="#atendimentos-POSTapi-patients--patient_id--consultations">Agendar atendimento</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-GETapi-patients--patient_id--timeline">
+                                <a href="#atendimentos-GETapi-patients--patient_id--timeline">Linha do tempo do paciente</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-GETapi-consultations">
+                                <a href="#atendimentos-GETapi-consultations">Agenda</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-GETapi-consultations--id-">
+                                <a href="#atendimentos-GETapi-consultations--id-">Detalhar atendimento</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-PUTapi-consultations--id-">
+                                <a href="#atendimentos-PUTapi-consultations--id-">Atualizar atendimento</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-PATCHapi-consultations--consultation_id--status">
+                                <a href="#atendimentos-PATCHapi-consultations--consultation_id--status">Alterar status do atendimento</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-PUTapi-consultations--consultation_id--eye-exam">
+                                <a href="#atendimentos-PUTapi-consultations--consultation_id--eye-exam">Registrar prontuário oftalmológico</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="atendimentos-GETapi-consultations--consultation_id--prescription">
+                                <a href="#atendimentos-GETapi-consultations--consultation_id--prescription">Receita de óculos (PDF)</a>
+                            </li>
+                                                                        </ul>
+                            </ul>
                     <ul id="tocify-header-monitoramento" class="tocify-header">
                 <li class="tocify-item level-1" data-unique="monitoramento">
                     <a href="#monitoramento">Monitoramento</a>
@@ -127,7 +161,7 @@
     <div class="dark-box"></div>
     <div class="content">
         <h1 id="introduction">Introduction</h1>
-<p>API REST para cadastro, consulta, edição e exclusão (soft delete) de pacientes.</p>
+<p>API REST para cadastro, consulta, edição e exclusão (soft delete) de pacientes, atendimentos, prontuário oftalmológico e receita de óculos.</p>
 <aside>
     <strong>Base URL</strong>: <code>http://localhost:8000</code>
 </aside>
@@ -137,6 +171,9 @@ na entrada e são armazenados e retornados apenas com dígitos. Datas usam o for
 A exclusão é lógica (soft delete): o paciente deixa de aparecer na listagem e passa a retornar 404.
 CPF, RG e celular são armazenados criptografados no banco (a API sempre devolve os valores em claro); por isso
 a busca por CPF exige o CPF completo. Cada alteração de paciente fica registrada no histórico (<code>/patients/{id}/audits</code>).</p>
+<p>Atendimentos: datas e horas em ISO-8601, com fuso (<code>2026-11-03T14:30:00-03:00</code>) ou sem fuso (interpretado em
+America/Sao_Paulo); as respostas sempre trazem o deslocamento de São Paulo. Os campos clínicos livres (<code>reason</code>,
+<code>notes</code>, <code>diagnosis</code>, <code>observations</code>) são armazenados criptografados.</p>
 <aside>Os exemplos de requisição (bash e JavaScript) ficam na área escura à direita. Use o botão
 "Try it out" de cada endpoint para enviar uma requisição real à API.</aside>
 
@@ -2095,6 +2132,2124 @@ You can check the Dev Tools console for debugging information.</code></pre>
                data-component="url">
     <br>
 <p>ID do paciente. Example: <code>1</code></p>
+            </div>
+                    </form>
+
+                <h1 id="atendimentos">Atendimentos</h1>
+
+    <p>Atendimentos (consultas) dos pacientes: agenda, criação, edição, mudança de status, prontuário oftalmológico,
+receita de óculos em PDF e linha do tempo. Datas e horas em ISO-8601 com o deslocamento de São Paulo.
+Os campos clínicos livres (<code>reason</code>, <code>notes</code>, <code>diagnosis</code>, <code>observations</code>) são armazenados criptografados.</p>
+
+                                <h2 id="atendimentos-GETapi-patients--patient_id--consultations">Listar atendimentos do paciente</h2>
+
+<p>
+</p>
+
+<p>Atendimentos do paciente, do mais recente para o mais antigo (<code>scheduled_at</code> decrescente, desempate por <code>id</code>
+decrescente), paginados como a listagem de pacientes, cada um com <code>eye_exam</code> (ou <code>null</code>).
+Paciente na lixeira → 404.</p>
+
+<span id="example-requests-GETapi-patients--patient_id--consultations">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/patients/1/consultations?page=1&amp;per_page=10" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/patients/1/consultations"
+);
+
+const params = {
+    "page": "1",
+    "per_page": "10",
+};
+Object.keys(params)
+    .forEach(key =&gt; url.searchParams.append(key, params[key]));
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-patients--patient_id--consultations">
+            <blockquote>
+            <p>Example response (200, Sucesso):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: [
+        {
+            &quot;id&quot;: 1,
+            &quot;patient_id&quot;: 1,
+            &quot;scheduled_at&quot;: &quot;2026-11-03T14:30:00-03:00&quot;,
+            &quot;duration_minutes&quot;: 30,
+            &quot;status&quot;: &quot;completed&quot;,
+            &quot;professional_name&quot;: &quot;Dra. Helena Martins&quot;,
+            &quot;professional_crm&quot;: &quot;CRM-SP 123456&quot;,
+            &quot;reason&quot;: &quot;Dificuldade para enxergar de longe.&quot;,
+            &quot;notes&quot;: null,
+            &quot;eye_exam&quot;: {
+                &quot;od&quot;: {
+                    &quot;visual_acuity_sc&quot;: &quot;20/40&quot;,
+                    &quot;visual_acuity_cc&quot;: &quot;20/20&quot;,
+                    &quot;spherical&quot;: -1.25,
+                    &quot;cylindrical&quot;: -0.5,
+                    &quot;axis&quot;: 180,
+                    &quot;addition&quot;: null,
+                    &quot;iop&quot;: 14
+                },
+                &quot;oe&quot;: {
+                    &quot;visual_acuity_sc&quot;: &quot;20/50&quot;,
+                    &quot;visual_acuity_cc&quot;: &quot;20/20&quot;,
+                    &quot;spherical&quot;: -1,
+                    &quot;cylindrical&quot;: 0,
+                    &quot;axis&quot;: null,
+                    &quot;addition&quot;: null,
+                    &quot;iop&quot;: 15
+                },
+                &quot;diagnosis&quot;: &quot;Miopia leve com astigmatismo.&quot;,
+                &quot;observations&quot;: null,
+                &quot;updated_at&quot;: &quot;2026-11-03T15:00:00-03:00&quot;
+            },
+            &quot;created_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;,
+            &quot;updated_at&quot;: &quot;2026-11-03T15:00:00-03:00&quot;
+        }
+    ],
+    &quot;links&quot;: {
+        &quot;first&quot;: &quot;http://localhost:8000/api/patients/1/consultations?page=1&quot;,
+        &quot;last&quot;: &quot;http://localhost:8000/api/patients/1/consultations?page=1&quot;,
+        &quot;prev&quot;: null,
+        &quot;next&quot;: null
+    },
+    &quot;meta&quot;: {
+        &quot;current_page&quot;: 1,
+        &quot;from&quot;: 1,
+        &quot;last_page&quot;: 1,
+        &quot;links&quot;: [],
+        &quot;path&quot;: &quot;http://localhost:8000/api/patients/1/consultations&quot;,
+        &quot;per_page&quot;: 10,
+        &quot;to&quot;: 1,
+        &quot;total&quot;: 1
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Paciente não encontrado ou excluído):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Paciente n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-patients--patient_id--consultations" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-patients--patient_id--consultations"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-patients--patient_id--consultations"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-patients--patient_id--consultations" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-patients--patient_id--consultations">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-patients--patient_id--consultations" data-method="GET"
+      data-path="api/patients/{patient_id}/consultations"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-patients--patient_id--consultations', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-patients--patient_id--consultations"
+                    onclick="tryItOut('GETapi-patients--patient_id--consultations');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-patients--patient_id--consultations"
+                    onclick="cancelTryOut('GETapi-patients--patient_id--consultations');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-patients--patient_id--consultations"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/patients/{patient_id}/consultations</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-patients--patient_id--consultations"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-patients--patient_id--consultations"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>patient_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="patient_id"                data-endpoint="GETapi-patients--patient_id--consultations"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do paciente. Example: <code>1</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>Query Parameters</b></h4>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>page</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="page"                data-endpoint="GETapi-patients--patient_id--consultations"
+               value="1"
+               data-component="query">
+    <br>
+<p>Página desejada. Padrão: 1. Example: <code>1</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>per_page</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="per_page"                data-endpoint="GETapi-patients--patient_id--consultations"
+               value="10"
+               data-component="query">
+    <br>
+<p>Itens por página. Padrão: 10; máximo: 100. Example: <code>10</code></p>
+            </div>
+                </form>
+
+                    <h2 id="atendimentos-POSTapi-patients--patient_id--consultations">Agendar atendimento</h2>
+
+<p>
+</p>
+
+<p>Cria um atendimento com <code>status = scheduled</code>. <code>422</code> em <code>scheduled_at</code> se o mesmo profissional (nome sem
+diferenciar maiúsculas nem acentos) já tiver um atendimento não cancelado e não <code>no_show</code> com horário sobreposto
+(intervalos <code>[início, início + duração)</code>; horários que só se encostam não conflitam).</p>
+
+<span id="example-requests-POSTapi-patients--patient_id--consultations">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request POST \
+    "http://localhost:8000/api/patients/1/consultations" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json" \
+    --data "{
+    \"scheduled_at\": \"2026-11-03T14:30:00-03:00\",
+    \"duration_minutes\": 30,
+    \"professional_name\": \"Dra. Helena Martins\",
+    \"professional_crm\": \"CRM-SP 123456\",
+    \"reason\": \"Dificuldade para enxergar de longe.\",
+    \"notes\": \"Paciente usa óculos há 5 anos.\"
+}"
+</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/patients/1/consultations"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+let body = {
+    "scheduled_at": "2026-11-03T14:30:00-03:00",
+    "duration_minutes": 30,
+    "professional_name": "Dra. Helena Martins",
+    "professional_crm": "CRM-SP 123456",
+    "reason": "Dificuldade para enxergar de longe.",
+    "notes": "Paciente usa óculos há 5 anos."
+};
+
+fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-POSTapi-patients--patient_id--consultations">
+            <blockquote>
+            <p>Example response (201, Atendimento criado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: {
+        &quot;id&quot;: 1,
+        &quot;patient_id&quot;: 1,
+        &quot;scheduled_at&quot;: &quot;2026-11-03T14:30:00-03:00&quot;,
+        &quot;duration_minutes&quot;: 30,
+        &quot;status&quot;: &quot;scheduled&quot;,
+        &quot;professional_name&quot;: &quot;Dra. Helena Martins&quot;,
+        &quot;professional_crm&quot;: &quot;CRM-SP 123456&quot;,
+        &quot;reason&quot;: &quot;Dificuldade para enxergar de longe.&quot;,
+        &quot;notes&quot;: null,
+        &quot;eye_exam&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Paciente não encontrado ou excluído):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Paciente n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (422, Conflito de horário):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Este profissional j&aacute; tem um atendimento neste hor&aacute;rio.&quot;,
+    &quot;errors&quot;: {
+        &quot;scheduled_at&quot;: [
+            &quot;Este profissional j&aacute; tem um atendimento neste hor&aacute;rio.&quot;
+        ]
+    }
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-POSTapi-patients--patient_id--consultations" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-POSTapi-patients--patient_id--consultations"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-POSTapi-patients--patient_id--consultations"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-POSTapi-patients--patient_id--consultations" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-POSTapi-patients--patient_id--consultations">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-POSTapi-patients--patient_id--consultations" data-method="POST"
+      data-path="api/patients/{patient_id}/consultations"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('POSTapi-patients--patient_id--consultations', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-POSTapi-patients--patient_id--consultations"
+                    onclick="tryItOut('POSTapi-patients--patient_id--consultations');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-POSTapi-patients--patient_id--consultations"
+                    onclick="cancelTryOut('POSTapi-patients--patient_id--consultations');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-POSTapi-patients--patient_id--consultations"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-black">POST</small>
+            <b><code>api/patients/{patient_id}/consultations</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="POSTapi-patients--patient_id--consultations"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="POSTapi-patients--patient_id--consultations"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>patient_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="patient_id"                data-endpoint="POSTapi-patients--patient_id--consultations"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do paciente. Example: <code>1</code></p>
+            </div>
+                            <h4 class="fancy-heading-panel"><b>Body Parameters</b></h4>
+        <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>scheduled_at</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="scheduled_at"                data-endpoint="POSTapi-patients--patient_id--consultations"
+               value="2026-11-03T14:30:00-03:00"
+               data-component="body">
+    <br>
+<p>Data e hora de início, ISO-8601 com fuso (<code>2026-11-03T14:30:00-03:00</code>) ou sem fuso (<code>2026-11-03T14:30</code>, interpretado em America/Sao_Paulo). Example: <code>2026-11-03T14:30:00-03:00</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>duration_minutes</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="duration_minutes"                data-endpoint="POSTapi-patients--patient_id--consultations"
+               value="30"
+               data-component="body">
+    <br>
+<p>Duração em minutos (10 a 240). Padrão: 30. Must be between 10 and 240. Example: <code>30</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>professional_name</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="professional_name"                data-endpoint="POSTapi-patients--patient_id--consultations"
+               value="Dra. Helena Martins"
+               data-component="body">
+    <br>
+<p>Nome do profissional (3 a 255 caracteres). Um mesmo nome (sem diferenciar maiúsculas nem acentos) não pode ter dois atendimentos ativos com horários sobrepostos. Must be at least 3 characters. Must not be greater than 255 characters. Example: <code>Dra. Helena Martins</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>professional_crm</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="professional_crm"                data-endpoint="POSTapi-patients--patient_id--consultations"
+               value="CRM-SP 123456"
+               data-component="body">
+    <br>
+<p>CRM do profissional (opcional, até 20 caracteres). Must not be greater than 20 characters. Example: <code>CRM-SP 123456</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>reason</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="reason"                data-endpoint="POSTapi-patients--patient_id--consultations"
+               value="Dificuldade para enxergar de longe."
+               data-component="body">
+    <br>
+<p>Queixa principal (opcional, até 2000 caracteres). Armazenada criptografada. Must not be greater than 2000 characters. Example: <code>Dificuldade para enxergar de longe.</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>notes</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="notes"                data-endpoint="POSTapi-patients--patient_id--consultations"
+               value="Paciente usa óculos há 5 anos."
+               data-component="body">
+    <br>
+<p>Anotações (opcional, até 5000 caracteres). Armazenadas criptografadas. Único campo editável em atendimentos finalizados. Must not be greater than 5000 characters. Example: <code>Paciente usa óculos há 5 anos.</code></p>
+        </div>
+        </form>
+
+                    <h2 id="atendimentos-GETapi-patients--patient_id--timeline">Linha do tempo do paciente</h2>
+
+<p>
+</p>
+
+<p>Atendimentos e registros do histórico de alterações do paciente numa só lista, do mais recente para o mais
+antigo, paginada (<code>page</code>, <code>per_page</code> como na listagem). <code>occurred_at</code> é o <code>scheduled_at</code> do atendimento ou
+o <code>created_at</code> do registro do histórico. Desempate: atendimentos antes de registros do histórico, depois
+<code>id</code> decrescente. Paciente na lixeira → 404.</p>
+
+<span id="example-requests-GETapi-patients--patient_id--timeline">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/patients/1/timeline?page=1&amp;per_page=10" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/patients/1/timeline"
+);
+
+const params = {
+    "page": "1",
+    "per_page": "10",
+};
+Object.keys(params)
+    .forEach(key =&gt; url.searchParams.append(key, params[key]));
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-patients--patient_id--timeline">
+            <blockquote>
+            <p>Example response (200, Sucesso):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: [
+        {
+            &quot;type&quot;: &quot;consultation&quot;,
+            &quot;occurred_at&quot;: &quot;2026-11-03T14:30:00-03:00&quot;,
+            &quot;consultation&quot;: {
+                &quot;id&quot;: 1,
+                &quot;patient_id&quot;: 1,
+                &quot;scheduled_at&quot;: &quot;2026-11-03T14:30:00-03:00&quot;,
+                &quot;duration_minutes&quot;: 30,
+                &quot;status&quot;: &quot;scheduled&quot;,
+                &quot;professional_name&quot;: &quot;Dra. Helena Martins&quot;,
+                &quot;professional_crm&quot;: &quot;CRM-SP 123456&quot;,
+                &quot;reason&quot;: null,
+                &quot;notes&quot;: null,
+                &quot;eye_exam&quot;: null,
+                &quot;created_at&quot;: &quot;2026-10-27T10:05:00-03:00&quot;,
+                &quot;updated_at&quot;: &quot;2026-10-27T10:05:00-03:00&quot;
+            }
+        },
+        {
+            &quot;type&quot;: &quot;audit&quot;,
+            &quot;occurred_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;,
+            &quot;audit&quot;: {
+                &quot;id&quot;: 1,
+                &quot;event&quot;: &quot;created&quot;,
+                &quot;changes&quot;: {
+                    &quot;name&quot;: {
+                        &quot;old&quot;: null,
+                        &quot;new&quot;: &quot;Maria da Silva&quot;
+                    }
+                },
+                &quot;ip&quot;: &quot;172.18.0.1&quot;,
+                &quot;user_agent&quot;: &quot;Mozilla/5.0 (X11; Linux x86_64)&quot;,
+                &quot;user_id&quot;: null,
+                &quot;created_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;
+            }
+        }
+    ],
+    &quot;links&quot;: {
+        &quot;first&quot;: &quot;http://localhost:8000/api/patients/1/timeline?page=1&quot;,
+        &quot;last&quot;: &quot;http://localhost:8000/api/patients/1/timeline?page=1&quot;,
+        &quot;prev&quot;: null,
+        &quot;next&quot;: null
+    },
+    &quot;meta&quot;: {
+        &quot;current_page&quot;: 1,
+        &quot;from&quot;: 1,
+        &quot;last_page&quot;: 1,
+        &quot;links&quot;: [],
+        &quot;path&quot;: &quot;http://localhost:8000/api/patients/1/timeline&quot;,
+        &quot;per_page&quot;: 10,
+        &quot;to&quot;: 2,
+        &quot;total&quot;: 2
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Paciente não encontrado ou excluído):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Paciente n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-patients--patient_id--timeline" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-patients--patient_id--timeline"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-patients--patient_id--timeline"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-patients--patient_id--timeline" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-patients--patient_id--timeline">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-patients--patient_id--timeline" data-method="GET"
+      data-path="api/patients/{patient_id}/timeline"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-patients--patient_id--timeline', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-patients--patient_id--timeline"
+                    onclick="tryItOut('GETapi-patients--patient_id--timeline');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-patients--patient_id--timeline"
+                    onclick="cancelTryOut('GETapi-patients--patient_id--timeline');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-patients--patient_id--timeline"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/patients/{patient_id}/timeline</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-patients--patient_id--timeline"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-patients--patient_id--timeline"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>patient_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="patient_id"                data-endpoint="GETapi-patients--patient_id--timeline"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do paciente. Example: <code>1</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>Query Parameters</b></h4>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>page</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="page"                data-endpoint="GETapi-patients--patient_id--timeline"
+               value="1"
+               data-component="query">
+    <br>
+<p>Página desejada. Padrão: 1. Example: <code>1</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>per_page</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="per_page"                data-endpoint="GETapi-patients--patient_id--timeline"
+               value="10"
+               data-component="query">
+    <br>
+<p>Itens por página. Padrão: 10; máximo: 100. Example: <code>10</code></p>
+            </div>
+                </form>
+
+                    <h2 id="atendimentos-GETapi-consultations">Agenda</h2>
+
+<p>
+</p>
+
+<p>Atendimentos que começam entre <code>date_from</code> e <code>date_to</code> (dias de São Paulo, inclusive), em ordem crescente de
+<code>scheduled_at</code> (desempate por <code>id</code>), <strong>sem paginação</strong>, cada um com <code>patient</code> (<code>id</code> e <code>name</code>). Pacientes na
+lixeira não aparecem. Intervalo máximo de 31 dias; <code>date_to</code> anterior a <code>date_from</code> → 422.</p>
+
+<span id="example-requests-GETapi-consultations">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/consultations?date_from=2026-11-02&amp;date_to=2026-11-08&amp;status=scheduled%2Cconfirmed&amp;professional=helena" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/consultations"
+);
+
+const params = {
+    "date_from": "2026-11-02",
+    "date_to": "2026-11-08",
+    "status": "scheduled,confirmed",
+    "professional": "helena",
+};
+Object.keys(params)
+    .forEach(key =&gt; url.searchParams.append(key, params[key]));
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-consultations">
+            <blockquote>
+            <p>Example response (200, Sucesso):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: [
+        {
+            &quot;id&quot;: 2,
+            &quot;patient_id&quot;: 1,
+            &quot;patient&quot;: {
+                &quot;id&quot;: 1,
+                &quot;name&quot;: &quot;Maria da Silva&quot;
+            },
+            &quot;scheduled_at&quot;: &quot;2026-11-04T09:00:00-03:00&quot;,
+            &quot;duration_minutes&quot;: 30,
+            &quot;status&quot;: &quot;confirmed&quot;,
+            &quot;professional_name&quot;: &quot;Dra. Helena Martins&quot;,
+            &quot;professional_crm&quot;: &quot;CRM-SP 123456&quot;,
+            &quot;reason&quot;: &quot;Retorno.&quot;,
+            &quot;notes&quot;: null,
+            &quot;eye_exam&quot;: null,
+            &quot;created_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;,
+            &quot;updated_at&quot;: &quot;2026-10-28T08:00:00-03:00&quot;
+        }
+    ]
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (422, Intervalo maior que 31 dias):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;O intervalo da agenda n&atilde;o pode passar de 31 dias.&quot;,
+    &quot;errors&quot;: {
+        &quot;date_to&quot;: [
+            &quot;O intervalo da agenda n&atilde;o pode passar de 31 dias.&quot;
+        ]
+    }
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-consultations" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-consultations"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-consultations"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-consultations" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-consultations">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-consultations" data-method="GET"
+      data-path="api/consultations"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-consultations', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-consultations"
+                    onclick="tryItOut('GETapi-consultations');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-consultations"
+                    onclick="cancelTryOut('GETapi-consultations');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-consultations"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/consultations</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-consultations"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-consultations"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                            <h4 class="fancy-heading-panel"><b>Query Parameters</b></h4>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>date_from</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="date_from"                data-endpoint="GETapi-consultations"
+               value="2026-11-02"
+               data-component="query">
+    <br>
+<p>Primeiro dia (AAAA-MM-DD, dia de São Paulo, inclusive). Padrão: hoje (ou <code>date_to</code> - 6 quando só <code>date_to</code> é enviado). Must be a valid date in the format <code>Y-m-d</code>. Example: <code>2026-11-02</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>date_to</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="date_to"                data-endpoint="GETapi-consultations"
+               value="2026-11-08"
+               data-component="query">
+    <br>
+<p>Último dia (AAAA-MM-DD, inclusive). Padrão: <code>date_from</code> + 6. O intervalo pode ter no máximo 31 dias. Must be a valid date in the format <code>Y-m-d</code>. Example: <code>2026-11-08</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>status</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="status"                data-endpoint="GETapi-consultations"
+               value="scheduled,confirmed"
+               data-component="query">
+    <br>
+<p>Um ou vários status separados por vírgula: <code>scheduled</code>, <code>confirmed</code>, <code>completed</code>, <code>no_show</code>, <code>cancelled</code>. Valor desconhecido → 422. Example: <code>scheduled,confirmed</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>professional</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="professional"                data-endpoint="GETapi-consultations"
+               value="helena"
+               data-component="query">
+    <br>
+<p>Parte do nome do profissional (sem diferenciar maiúsculas nem acentos). Must not be greater than 255 characters. Example: <code>helena</code></p>
+            </div>
+                </form>
+
+                    <h2 id="atendimentos-GETapi-consultations--id-">Detalhar atendimento</h2>
+
+<p>
+</p>
+
+<p>Com <code>patient</code> (<code>id</code> e <code>name</code>) e <code>eye_exam</code>. <code>404</code> se não existir ou se o paciente estiver na lixeira.</p>
+
+<span id="example-requests-GETapi-consultations--id-">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/consultations/1" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/consultations/1"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-consultations--id-">
+            <blockquote>
+            <p>Example response (200, Sucesso):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: {
+        &quot;id&quot;: 1,
+        &quot;patient_id&quot;: 1,
+        &quot;patient&quot;: {
+            &quot;id&quot;: 1,
+            &quot;name&quot;: &quot;Maria da Silva&quot;
+        },
+        &quot;scheduled_at&quot;: &quot;2026-11-03T14:30:00-03:00&quot;,
+        &quot;duration_minutes&quot;: 30,
+        &quot;status&quot;: &quot;scheduled&quot;,
+        &quot;professional_name&quot;: &quot;Dra. Helena Martins&quot;,
+        &quot;professional_crm&quot;: &quot;CRM-SP 123456&quot;,
+        &quot;reason&quot;: &quot;Dificuldade para enxergar de longe.&quot;,
+        &quot;notes&quot;: null,
+        &quot;eye_exam&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Atendimento não encontrado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Atendimento n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-consultations--id-" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-consultations--id-"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-consultations--id-"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-consultations--id-" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-consultations--id-">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-consultations--id-" data-method="GET"
+      data-path="api/consultations/{id}"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-consultations--id-', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-consultations--id-"
+                    onclick="tryItOut('GETapi-consultations--id-');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-consultations--id-"
+                    onclick="cancelTryOut('GETapi-consultations--id-');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-consultations--id-"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/consultations/{id}</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-consultations--id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-consultations--id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="id"                data-endpoint="GETapi-consultations--id-"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do atendimento. Example: <code>1</code></p>
+            </div>
+                    </form>
+
+                    <h2 id="atendimentos-PUTapi-consultations--id-">Atualizar atendimento</h2>
+
+<p>
+</p>
+
+<p>Substituição completa (PUT) dos campos editáveis (os mesmos da criação; opcionais omitidos são apagados e
+a duração volta a 30). Em atendimento finalizado (<code>completed</code>, <code>no_show</code>, <code>cancelled</code>) só <code>notes</code> pode
+mudar: qualquer outro campo diferente do atual → 422 naquele campo. O conflito de horário é verificado
+ignorando o próprio atendimento.</p>
+
+<span id="example-requests-PUTapi-consultations--id-">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request PUT \
+    "http://localhost:8000/api/consultations/1" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json" \
+    --data "{
+    \"scheduled_at\": \"2026-11-03T14:30:00-03:00\",
+    \"duration_minutes\": 30,
+    \"professional_name\": \"Dra. Helena Martins\",
+    \"professional_crm\": \"CRM-SP 123456\",
+    \"reason\": \"Dificuldade para enxergar de longe.\",
+    \"notes\": \"Paciente usa óculos há 5 anos.\"
+}"
+</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/consultations/1"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+let body = {
+    "scheduled_at": "2026-11-03T14:30:00-03:00",
+    "duration_minutes": 30,
+    "professional_name": "Dra. Helena Martins",
+    "professional_crm": "CRM-SP 123456",
+    "reason": "Dificuldade para enxergar de longe.",
+    "notes": "Paciente usa óculos há 5 anos."
+};
+
+fetch(url, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(body),
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-PUTapi-consultations--id-">
+            <blockquote>
+            <p>Example response (200, Atendimento atualizado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: {
+        &quot;id&quot;: 1,
+        &quot;patient_id&quot;: 1,
+        &quot;patient&quot;: {
+            &quot;id&quot;: 1,
+            &quot;name&quot;: &quot;Maria da Silva&quot;
+        },
+        &quot;scheduled_at&quot;: &quot;2026-11-03T15:00:00-03:00&quot;,
+        &quot;duration_minutes&quot;: 45,
+        &quot;status&quot;: &quot;scheduled&quot;,
+        &quot;professional_name&quot;: &quot;Dra. Helena Martins&quot;,
+        &quot;professional_crm&quot;: &quot;CRM-SP 123456&quot;,
+        &quot;reason&quot;: &quot;Dificuldade para enxergar de longe.&quot;,
+        &quot;notes&quot;: &quot;Trazer &oacute;culos atuais.&quot;,
+        &quot;eye_exam&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-27T11:00:00-03:00&quot;
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Atendimento não encontrado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Atendimento n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (422, Atendimento finalizado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;O campo data e hora n&atilde;o pode ser alterado em um atendimento finalizado (s&oacute; as anota&ccedil;&otilde;es podem mudar).&quot;,
+    &quot;errors&quot;: {
+        &quot;scheduled_at&quot;: [
+            &quot;O campo data e hora n&atilde;o pode ser alterado em um atendimento finalizado (s&oacute; as anota&ccedil;&otilde;es podem mudar).&quot;
+        ]
+    }
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-PUTapi-consultations--id-" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-PUTapi-consultations--id-"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-PUTapi-consultations--id-"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-PUTapi-consultations--id-" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-PUTapi-consultations--id-">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-PUTapi-consultations--id-" data-method="PUT"
+      data-path="api/consultations/{id}"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('PUTapi-consultations--id-', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-PUTapi-consultations--id-"
+                    onclick="tryItOut('PUTapi-consultations--id-');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-PUTapi-consultations--id-"
+                    onclick="cancelTryOut('PUTapi-consultations--id-');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-PUTapi-consultations--id-"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-darkblue">PUT</small>
+            <b><code>api/consultations/{id}</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="PUTapi-consultations--id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="PUTapi-consultations--id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="id"                data-endpoint="PUTapi-consultations--id-"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do atendimento. Example: <code>1</code></p>
+            </div>
+                            <h4 class="fancy-heading-panel"><b>Body Parameters</b></h4>
+        <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>scheduled_at</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="scheduled_at"                data-endpoint="PUTapi-consultations--id-"
+               value="2026-11-03T14:30:00-03:00"
+               data-component="body">
+    <br>
+<p>Data e hora de início, ISO-8601 com fuso (<code>2026-11-03T14:30:00-03:00</code>) ou sem fuso (<code>2026-11-03T14:30</code>, interpretado em America/Sao_Paulo). Example: <code>2026-11-03T14:30:00-03:00</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>duration_minutes</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="duration_minutes"                data-endpoint="PUTapi-consultations--id-"
+               value="30"
+               data-component="body">
+    <br>
+<p>Duração em minutos (10 a 240). Padrão: 30. Must be between 10 and 240. Example: <code>30</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>professional_name</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="professional_name"                data-endpoint="PUTapi-consultations--id-"
+               value="Dra. Helena Martins"
+               data-component="body">
+    <br>
+<p>Nome do profissional (3 a 255 caracteres). Um mesmo nome (sem diferenciar maiúsculas nem acentos) não pode ter dois atendimentos ativos com horários sobrepostos. Must be at least 3 characters. Must not be greater than 255 characters. Example: <code>Dra. Helena Martins</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>professional_crm</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="professional_crm"                data-endpoint="PUTapi-consultations--id-"
+               value="CRM-SP 123456"
+               data-component="body">
+    <br>
+<p>CRM do profissional (opcional, até 20 caracteres). Must not be greater than 20 characters. Example: <code>CRM-SP 123456</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>reason</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="reason"                data-endpoint="PUTapi-consultations--id-"
+               value="Dificuldade para enxergar de longe."
+               data-component="body">
+    <br>
+<p>Queixa principal (opcional, até 2000 caracteres). Armazenada criptografada. Must not be greater than 2000 characters. Example: <code>Dificuldade para enxergar de longe.</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>notes</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="notes"                data-endpoint="PUTapi-consultations--id-"
+               value="Paciente usa óculos há 5 anos."
+               data-component="body">
+    <br>
+<p>Anotações (opcional, até 5000 caracteres). Armazenadas criptografadas. Único campo editável em atendimentos finalizados. Must not be greater than 5000 characters. Example: <code>Paciente usa óculos há 5 anos.</code></p>
+        </div>
+        </form>
+
+                    <h2 id="atendimentos-PATCHapi-consultations--consultation_id--status">Alterar status do atendimento</h2>
+
+<p>
+</p>
+
+<p>Transições permitidas: <code>scheduled</code> → <code>confirmed</code>, <code>completed</code>, <code>no_show</code>, <code>cancelled</code>;
+<code>confirmed</code> → <code>completed</code>, <code>no_show</code>, <code>cancelled</code>. <code>completed</code>, <code>no_show</code> e <code>cancelled</code> são finais.
+Outras (inclusive para o mesmo status) → 422 em <code>status</code>.</p>
+
+<span id="example-requests-PATCHapi-consultations--consultation_id--status">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request PATCH \
+    "http://localhost:8000/api/consultations/1/status" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json" \
+    --data "{
+    \"status\": \"confirmed\"
+}"
+</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/consultations/1/status"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+let body = {
+    "status": "confirmed"
+};
+
+fetch(url, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify(body),
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-PATCHapi-consultations--consultation_id--status">
+            <blockquote>
+            <p>Example response (200, Status alterado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: {
+        &quot;id&quot;: 1,
+        &quot;patient_id&quot;: 1,
+        &quot;patient&quot;: {
+            &quot;id&quot;: 1,
+            &quot;name&quot;: &quot;Maria da Silva&quot;
+        },
+        &quot;scheduled_at&quot;: &quot;2026-11-03T14:30:00-03:00&quot;,
+        &quot;duration_minutes&quot;: 30,
+        &quot;status&quot;: &quot;confirmed&quot;,
+        &quot;professional_name&quot;: &quot;Dra. Helena Martins&quot;,
+        &quot;professional_crm&quot;: &quot;CRM-SP 123456&quot;,
+        &quot;reason&quot;: null,
+        &quot;notes&quot;: null,
+        &quot;eye_exam&quot;: null,
+        &quot;created_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-28T08:00:00-03:00&quot;
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Atendimento não encontrado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Atendimento n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (422, Transição inválida):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;N&atilde;o &eacute; poss&iacute;vel alterar o status de \&quot;realizado\&quot; para \&quot;cancelado\&quot;.&quot;,
+    &quot;errors&quot;: {
+        &quot;status&quot;: [
+            &quot;N&atilde;o &eacute; poss&iacute;vel alterar o status de \&quot;realizado\&quot; para \&quot;cancelado\&quot;.&quot;
+        ]
+    }
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-PATCHapi-consultations--consultation_id--status" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-PATCHapi-consultations--consultation_id--status"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-PATCHapi-consultations--consultation_id--status"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-PATCHapi-consultations--consultation_id--status" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-PATCHapi-consultations--consultation_id--status">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-PATCHapi-consultations--consultation_id--status" data-method="PATCH"
+      data-path="api/consultations/{consultation_id}/status"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('PATCHapi-consultations--consultation_id--status', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-PATCHapi-consultations--consultation_id--status"
+                    onclick="tryItOut('PATCHapi-consultations--consultation_id--status');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-PATCHapi-consultations--consultation_id--status"
+                    onclick="cancelTryOut('PATCHapi-consultations--consultation_id--status');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-PATCHapi-consultations--consultation_id--status"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-purple">PATCH</small>
+            <b><code>api/consultations/{consultation_id}/status</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="PATCHapi-consultations--consultation_id--status"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="PATCHapi-consultations--consultation_id--status"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>consultation_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="consultation_id"                data-endpoint="PATCHapi-consultations--consultation_id--status"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do atendimento. Example: <code>1</code></p>
+            </div>
+                            <h4 class="fancy-heading-panel"><b>Body Parameters</b></h4>
+        <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>status</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="status"                data-endpoint="PATCHapi-consultations--consultation_id--status"
+               value="confirmed"
+               data-component="body">
+    <br>
+<p>Novo status: <code>confirmed</code>, <code>completed</code>, <code>no_show</code> ou <code>cancelled</code> (conforme a tabela de transições). Example: <code>confirmed</code></p>
+Must be one of:
+<ul style="list-style-type: square;"><li><code>scheduled</code></li> <li><code>confirmed</code></li> <li><code>completed</code></li> <li><code>no_show</code></li> <li><code>cancelled</code></li></ul>
+        </div>
+        </form>
+
+                    <h2 id="atendimentos-PUTapi-consultations--consultation_id--eye-exam">Registrar prontuário oftalmológico</h2>
+
+<p>
+</p>
+
+<p>Cria ou substitui (PUT) o prontuário do atendimento: acuidade visual, refração (esférico, cilíndrico, eixo,
+adição) e pressão intraocular de cada olho (<code>od</code> = direito, <code>oe</code> = esquerdo), diagnóstico e observações.
+Todos os campos são opcionais; os omitidos são apagados. Só para atendimentos <code>completed</code> (senão 422 em
+<code>status</code>). Retorna o atendimento com o <code>eye_exam</code> gravado.</p>
+
+<span id="example-requests-PUTapi-consultations--consultation_id--eye-exam">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request PUT \
+    "http://localhost:8000/api/consultations/1/eye-exam" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json" \
+    --data "{
+    \"diagnosis\": \"Miopia leve com astigmatismo.\",
+    \"od\": {
+        \"visual_acuity_sc\": \"20\\/40\",
+        \"visual_acuity_cc\": \"20\\/20\",
+        \"spherical\": -1.25,
+        \"cylindrical\": -0.5,
+        \"axis\": 180,
+        \"iop\": 14
+    },
+    \"oe\": {
+        \"visual_acuity_sc\": \"20\\/50\",
+        \"visual_acuity_cc\": \"20\\/20\",
+        \"spherical\": -1,
+        \"cylindrical\": 0,
+        \"iop\": 15
+    }
+}"
+</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/consultations/1/eye-exam"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+let body = {
+    "diagnosis": "Miopia leve com astigmatismo.",
+    "od": {
+        "visual_acuity_sc": "20\/40",
+        "visual_acuity_cc": "20\/20",
+        "spherical": -1.25,
+        "cylindrical": -0.5,
+        "axis": 180,
+        "iop": 14
+    },
+    "oe": {
+        "visual_acuity_sc": "20\/50",
+        "visual_acuity_cc": "20\/20",
+        "spherical": -1,
+        "cylindrical": 0,
+        "iop": 15
+    }
+};
+
+fetch(url, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(body),
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-PUTapi-consultations--consultation_id--eye-exam">
+            <blockquote>
+            <p>Example response (200, Prontuário gravado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: {
+        &quot;id&quot;: 1,
+        &quot;patient_id&quot;: 1,
+        &quot;patient&quot;: {
+            &quot;id&quot;: 1,
+            &quot;name&quot;: &quot;Maria da Silva&quot;
+        },
+        &quot;scheduled_at&quot;: &quot;2026-11-03T14:30:00-03:00&quot;,
+        &quot;duration_minutes&quot;: 30,
+        &quot;status&quot;: &quot;completed&quot;,
+        &quot;professional_name&quot;: &quot;Dra. Helena Martins&quot;,
+        &quot;professional_crm&quot;: &quot;CRM-SP 123456&quot;,
+        &quot;reason&quot;: &quot;Dificuldade para enxergar de longe.&quot;,
+        &quot;notes&quot;: null,
+        &quot;eye_exam&quot;: {
+            &quot;od&quot;: {
+                &quot;visual_acuity_sc&quot;: &quot;20/40&quot;,
+                &quot;visual_acuity_cc&quot;: &quot;20/20&quot;,
+                &quot;spherical&quot;: -1.25,
+                &quot;cylindrical&quot;: -0.5,
+                &quot;axis&quot;: 180,
+                &quot;addition&quot;: null,
+                &quot;iop&quot;: 14
+            },
+            &quot;oe&quot;: {
+                &quot;visual_acuity_sc&quot;: &quot;20/50&quot;,
+                &quot;visual_acuity_cc&quot;: &quot;20/20&quot;,
+                &quot;spherical&quot;: -1,
+                &quot;cylindrical&quot;: 0,
+                &quot;axis&quot;: null,
+                &quot;addition&quot;: null,
+                &quot;iop&quot;: 15
+            },
+            &quot;diagnosis&quot;: &quot;Miopia leve com astigmatismo.&quot;,
+            &quot;observations&quot;: null,
+            &quot;updated_at&quot;: &quot;2026-11-03T15:00:00-03:00&quot;
+        },
+        &quot;created_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;,
+        &quot;updated_at&quot;: &quot;2026-11-03T15:00:00-03:00&quot;
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Atendimento não encontrado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Atendimento n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (422, Atendimento não realizado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;O prontu&aacute;rio s&oacute; pode ser registrado em atendimentos realizados.&quot;,
+    &quot;errors&quot;: {
+        &quot;status&quot;: [
+            &quot;O prontu&aacute;rio s&oacute; pode ser registrado em atendimentos realizados.&quot;
+        ]
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (422, Eixo sem cilíndrico):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;O campo eixo (OE) deve ficar vazio quando o cil&iacute;ndrico &eacute; zero ou n&atilde;o informado.&quot;,
+    &quot;errors&quot;: {
+        &quot;oe.axis&quot;: [
+            &quot;O campo eixo (OE) deve ficar vazio quando o cil&iacute;ndrico &eacute; zero ou n&atilde;o informado.&quot;
+        ]
+    }
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-PUTapi-consultations--consultation_id--eye-exam" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-PUTapi-consultations--consultation_id--eye-exam"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-PUTapi-consultations--consultation_id--eye-exam"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-PUTapi-consultations--consultation_id--eye-exam" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-PUTapi-consultations--consultation_id--eye-exam">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-PUTapi-consultations--consultation_id--eye-exam" data-method="PUT"
+      data-path="api/consultations/{consultation_id}/eye-exam"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('PUTapi-consultations--consultation_id--eye-exam', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-PUTapi-consultations--consultation_id--eye-exam"
+                    onclick="tryItOut('PUTapi-consultations--consultation_id--eye-exam');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-PUTapi-consultations--consultation_id--eye-exam"
+                    onclick="cancelTryOut('PUTapi-consultations--consultation_id--eye-exam');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-PUTapi-consultations--consultation_id--eye-exam"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-darkblue">PUT</small>
+            <b><code>api/consultations/{consultation_id}/eye-exam</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>consultation_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="consultation_id"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do atendimento. Example: <code>1</code></p>
+            </div>
+                            <h4 class="fancy-heading-panel"><b>Body Parameters</b></h4>
+        <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>diagnosis</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="diagnosis"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="Miopia leve com astigmatismo."
+               data-component="body">
+    <br>
+<p>Diagnóstico (opcional, até 2000 caracteres). Armazenado criptografado. Must not be greater than 2000 characters. Example: <code>Miopia leve com astigmatismo.</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>observations</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="observations"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value=""
+               data-component="body">
+    <br>
+<p>Observações (opcional, até 5000 caracteres). Armazenadas criptografadas. Must not be greater than 5000 characters.</p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+        <details>
+            <summary style="padding-bottom: 10px;">
+                <b style="line-height: 2;"><code>od</code></b>&nbsp;&nbsp;
+<small>object</small>&nbsp;
+<i>optional</i> &nbsp;
+<br>
+<p>Medidas do olho OD (direito). Todas opcionais.</p>
+            </summary>
+                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>visual_acuity_sc</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="od.visual_acuity_sc"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="20/40"
+               data-component="body">
+    <br>
+<p>Acuidade visual sem correção, Snellen <code>20/N</code> (N entre 10 e 400). Example: <code>20/40</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>visual_acuity_cc</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="od.visual_acuity_cc"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="20/20"
+               data-component="body">
+    <br>
+<p>Acuidade visual com correção, Snellen <code>20/N</code> (N entre 10 e 400). Example: <code>20/20</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>spherical</code></b>&nbsp;&nbsp;
+<small>number</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="od.spherical"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="-1.25"
+               data-component="body">
+    <br>
+<p>Esférico, de -30.00 a +30.00, múltiplo de 0.25. Must be between -30 and 30. Example: <code>-1.25</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>cylindrical</code></b>&nbsp;&nbsp;
+<small>number</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="od.cylindrical"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="-0.5"
+               data-component="body">
+    <br>
+<p>Cilíndrico, de -10.00 a 0.00, múltiplo de 0.25. Must be between -10 and 0. Example: <code>-0.5</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>axis</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="od.axis"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="180"
+               data-component="body">
+    <br>
+<p>Eixo em graus (0 a 180). Obrigatório quando o cilíndrico é diferente de zero; deve ser <code>null</code> quando é zero ou ausente. Must be between 0 and 180. Example: <code>180</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>addition</code></b>&nbsp;&nbsp;
+<small>number</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="od.addition"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value=""
+               data-component="body">
+    <br>
+<p>Adição para perto, de +0.75 a +4.00, múltiplo de 0.25. Must be between 0.75 and 4.</p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>iop</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="od.iop"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="14"
+               data-component="body">
+    <br>
+<p>Pressão intraocular em mmHg (inteiro, 5 a 60). Must be between 5 and 60. Example: <code>14</code></p>
+                    </div>
+                                    </details>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+        <details>
+            <summary style="padding-bottom: 10px;">
+                <b style="line-height: 2;"><code>oe</code></b>&nbsp;&nbsp;
+<small>object</small>&nbsp;
+<i>optional</i> &nbsp;
+<br>
+<p>Medidas do olho OE (esquerdo). Todas opcionais.</p>
+            </summary>
+                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>visual_acuity_sc</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="oe.visual_acuity_sc"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="20/50"
+               data-component="body">
+    <br>
+<p>Acuidade visual sem correção, Snellen <code>20/N</code> (N entre 10 e 400). Example: <code>20/50</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>visual_acuity_cc</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="oe.visual_acuity_cc"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="20/20"
+               data-component="body">
+    <br>
+<p>Acuidade visual com correção, Snellen <code>20/N</code> (N entre 10 e 400). Example: <code>20/20</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>spherical</code></b>&nbsp;&nbsp;
+<small>number</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="oe.spherical"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="-1"
+               data-component="body">
+    <br>
+<p>Esférico, de -30.00 a +30.00, múltiplo de 0.25. Must be between -30 and 30. Example: <code>-1</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>cylindrical</code></b>&nbsp;&nbsp;
+<small>number</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="oe.cylindrical"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="0"
+               data-component="body">
+    <br>
+<p>Cilíndrico, de -10.00 a 0.00, múltiplo de 0.25. Must be between -10 and 0. Example: <code>0</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>axis</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="oe.axis"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value=""
+               data-component="body">
+    <br>
+<p>Eixo em graus (0 a 180). Obrigatório quando o cilíndrico é diferente de zero; deve ser <code>null</code> quando é zero ou ausente. Must be between 0 and 180.</p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>addition</code></b>&nbsp;&nbsp;
+<small>number</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="oe.addition"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value=""
+               data-component="body">
+    <br>
+<p>Adição para perto, de +0.75 a +4.00, múltiplo de 0.25. Must be between 0.75 and 4.</p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>iop</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="oe.iop"                data-endpoint="PUTapi-consultations--consultation_id--eye-exam"
+               value="15"
+               data-component="body">
+    <br>
+<p>Pressão intraocular em mmHg (inteiro, 5 a 60). Must be between 5 and 60. Example: <code>15</code></p>
+                    </div>
+                                    </details>
+        </div>
+        </form>
+
+                    <h2 id="atendimentos-GETapi-consultations--consultation_id--prescription">Receita de óculos (PDF)</h2>
+
+<p>
+</p>
+
+<p>Baixa a receita de óculos do atendimento em PDF (<code>receita-&lt;id&gt;-AAAAMMDD.pdf</code>, com a data do atendimento):
+paciente (nome, data de nascimento e idade), data, tabela OD/OE com esférico, cilíndrico, eixo e adição,
+profissional e CRM, e linha para assinatura. <code>422</code> se o atendimento não tiver prontuário com ao menos um
+valor de refração. O &quot;Try it out&quot; não exibe o PDF; para baixar, abra a URL no navegador.</p>
+
+<span id="example-requests-GETapi-consultations--consultation_id--prescription">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/consultations/1/prescription" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/consultations/1/prescription"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-consultations--consultation_id--prescription">
+            <blockquote>
+            <p>Example response (200, PDF (application/pdf)):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">%PDF-1.7 ...</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Atendimento não encontrado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Atendimento n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (422, Sem dados de refração):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;O atendimento n&atilde;o tem dados de refra&ccedil;&atilde;o para gerar a receita.&quot;,
+    &quot;errors&quot;: {
+        &quot;eye_exam&quot;: [
+            &quot;O atendimento n&atilde;o tem dados de refra&ccedil;&atilde;o para gerar a receita.&quot;
+        ]
+    }
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-consultations--consultation_id--prescription" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-consultations--consultation_id--prescription"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-consultations--consultation_id--prescription"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-consultations--consultation_id--prescription" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-consultations--consultation_id--prescription">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-consultations--consultation_id--prescription" data-method="GET"
+      data-path="api/consultations/{consultation_id}/prescription"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-consultations--consultation_id--prescription', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-consultations--consultation_id--prescription"
+                    onclick="tryItOut('GETapi-consultations--consultation_id--prescription');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-consultations--consultation_id--prescription"
+                    onclick="cancelTryOut('GETapi-consultations--consultation_id--prescription');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-consultations--consultation_id--prescription"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/consultations/{consultation_id}/prescription</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-consultations--consultation_id--prescription"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-consultations--consultation_id--prescription"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>consultation_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="consultation_id"                data-endpoint="GETapi-consultations--consultation_id--prescription"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do atendimento. Example: <code>1</code></p>
             </div>
                     </form>
 

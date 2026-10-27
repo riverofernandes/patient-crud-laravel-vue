@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Pacientes API",
-    "description": "CRUD de pacientes (Laravel): listagem com filtros e ordenação, exportação CSV, lixeira, restauração, histórico de alterações e verificação de CPF. Contrato: docs/API_CONTRACT.md. Execute em ordem (Runner/newman).",
+    "description": "CRUD de pacientes (Laravel): listagem com filtros e ordenação, exportação CSV, lixeira, restauração, histórico de alterações, verificação de CPF e atendimentos (agenda, prontuário, receita em PDF e linha do tempo). Contrato: docs/API_CONTRACT.md. Execute em ordem (Runner/newman).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -23,6 +23,30 @@
     },
     {
       "key": "cpfPartial",
+      "value": ""
+    },
+    {
+      "key": "consultationPatientId",
+      "value": ""
+    },
+    {
+      "key": "consultationId",
+      "value": ""
+    },
+    {
+      "key": "consultationCpf",
+      "value": ""
+    },
+    {
+      "key": "consultationDate",
+      "value": ""
+    },
+    {
+      "key": "professional",
+      "value": ""
+    },
+    {
+      "key": "professionalSuffix",
       "value": ""
     }
   ],
@@ -1043,6 +1067,917 @@
         },
         "description": "Remove o paciente de teste ao final, para execuções repetidas não acumularem registros ativos."
       }
+    },
+    {
+      "name": "Atendimentos",
+      "description": "Agendamento, agenda, status, prontuário oftalmológico, receita em PDF e linha do tempo (Sprint 4). Cria o próprio paciente e o envia para a lixeira ao final.",
+      "item": [
+        {
+          "name": "Cadastrar paciente para atendimentos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('consultationPatientId', pm.response.json().data.id);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));",
+                  "for (const len of [9, 10]) {",
+                  "  const sum = d.slice(0, len).reduce((acc, n, i) => acc + n * (len + 1 - i), 0);",
+                  "  d.push((sum * 10) % 11 % 10);",
+                  "}",
+                  "pm.collectionVariables.set('consultationCpf', d.join(''));",
+                  "const suffix = Date.now().toString(36);",
+                  "pm.collectionVariables.set('professionalSuffix', suffix);",
+                  "pm.collectionVariables.set('professional', 'Dra. Postman ' + suffix);",
+                  "// YYYY-MM-DD in America/Sao_Paulo, two days from now.",
+                  "const date = new Date(Date.now() + 2 * 86400000).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });",
+                  "pm.collectionVariables.set('consultationDate', date);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients"
+              ]
+            },
+            "description": "201. O pre-request gera um CPF válido, um nome de profissional único por execução (execuções repetidas não conflitam) e a data do atendimento (daqui a 2 dias, no fuso de São Paulo).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Paciente Atendimento Postman\",\n  \"cpf\": \"{{consultationCpf}}\",\n  \"rg\": \"12.345.678-9\",\n  \"birth_date\": \"1985-03-15\",\n  \"sex\": \"F\",\n  \"phone\": \"(11) 91234-5678\",\n  \"email\": null,\n  \"description\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Agendar atendimento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Created as scheduled, in São Paulo time', function () {",
+                  "  pm.expect(body.data.status).to.eql('scheduled');",
+                  "  pm.expect(body.data.scheduled_at).to.eql(pm.collectionVariables.get('consultationDate') + 'T10:00:00-03:00');",
+                  "  pm.expect(body.data.eye_exam).to.eql(null);",
+                  "});",
+                  "pm.collectionVariables.set('consultationId', body.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{consultationPatientId}}/consultations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{consultationPatientId}}",
+                "consultations"
+              ]
+            },
+            "description": "201 com status `scheduled`. Datas aceitam ISO-8601 com ou sem fuso; a resposta vem com o deslocamento de São Paulo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduled_at\": \"{{consultationDate}}T10:00:00-03:00\",\n  \"duration_minutes\": 30,\n  \"professional_name\": \"{{professional}}\",\n  \"professional_crm\": \"CRM-SP 123456\",\n  \"reason\": \"Dificuldade para enxergar de longe.\",\n  \"notes\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Agendar atendimento (conflito de horário - 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Conflict message', function () { pm.expect(pm.response.json().errors.scheduled_at[0]).to.eql('Este profissional já tem um atendimento neste horário.'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{consultationPatientId}}/consultations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{consultationPatientId}}",
+                "consultations"
+              ]
+            },
+            "description": "422: mesmo profissional (sem diferenciar maiúsculas/espaços) com horário sobreposto (13:15 UTC = 10:15 em São Paulo).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduled_at\": \"{{consultationDate}}T13:15:00Z\",\n  \"professional_name\": \"  {{professional}}  \",\n  \"reason\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Agenda (filtro por profissional e status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Only the test consultation, with patient, no pagination', function () {",
+                  "  pm.expect(body.data.map((c) => c.id)).to.eql([Number(pm.collectionVariables.get('consultationId'))]);",
+                  "  pm.expect(body.data[0].patient.name).to.eql('Paciente Atendimento Postman');",
+                  "  pm.expect(body.data[0].patient).to.not.have.property('cpf');",
+                  "  pm.expect(body).to.not.have.property('meta');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations?date_from={{consultationDate}}&date_to={{consultationDate}}&status=scheduled,confirmed&professional={{professionalSuffix}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations"
+              ],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "{{consultationDate}}"
+                },
+                {
+                  "key": "date_to",
+                  "value": "{{consultationDate}}"
+                },
+                {
+                  "key": "status",
+                  "value": "scheduled,confirmed"
+                },
+                {
+                  "key": "professional",
+                  "value": "{{professionalSuffix}}"
+                }
+              ]
+            },
+            "description": "Agenda do dia, sem paginação, com `patient` (id e nome)."
+          }
+        },
+        {
+          "name": "Agenda (intervalo maior que 31 dias - 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Range error', function () { pm.expect(pm.response.json().errors.date_to[0]).to.eql('O intervalo da agenda não pode passar de 31 dias.'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations?date_from=2026-01-01&date_to=2026-02-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations"
+              ],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2026-02-01"
+                }
+              ]
+            },
+            "description": "422 em `date_to`."
+          }
+        },
+        {
+          "name": "Confirmar atendimento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Confirmed', function () { pm.expect(pm.response.json().data.status).to.eql('confirmed'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}",
+                "status"
+              ]
+            },
+            "description": "scheduled → confirmed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Registrar prontuário em atendimento não realizado (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Status error', function () { pm.expect(pm.response.json().errors.status[0]).to.eql('O prontuário só pode ser registrado em atendimentos realizados.'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}/eye-exam",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}",
+                "eye-exam"
+              ]
+            },
+            "description": "422 em `status`: o prontuário só é aceito em atendimentos `completed`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diagnosis\": \"Teste\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Marcar atendimento como realizado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Completed', function () { pm.expect(pm.response.json().data.status).to.eql('completed'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}",
+                "status"
+              ]
+            },
+            "description": "confirmed → completed (status final).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Alterar status de atendimento finalizado (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Transition error', function () { pm.expect(pm.response.json().errors.status[0]).to.eql('Não é possível alterar o status de \"realizado\" para \"cancelado\".'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}",
+                "status"
+              ]
+            },
+            "description": "completed é final: 422 em `status`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"cancelled\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Prontuário inválido (eixo sem cilíndrico - 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+                  "const errors = pm.response.json().errors;",
+                  "pm.test('Field errors', function () {",
+                  "  pm.expect(errors['oe.spherical'][0]).to.eql('O campo esférico (OE) deve ser múltiplo de 0.25.');",
+                  "  pm.expect(errors['oe.axis'][0]).to.eql('O campo eixo (OE) deve ficar vazio quando o cilíndrico é zero ou não informado.');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}/eye-exam",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}",
+                "eye-exam"
+              ]
+            },
+            "description": "422: esférico fora do passo de 0.25 e eixo informado com cilíndrico zero.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oe\": {\n    \"spherical\": -1.1,\n    \"cylindrical\": 0,\n    \"axis\": 90\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Registrar prontuário oftalmológico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const exam = pm.response.json().data.eye_exam;",
+                  "pm.test('Exam saved as numbers', function () {",
+                  "  pm.expect(exam.od.spherical).to.eql(-1.25);",
+                  "  pm.expect(exam.od.axis).to.eql(180);",
+                  "  pm.expect(exam.oe.axis).to.eql(null);",
+                  "  pm.expect(exam.diagnosis).to.eql('Miopia leve com astigmatismo.');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}/eye-exam",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}",
+                "eye-exam"
+              ]
+            },
+            "description": "Cria ou substitui o prontuário (200 com o atendimento).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"od\": {\n    \"visual_acuity_sc\": \"20/40\",\n    \"visual_acuity_cc\": \"20/20\",\n    \"spherical\": -1.25,\n    \"cylindrical\": -0.5,\n    \"axis\": 180,\n    \"addition\": null,\n    \"iop\": 14\n  },\n  \"oe\": {\n    \"visual_acuity_sc\": \"20/50\",\n    \"visual_acuity_cc\": \"20/20\",\n    \"spherical\": -1.0,\n    \"cylindrical\": 0,\n    \"axis\": null,\n    \"addition\": null,\n    \"iop\": 15\n  },\n  \"diagnosis\": \"Miopia leve com astigmatismo.\",\n  \"observations\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Receita de óculos (PDF)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('PDF attachment', function () {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "  const date = pm.collectionVariables.get('consultationDate').replace(/-/g, '');",
+                  "  pm.expect(pm.response.headers.get('Content-Disposition')).to.eql('attachment; filename=\"receita-' + pm.collectionVariables.get('consultationId') + '-' + date + '.pdf\"');",
+                  "  pm.expect(pm.response.text().startsWith('%PDF-')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/pdf"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}/prescription",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}",
+                "prescription"
+              ]
+            },
+            "description": "PDF `receita-<id>-AAAAMMDD.pdf` com a data do atendimento."
+          }
+        },
+        {
+          "name": "Atualizar atendimento finalizado (só anotações)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Notes updated', function () { pm.expect(pm.response.json().data.notes).to.eql('Óculos prescritos.'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}"
+              ]
+            },
+            "description": "Em atendimento finalizado só `notes` pode mudar; os demais campos são reenviados iguais.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduled_at\": \"{{consultationDate}}T10:00:00-03:00\",\n  \"duration_minutes\": 30,\n  \"professional_name\": \"{{professional}}\",\n  \"professional_crm\": \"CRM-SP 123456\",\n  \"reason\": \"Dificuldade para enxergar de longe.\",\n  \"notes\": \"Óculos prescritos.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Atualizar campo de atendimento finalizado (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Only duration rejected', function () { pm.expect(Object.keys(pm.response.json().errors)).to.eql(['duration_minutes']); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}"
+              ]
+            },
+            "description": "422: a duração não pode mudar em atendimento finalizado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduled_at\": \"{{consultationDate}}T10:00:00-03:00\",\n  \"duration_minutes\": 60,\n  \"professional_name\": \"{{professional}}\",\n  \"professional_crm\": \"CRM-SP 123456\",\n  \"reason\": \"Dificuldade para enxergar de longe.\",\n  \"notes\": \"Óculos prescritos.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Detalhar atendimento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const detail = pm.response.json().data;",
+                  "pm.test('Patient and exam included', function () {",
+                  "  pm.expect(detail.patient.id).to.eql(Number(pm.collectionVariables.get('consultationPatientId')));",
+                  "  pm.expect(detail.eye_exam.od.cylindrical).to.eql(-0.5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}"
+              ]
+            },
+            "description": "Com `patient` e `eye_exam`."
+          }
+        },
+        {
+          "name": "Listar atendimentos do paciente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('One consultation', function () { pm.expect(pm.response.json().meta.total).to.eql(1); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{consultationPatientId}}/consultations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{consultationPatientId}}",
+                "consultations"
+              ]
+            },
+            "description": "Paginado, `scheduled_at` decrescente."
+          }
+        },
+        {
+          "name": "Linha do tempo do paciente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const entries = pm.response.json().data;",
+                  "pm.test('Consultation (future) first, then the creation audit', function () {",
+                  "  pm.expect(entries.map((e) => e.type)).to.eql(['consultation', 'audit']);",
+                  "  pm.expect(entries[0].occurred_at).to.eql(entries[0].consultation.scheduled_at);",
+                  "  pm.expect(entries[1].audit.event).to.eql('created');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{consultationPatientId}}/timeline?per_page=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{consultationPatientId}}",
+                "timeline"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Atendimentos e histórico de alterações, do mais recente para o mais antigo."
+          }
+        },
+        {
+          "name": "Excluir paciente dos atendimentos (limpeza)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{consultationPatientId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{consultationPatientId}}"
+              ]
+            },
+            "description": "Envia o paciente de teste para a lixeira: seus atendimentos saem da agenda."
+          }
+        },
+        {
+          "name": "Detalhar atendimento de paciente excluído (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Message', function () { pm.expect(pm.response.json().message).to.eql('Atendimento não encontrado.'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultations/{{consultationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultations",
+                "{{consultationId}}"
+              ]
+            },
+            "description": "Atendimentos de pacientes na lixeira retornam 404."
+          }
+        }
+      ]
     }
   ]
 }

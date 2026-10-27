@@ -7,7 +7,7 @@ return [
     'title' => 'API de Pacientes',
 
     // A short description of your API. Will be included in the docs webpage, Postman collection and OpenAPI spec.
-    'description' => 'API REST para cadastro, consulta, edição e exclusão (soft delete) de pacientes.',
+    'description' => 'API REST para cadastro, consulta, edição e exclusão (soft delete) de pacientes, atendimentos, prontuário oftalmológico e receita de óculos.',
 
     // The base URL displayed in the docs. If this is empty, Scribe will use the value of config('app.url') at generation time.
     // If you're using `laravel` type, you can set this to a dynamic string, like '{{ config("app.tenant_url") }}' to get a dynamic base URL.
@@ -135,6 +135,10 @@ A exclusão é lógica (soft delete): o paciente deixa de aparecer na listagem e
 CPF, RG e celular são armazenados criptografados no banco (a API sempre devolve os valores em claro); por isso
 a busca por CPF exige o CPF completo. Cada alteração de paciente fica registrada no histórico (`/patients/{id}/audits`).
 
+Atendimentos: datas e horas em ISO-8601, com fuso (`2026-11-03T14:30:00-03:00`) ou sem fuso (interpretado em
+America/Sao_Paulo); as respostas sempre trazem o deslocamento de São Paulo. Os campos clínicos livres (`reason`,
+`notes`, `diagnosis`, `observations`) são armazenados criptografados.
+
 <aside>Os exemplos de requisição (bash e JavaScript) ficam na área escura à direita. Use o botão
 "Try it out" de cada endpoint para enviar uma requisição real à API.</aside>
 INTRO
@@ -181,7 +185,7 @@ INTRO
         // By default, Scribe will sort groups alphabetically, and endpoints in the order their routes are defined.
         // You can override this by listing the groups, subgroups and endpoints here in the order you want them.
         // See https://scribe.knuckles.wtf/blog/laravel-v4#easier-sorting and https://scribe.knuckles.wtf/laravel/reference/config#order for details
-        'order' => ['Pacientes', 'Monitoramento'],
+        'order' => ['Pacientes', 'Atendimentos', 'Monitoramento'],
     ],
 
     // Custom logo path. This will be used as the value of the src attribute for the <img> tag,
