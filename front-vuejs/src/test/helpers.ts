@@ -34,6 +34,12 @@ import {
   BIconPersonX,
   BIconPlus,
   BIconXCircle,
+  BIconCamera,
+  BIconCloudUpload,
+  BIconFileEarmark,
+  BIconFileEarmarkImage,
+  BIconPaperclip,
+  BIconUpload,
 } from "bootstrap-vue";
 import VueRouter from "vue-router";
 
@@ -76,6 +82,12 @@ export function makeLocalVue() {
     BIconPersonX,
     BIconPlus,
     BIconXCircle,
+    BIconCamera,
+    BIconCloudUpload,
+    BIconFileEarmark,
+    BIconFileEarmarkImage,
+    BIconPaperclip,
+    BIconUpload,
   }).forEach(([name, component]) => localVue.component(name, component));
   return localVue;
 }

@@ -159,3 +159,53 @@ describe("PatientDetailView clinical tabs", () => {
     expect(tab("Dados").attributes("aria-selected")).toBe("true");
   });
 });
+
+describe("PatientDetailView address and photo", () => {
+  it("shows '—' without an address and initials without a photo", async () => {
+    await mountDetail();
+    const term = wrapper
+      .findAll("dt")
+      .filter((w) => w.text() === "Endereço")
+      .at(0);
+    expect(term.element.nextElementSibling?.textContent?.trim()).toBe("—");
+    const avatar = wrapper.find(".patient-detail__header .patient-avatar");
+    expect(avatar.attributes("data-initials")).toBe("AS");
+    expect(avatar.attributes("aria-hidden")).toBe("true");
+    expect(wrapper.find("h1").text()).toBe("Ana Souza");
+    expect(wrapper.find("#patient-photo-pick").text()).toBe("Adicionar foto");
+  });
+
+  it("shows the formatted address and the photo with alt text", async () => {
+    vi.mocked(patientService.get).mockResolvedValue({
+      ...patient,
+      photo_url: "http://localhost:8001/api/patients/7/photo?v=2",
+      address: {
+        cep: "01310100",
+        street: "Avenida Paulista",
+        number: "1578",
+        complement: "Sala 12",
+        neighborhood: "Bela Vista",
+        city: "São Paulo",
+        state: "SP",
+      },
+    });
+    await mountDetail();
+    expect(wrapper.text()).toContain(
+      "Avenida Paulista, 1578 - Sala 12 - Bela Vista · São Paulo/SP · CEP 01310-100"
+    );
+    const img = wrapper.find(".patient-detail__header img");
+    expect(img.attributes("alt")).toBe("Foto de Ana Souza");
+    expect(img.attributes("src")).toBe(
+      "http://localhost:8001/api/patients/7/photo?v=2"
+    );
+    expect(wrapper.find("#patient-photo-pick").text()).toBe("Trocar foto");
+
+    // The photo component reports a removal: the header falls back to initials.
+    wrapper
+      .findComponent({ name: "PatientPhoto" })
+      .vm.$emit("updated", { ...patient, photo_url: null });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".patient-detail__header img").exists()).toBe(false);
+    expect(wrapper.find("#patient-photo-pick").text()).toBe("Adicionar foto");
+  });
+});

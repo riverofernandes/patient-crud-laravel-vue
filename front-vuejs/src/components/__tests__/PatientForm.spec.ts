@@ -126,7 +126,9 @@ describe("PatientForm", () => {
     expect(wrapper.find("#pf-cpf").attributes("aria-describedby")).toBe(
       "pf-cpf-error"
     );
-    expect(wrapper.find("[role='status']").text()).toBe(CPF_TAKEN);
+    expect(wrapper.find(".patient-form > [role='status']").text()).toBe(
+      CPF_TAKEN
+    );
   });
 
   it("does not ask the API for incomplete or invalid CPFs", async () => {

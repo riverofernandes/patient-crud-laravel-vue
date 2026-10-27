@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   auditChanges,
+  auditEventDescription,
   auditEventIcon,
   auditEventLabel,
   formatAuditValue,
@@ -50,5 +51,86 @@ describe("audit formatting", () => {
 
   it("handles empty changes (PHP serializes {} as [])", () => {
     expect(auditChanges({ changes: [] })).toEqual([]);
+  });
+});
+
+describe("audit formatting (Sprint 5: address and photo)", () => {
+  it("labels address fields in form order and formats CEP/UF", () => {
+    const changes = auditChanges({
+      changes: {
+        "address.city": { old: null, new: "São Paulo" },
+        "address.cep": { old: null, new: "01310100" },
+        "address.state": { old: "rj", new: "sp" },
+        name: { old: "A", new: "B" },
+      },
+    });
+    expect(changes.map((c) => c.label)).toEqual([
+      "Nome completo",
+      "Endereço: CEP",
+      "Endereço: Cidade",
+      "Endereço: UF",
+    ]);
+    expect(changes[1]).toMatchObject({ old: "—", new: "01310-100" });
+    expect(changes[3]).toMatchObject({ old: "RJ", new: "SP" });
+  });
+
+  it("formats photo changes without exposing the stored value", () => {
+    expect(formatAuditValue("photo", "photos/abc.jpg")).toBe("Com foto");
+    expect(formatAuditValue("photo", true)).toBe("Com foto");
+    expect(formatAuditValue("photo", false)).toBe("—");
+    expect(formatAuditValue("photo", null)).toBe("—");
+    expect(formatAuditValue("photo", "adicionada")).toBe("Adicionada");
+    expect(formatAuditValue("photo", "Removida")).toBe("Removida");
+    expect(
+      auditChanges({ changes: { photo: { old: null, new: "v2" } } })
+    ).toEqual([
+      {
+        field: "photo",
+        label: "Foto",
+        old: "—",
+        new: "Com foto",
+        summary: "Alterada",
+      },
+    ]);
+    const summary = (value: string | null) =>
+      auditChanges({ changes: { photo: { old: null, new: value } } })[0]
+        .summary;
+    expect(summary("adicionada")).toBe("Adicionada");
+    expect(summary("alterada")).toBe("Alterada");
+    expect(summary("removida")).toBe("Removida");
+    expect(summary(null)).toBe("Removida");
+    expect(summary("false")).toBe("Removida");
+  });
+
+  it("labels and describes the photo event", () => {
+    expect(auditEventLabel("photo")).toBe("Foto");
+    expect(auditEventIcon("photo")).toBe("b-icon-camera");
+    expect(auditEventDescription("photo")).toBe("Foto alterada.");
+    expect(auditEventDescription("photo", { changes: [] })).toBe(
+      "Foto alterada."
+    );
+    expect(
+      auditEventDescription("photo", {
+        changes: { photo: { old: null, new: "abc" } },
+      })
+    ).toBe("Foto atualizada.");
+    expect(
+      auditEventDescription("photo", {
+        changes: { photo: { old: null, new: "adicionada" } },
+      })
+    ).toBe("Foto adicionada.");
+    expect(
+      auditEventDescription("photo", {
+        changes: { photo: { old: "abc", new: null } },
+      })
+    ).toBe("Foto removida.");
+    expect(
+      auditEventDescription("photo", {
+        changes: { photo_path: { old: "abc", new: "" } },
+      })
+    ).toBe("Foto removida.");
+    expect(auditEventDescription("updated", { changes: [] })).toBe(
+      "Nenhum campo alterado."
+    );
   });
 });

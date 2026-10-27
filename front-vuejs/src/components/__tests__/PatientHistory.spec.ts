@@ -188,3 +188,51 @@ describe("PatientHistory time zone", () => {
     expect(wrapper.find(".history-item time").text()).toBe("26/10/2026 23:00");
   });
 });
+
+describe("PatientHistory address and photo entries", () => {
+  it("lists address changes with their labels and describes photo events", async () => {
+    audits.mockResolvedValueOnce(
+      page(
+        [
+          {
+            id: 10,
+            event: "photo",
+            changes: { photo: { old: "v1", new: null } },
+            created_at: "2026-10-29T10:00:00-03:00",
+          },
+          {
+            id: 9,
+            event: "updated",
+            changes: { photo: { old: null, new: "adicionada" } },
+            created_at: "2026-10-28T10:00:00-03:00",
+          },
+          {
+            id: 8,
+            event: "updated",
+            changes: {
+              "address.cep": { old: null, new: "01310100" },
+              "address.street": { old: null, new: "Avenida Paulista" },
+            },
+            created_at: "2026-10-27T10:00:00-03:00",
+          },
+        ],
+        1,
+        1,
+        3
+      )
+    );
+    await mountHistory();
+    const [photo, added, address] = items().wrappers;
+    expect(photo.find(".history-item__title strong").text()).toBe("Foto");
+    expect(photo.find(".history-item__text").text()).toBe("Foto removida.");
+    // The API's format: an "updated" entry with changes.photo = marker.
+    expect(added.find(".history-change__field").text()).toBe("Foto");
+    expect(added.find(".history-change__summary").text()).toBe("Adicionada");
+    expect(added.find("del").exists()).toBe(false);
+    const fields = address
+      .findAll(".history-change__field")
+      .wrappers.map((w) => w.text());
+    expect(fields).toEqual(["Endereço: CEP", "Endereço: Rua"]);
+    expect(address.find(".history-change__new").text()).toBe("01310-100");
+  });
+});

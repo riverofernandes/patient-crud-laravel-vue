@@ -334,4 +334,34 @@ describe("PatientListView filters and export", () => {
     expect(click).toHaveBeenCalled();
     click.mockRestore();
   });
+
+  it("shows a decorative avatar without changing the name cell's text", async () => {
+    list.mockResolvedValue({
+      data: [
+        { ...patients[0], photo_url: "http://api/patients/1/photo?v=1" },
+        { ...patients[0], id: 2, name: "Bruno Lima", photo_url: null },
+      ],
+      meta: {
+        current_page: 1,
+        last_page: 1,
+        per_page: 10,
+        total: 2,
+        from: 1,
+        to: 2,
+      },
+    });
+    await mountList();
+    const cells = wrapper.findAll("tbody tr td:first-child");
+    expect(cells.at(0).element.textContent).toBe("Ana Souza");
+    expect(cells.at(1).element.textContent).toBe("Bruno Lima");
+    const photo = cells.at(0).find(".patient-avatar");
+    expect(photo.attributes("aria-hidden")).toBe("true");
+    expect(photo.find("img").attributes("alt")).toBe("");
+    expect(photo.find("img").attributes("src")).toBe(
+      "http://api/patients/1/photo?v=1"
+    );
+    const initials = cells.at(1).find(".patient-avatar");
+    expect(initials.attributes("data-initials")).toBe("BL");
+    expect(initials.attributes("aria-hidden")).toBe("true");
+  });
 });
