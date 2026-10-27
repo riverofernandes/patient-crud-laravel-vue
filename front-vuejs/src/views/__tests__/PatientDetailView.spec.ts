@@ -5,6 +5,7 @@ import type Vue from "vue";
 import type VueRouter from "vue-router";
 import PatientDetailView from "../PatientDetailView.vue";
 import { patientService, type Patient } from "@/services/patientService";
+import { consultationService } from "@/services/consultationService";
 import { flushPromises, makeLocalVue, makeRouter } from "@/test/helpers";
 
 vi.mock("@/services/patientService", () => ({
@@ -14,6 +15,9 @@ vi.mock("@/services/patientService", () => ({
     remove: vi.fn(),
     restore: vi.fn(),
   },
+}));
+vi.mock("@/services/consultationService", () => ({
+  consultationService: { listByPatient: vi.fn(), timeline: vi.fn() },
 }));
 vi.mock("@/utils/notify", () => ({ notify: vi.fn() }));
 
@@ -103,5 +107,55 @@ describe("PatientDetailView tabs", () => {
       page: 1,
       per_page: 10,
     });
+  });
+});
+
+describe("PatientDetailView clinical tabs", () => {
+  const empty = {
+    data: [],
+    meta: {
+      current_page: 1,
+      last_page: 1,
+      per_page: 10,
+      total: 0,
+      from: null,
+      to: null,
+    },
+  };
+
+  beforeEach(() => {
+    vi.mocked(consultationService.listByPatient).mockReset();
+    vi.mocked(consultationService.listByPatient).mockResolvedValue(empty);
+    vi.mocked(consultationService.timeline).mockReset();
+    vi.mocked(consultationService.timeline).mockResolvedValue(empty);
+  });
+
+  it("keeps Dados first and Histórico second, then the new tabs", async () => {
+    await mountDetail();
+    expect(
+      wrapper.findAll("[role='tab']").wrappers.map((t) => t.text())
+    ).toEqual(["Dados", "Histórico", "Atendimentos", "Linha do tempo"]);
+  });
+
+  it("deep links ?aba=atendimentos and ?aba=linha-do-tempo, lazily loaded", async () => {
+    await mountDetail("/pacientes/7?aba=atendimentos");
+    expect(tab("Atendimentos").attributes("aria-selected")).toBe("true");
+    expect(consultationService.listByPatient).toHaveBeenCalledTimes(1);
+    expect(consultationService.timeline).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain("Nenhum atendimento registrado");
+
+    await tab("Linha do tempo").trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.query).toEqual({ aba: "linha-do-tempo" });
+    expect(consultationService.timeline).toHaveBeenCalledTimes(1);
+
+    await tab("Dados").trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.query).toEqual({});
+  });
+
+  it("ignores an unknown ?aba", async () => {
+    await mountDetail("/pacientes/7?aba=xyz");
+    expect(tab("Dados").attributes("aria-selected")).toBe("true");
   });
 });

@@ -22,16 +22,22 @@ npm run dev                  # http://localhost:5173 (listens on all interfaces)
 
 ```
 src/
-  services/       api.ts (axios instance + error helpers), patientService.ts (typed CRUD)
+  services/       api.ts (axios instance + error helpers), patientService.ts (typed CRUD),
+                  consultationService.ts (consultations, agenda, status, eye exam, prescription PDF, timeline)
   composables/    usePatient.ts (load one patient: loading / 404 / error)
   components/     AppLayout, AppBreadcrumb, PatientForm, FormField, DetailItem,
-                  ConfirmDeleteModal, PageState, PatientFilters, ExportCsvButton, PatientHistory
-  views/          PatientListView, PatientCreateView, PatientDetailView, PatientEditView, NotFoundView
+                  ConfirmDeleteModal, PageState, PatientFilters, ExportCsvButton, PatientHistory,
+                  PatientConsultations, PatientTimeline, ConsultationForm, ConsultationStatusActions,
+                  StatusBadge, EyeExamForm, EyeExamView, DiopterInput
+  views/          PatientListView, PatientCreateView, PatientDetailView, PatientEditView, NotFoundView,
+                  AgendaView, ConsultationCreateView, ConsultationDetailView
   utils/          format.ts (CPF/RG/phone/date masks, DD/MM/AAAA <-> YYYY-MM-DD, age, date-time),
                   validation.ts (CPF check digits, e-mail), notify.ts (toasts, optional action),
                   restore.ts (restore from trash + toast), debounce.ts,
                   filters.ts (sex/age filters <-> query, validation), download.ts (CSV filename + save),
-                  audit.ts (history labels/formatting)
+                  audit.ts (history labels/formatting), datetime.ts (America/Sao_Paulo dates, week math),
+                  consultationStatus.ts (labels, transitions, actions), eyeExam.ts (diopters, rules),
+                  agenda.ts (?semana/?status/?profissional), timeline.ts (keys, merge, day groups)
   test/           helpers for component tests (localVue with BootstrapVue, in-memory router)
   styles/         _variables.scss (design tokens + Bootstrap overrides), main.scss
 ```
@@ -43,13 +49,21 @@ src/
 | `/` | Listing with search (`?search=`, name or full CPF), filters (`?sex=M\|F&age_min=&age_max=`, 0–150), pagination (`?page=`, `?per_page=` 10/25/50), sorting (`?sort=name\|birth_date&direction=asc\|desc`), "Exportar CSV", detail/edit/delete actions |
 | `/pacientes/lixeira` | Trash ("Pacientes excluídos"): search, pagination, "Restaurar", "Exportar CSV" (`trashed=only`) |
 | `/pacientes/novo` | Create |
-| `/pacientes/:id` | Detail with tabs "Dados" / "Histórico" (`?aba=historico`) |
+| `/pacientes/:id` | Detail with tabs "Dados" / "Histórico" / "Atendimentos" / "Linha do tempo" (`?aba=historico\|atendimentos\|linha-do-tempo`) |
+| `/pacientes/:id/atendimentos/novo` | New consultation (Data, Hora, Duração, Profissional, CRM, Queixa principal, Anotações) |
+| `/atendimentos/:id` | Consultation: summary, status actions, edit (notes only in final states), prontuário (OD/OE) and "Baixar receita (PDF)" when completed |
+| `/agenda` | Weekly agenda Mon–Sun (`?semana=YYYY-MM-DD`, Monday; `?status=a,b`; `?profissional=`), quick status actions |
 | `/pacientes/:id/editar` | Edit |
 
 Export downloads `GET /patients/export` through axios as a Blob (errors become a toast). The filename comes from
 `Content-Disposition` when the API exposes it to the browser (`Access-Control-Expose-Headers`), otherwise it is
 built locally as `pacientes-AAAAMMDD-HHMM.csv`. The history tab is loaded the first time it opens and pages with
 "Carregar mais"; the request IP / user agent are not shown (without login they identify no one — data minimization).
+
+Consultation dates follow America/Sao_Paulo (fixed UTC−03:00, no DST since 2019): API datetimes are read as
+São Paulo wall clock, `scheduled_at` is sent as `YYYY-MM-DDTHH:mm` (the API reads it in São Paulo) and week ranges
+are computed on `Date.UTC` dates, so nothing depends on the browser's zone. Diopters are shown as `+1.25` / `−0.50`
+in 0.25 steps (arrow keys or −/+); the axis is only enabled when the cylinder is not 0.
 
 Notes: dates are converted by string splitting (never `new Date('YYYY-MM-DD')`, which shifts a day in UTC-3);
 CPF/RG/phone are sent unmasked; server 422 `errors` are mapped onto the form fields.

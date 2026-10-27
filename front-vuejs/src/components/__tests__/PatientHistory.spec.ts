@@ -91,6 +91,8 @@ describe("PatientHistory", () => {
       /^Edição,\s*\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/
     );
     expect(edit.find("time").attributes("datetime")).toBe(updated.created_at);
+    // São Paulo wall clock (the fixture carries the −03:00 offset).
+    expect(edit.find("time").text()).toBe("27/10/2026 10:00");
     const rows = edit
       .findAll(".history-change")
       .wrappers.map((w) => w.text().replace(/\s+/g, " "));
@@ -174,5 +176,15 @@ describe("PatientHistory", () => {
     await alert.find("button").trigger("click");
     await flushPromises();
     expect(items()).toHaveLength(1);
+  });
+});
+
+describe("PatientHistory time zone", () => {
+  it("an audit at 02:00Z shows the previous day 23:00 (São Paulo)", async () => {
+    audits.mockResolvedValueOnce(
+      page([{ ...created, created_at: "2026-10-27T02:00:00Z" }], 1, 1, 1)
+    );
+    await mountHistory();
+    expect(wrapper.find(".history-item time").text()).toBe("26/10/2026 23:00");
   });
 });
