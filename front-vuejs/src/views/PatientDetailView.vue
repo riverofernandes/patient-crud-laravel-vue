@@ -63,7 +63,13 @@
         </b-tab>
         <b-tab title="Histórico" title-link-class="patient-tabs__link">
           <!-- Mounted the first time the tab opens, then kept (no reloads). -->
-          <PatientHistory v-if="historyOpened" :patient-id="id" />
+          <PatientHistory v-if="opened.historico" :patient-id="id" />
+        </b-tab>
+        <b-tab title="Atendimentos" title-link-class="patient-tabs__link">
+          <PatientConsultations v-if="opened.atendimentos" :patient-id="id" />
+        </b-tab>
+        <b-tab title="Linha do tempo" title-link-class="patient-tabs__link">
+          <PatientTimeline v-if="opened['linha-do-tempo']" :patient-id="id" />
         </b-tab>
       </b-tabs>
 
@@ -96,7 +102,9 @@ import AppBreadcrumb, {
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal.vue";
 import DetailItem from "@/components/DetailItem.vue";
 import PageState from "@/components/PageState.vue";
+import PatientConsultations from "@/components/PatientConsultations.vue";
 import PatientHistory from "@/components/PatientHistory.vue";
+import PatientTimeline from "@/components/PatientTimeline.vue";
 import { usePatient } from "@/composables/usePatient";
 import { focusHeadingIfParked } from "@/utils/routeFocus";
 import type { Patient } from "@/services/patientService";
@@ -109,7 +117,8 @@ import {
   patientAge,
 } from "@/utils/format";
 
-const HISTORY_TAB = "historico";
+/** `?aba=` slug of each tab, in order ("Dados" has none). */
+export const TABS = ["", "historico", "atendimentos", "linha-do-tempo"];
 
 export default defineComponent({
   name: "PatientDetailView",
@@ -118,7 +127,9 @@ export default defineComponent({
     ConfirmDeleteModal,
     DetailItem,
     PageState,
+    PatientConsultations,
     PatientHistory,
+    PatientTimeline,
   },
   props: {
     id: { type: String, required: true },
@@ -129,19 +140,22 @@ export default defineComponent({
   data() {
     return {
       patientToDelete: null as Patient | null,
-      historyOpened: false,
+      /** Tabs mounted so far (each loads the first time it opens, then stays). */
+      opened: {} as Record<string, boolean>,
     };
   },
   computed: {
     /** Active tab, kept in the query (`?aba=historico`) so it can be linked. */
     tabIndex: {
       get(): number {
-        return this.$route.query.aba === HISTORY_TAB ? 1 : 0;
+        const aba = this.$route.query.aba;
+        const index = typeof aba === "string" && aba ? TABS.indexOf(aba) : 0;
+        return index > 0 ? index : 0;
       },
       set(index: number): void {
         if (index === this.tabIndex) return;
         const query = { ...this.$route.query };
-        if (index === 1) query.aba = HISTORY_TAB;
+        if (index > 0 && TABS[index]) query.aba = TABS[index];
         else delete query.aba;
         this.$router.replace({ query }).catch(() => undefined);
       },
@@ -157,7 +171,8 @@ export default defineComponent({
     tabIndex: {
       immediate: true,
       handler(index: number) {
-        if (index === 1) this.historyOpened = true;
+        const slug = TABS[index];
+        if (slug) this.$set(this.opened, slug, true);
       },
     },
     patient(value: Patient | null) {
@@ -266,6 +281,23 @@ export default defineComponent({
 @media (max-width: 767.98px) {
   .patient-detail {
     min-height: 0;
+  }
+}
+
+// Four tabs do not fit a phone: one scrollable row instead of wrapping.
+@media (max-width: 575.98px) {
+  .patient-tabs ::v-deep .patient-tabs__nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .patient-tabs ::v-deep .patient-tabs__nav .nav-item {
+    flex: 0 0 auto;
+  }
+
+  .patient-tabs ::v-deep .patient-tabs__link {
+    white-space: nowrap;
   }
 }
 </style>

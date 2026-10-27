@@ -4,6 +4,7 @@
  * Dates are always handled as plain strings (YYYY-MM-DD <-> DD/MM/AAAA) to
  * avoid timezone shifts caused by `new Date('YYYY-MM-DD')` (parsed as UTC).
  */
+import { splitDateTime } from "./datetime";
 
 export function onlyDigits(value: string | null | undefined): string {
   return (value ?? "").replace(/\D/g, "");
@@ -140,13 +141,13 @@ export function patientAge(patient: {
   return formatAge(patient.age ?? ageFromBirthDate(patient.birth_date));
 }
 
-/** ISO-8601 datetime -> DD/MM/AAAA HH:mm in the browser's local time. */
+/**
+ * ISO-8601 datetime -> DD/MM/AAAA HH:mm in America/Sao_Paulo (UTC−03:00, no
+ * DST), whatever the browser's time zone. Same wall clock as the new screens.
+ */
 export function formatDateTime(value: string | null | undefined): string {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(date.getDate())}/${pad(
-    date.getMonth() + 1
-  )}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const { date, time } = splitDateTime(value);
+  if (!date) return "";
+  const [y, m, d] = date.split("-");
+  return `${d}/${m}/${y} ${time}`;
 }

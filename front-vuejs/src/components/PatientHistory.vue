@@ -99,19 +99,13 @@ import { notify } from "@/utils/notify";
 import { formatDateTime } from "@/utils/format";
 import {
   auditChanges,
+  auditEventDescription,
   auditEventIcon,
   auditEventLabel,
   type FormattedChange,
 } from "@/utils/audit";
 
 export const HISTORY_PER_PAGE = 10;
-
-const DESCRIPTIONS: Record<string, string> = {
-  created: "Paciente cadastrado.",
-  updated: "Nenhum campo alterado.",
-  deleted: "Paciente movido para a lixeira.",
-  restored: "Paciente restaurado da lixeira.",
-};
 
 /**
  * Change history of a patient (newest first), loaded when mounted — the detail
@@ -157,9 +151,7 @@ export default defineComponent({
     changesOf(audit: Audit): FormattedChange[] {
       return auditChanges(audit);
     },
-    eventDescription(event: string): string {
-      return DESCRIPTIONS[event] ?? "";
-    },
+    eventDescription: auditEventDescription,
     async load(): Promise<void> {
       this.loading = true;
       this.error = "";

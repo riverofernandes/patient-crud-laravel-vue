@@ -33,6 +33,19 @@ import {
   BIconTrash,
   BIconTrashFill,
   BIconX,
+  BIconCalendarCheck,
+  BIconCalendarPlus,
+  BIconCalendarWeek,
+  BIconCheckCircle,
+  BIconCircle,
+  BIconClipboardCheck,
+  BIconClock,
+  BIconDash,
+  BIconFileEarmarkMedical,
+  BIconFileEarmarkPdf,
+  BIconPersonX,
+  BIconPlus,
+  BIconXCircle,
 } from "bootstrap-vue";
 
 import App from "./App.vue";
@@ -79,6 +92,19 @@ const icons = {
   BIconTrash,
   BIconTrashFill,
   BIconX,
+  BIconCalendarCheck,
+  BIconCalendarPlus,
+  BIconCalendarWeek,
+  BIconCheckCircle,
+  BIconCircle,
+  BIconClipboardCheck,
+  BIconClock,
+  BIconDash,
+  BIconFileEarmarkMedical,
+  BIconFileEarmarkPdf,
+  BIconPersonX,
+  BIconPlus,
+  BIconXCircle,
 };
 Object.entries(icons).forEach(([name, component]) =>
   Vue.component(name, component)

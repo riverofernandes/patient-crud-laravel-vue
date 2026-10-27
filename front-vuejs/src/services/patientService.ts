@@ -1,5 +1,4 @@
-import axios from "axios";
-import { api } from "./api";
+import { api, parseBlobError } from "./api";
 import {
   exportFilename,
   filenameFromContentDisposition,
@@ -102,21 +101,6 @@ function filterParams(params: ExportParams): ExportParams {
   if (params.age_min !== undefined) query.age_min = params.age_min;
   if (params.age_max !== undefined) query.age_max = params.age_max;
   return query;
-}
-
-/**
- * With `responseType: "blob"` an error body is a Blob too: turn it back into
- * JSON so getErrorMessage() can read the API's `message`.
- */
-async function parseBlobError(error: unknown): Promise<never> {
-  if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
-    try {
-      error.response.data = JSON.parse(await error.response.data.text());
-    } catch {
-      error.response.data = undefined;
-    }
-  }
-  throw error;
 }
 
 export interface CpfAvailability {

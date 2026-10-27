@@ -14,6 +14,15 @@
           <b-icon-people aria-hidden="true" />
         </router-link>
         <router-link
+          :to="{ name: 'agenda' }"
+          class="app-sidebar__link"
+          :class="{ 'is-active': isAgendaSection }"
+          aria-label="Agenda"
+          title="Agenda"
+        >
+          <b-icon-calendar-week aria-hidden="true" />
+        </router-link>
+        <router-link
           :to="{ name: 'patients.trash' }"
           class="app-sidebar__link"
           :class="{ 'is-active': isTrashSection }"
@@ -62,7 +71,13 @@ export default defineComponent({
   computed: {
     isPatientsSection(): boolean {
       const name = this.$route.name ?? "";
-      return name.startsWith("patients.") && !this.isTrashSection;
+      return (
+        (name.startsWith("patients.") || name.startsWith("consultations.")) &&
+        !this.isTrashSection
+      );
+    },
+    isAgendaSection(): boolean {
+      return this.$route.name === "agenda";
     },
     isTrashSection(): boolean {
       return this.$route.name === "patients.trash";

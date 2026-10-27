@@ -34,6 +34,18 @@ const FORMATTERS: Record<string, (value: string) => string> = {
   sex: formatSex,
 };
 
+const DESCRIPTIONS: Record<string, string> = {
+  created: "Paciente cadastrado.",
+  updated: "Nenhum campo alterado.",
+  deleted: "Paciente movido para a lixeira.",
+  restored: "Paciente restaurado da lixeira.",
+};
+
+/** Text shown when an entry has no changed-field list. */
+export function auditEventDescription(event: string): string {
+  return DESCRIPTIONS[event] ?? "";
+}
+
 export function auditEventLabel(event: string): string {
   return AUDIT_EVENTS[event as AuditEvent]?.label ?? event;
 }
