@@ -2,6 +2,8 @@
 
 namespace App\Exceptions;
 
+use App\Models\Consultation;
+use App\Models\Patient;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
@@ -37,9 +39,13 @@ class Handler extends ExceptionHandler
                 return null;
             }
 
-            $message = $e->getPrevious() instanceof ModelNotFoundException
-                ? 'Paciente não encontrado.'
-                : 'Recurso não encontrado.';
+            $previous = $e->getPrevious();
+
+            $message = match ($previous instanceof ModelNotFoundException ? $previous->getModel() : null) {
+                Patient::class => 'Paciente não encontrado.',
+                Consultation::class => 'Atendimento não encontrado.',
+                default => 'Recurso não encontrado.',
+            };
 
             return response()->json(['message' => $message], 404);
         });

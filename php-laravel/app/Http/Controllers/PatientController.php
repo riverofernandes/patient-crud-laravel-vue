@@ -9,6 +9,7 @@ use App\Http\Resources\PatientResource;
 use App\Models\Patient;
 use App\Rules\UniqueActiveCpf;
 use App\Support\PatientCsv;
+use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -27,10 +28,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class PatientController extends Controller
 {
-    private const DEFAULT_PER_PAGE = 10;
-
-    private const MAX_PER_PAGE = 100;
-
     /** Rows fetched per query while streaming the CSV export (values are decrypted in PHP). */
     private const EXPORT_CHUNK = 500;
 
@@ -58,7 +55,7 @@ class PatientController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $patients = $this->filteredQuery($request)
-            ->paginate($this->perPage($request))
+            ->paginate(PerPage::from($request))
             ->withQueryString();
 
         return PatientResource::collection($patients);
@@ -253,7 +250,7 @@ class PatientController extends Controller
         $audits = $patient->audits()
             ->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->paginate($this->perPage($request))
+            ->paginate(PerPage::from($request))
             ->withQueryString();
 
         return AuditResource::collection($audits);
@@ -277,16 +274,5 @@ class PatientController extends Controller
             ->ofSex($request->query('sex'))
             ->ageBetween($request->query('age_min'), $request->query('age_max'))
             ->sorted($request->query('sort'), $request->query('direction'));
-    }
-
-    /**
-     * `per_page` between 1 and 100 (invalid -> 10, larger -> 100).
-     */
-    private function perPage(Request $request): int
-    {
-        $perPage = filter_var($request->query('per_page'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])
-            ?: self::DEFAULT_PER_PAGE;
-
-        return min($perPage, self::MAX_PER_PAGE);
     }
 }
