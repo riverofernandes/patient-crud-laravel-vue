@@ -19,7 +19,8 @@ class PatientFactory extends Factory
 
         return [
             'name' => $this->faker->firstName($gender).' '.$this->faker->lastName().' '.$this->faker->lastName(),
-            'cpf' => $this->faker->unique()->cpf(false),
+            // pt_BR provider method, called through format() so static analysis sees a declared method.
+            'cpf' => (string) $this->faker->unique()->format('cpf', [false]),
             'rg' => $this->faker->numerify('#########'),
             'birth_date' => $this->faker->dateTimeBetween('-90 years', '-1 year')->format('Y-m-d'),
             'sex' => $sex,

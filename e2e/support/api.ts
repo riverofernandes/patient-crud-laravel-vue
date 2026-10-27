@@ -77,6 +77,34 @@ export class PatientApi {
     return patients;
   }
 
+  /** Full replacement (PUT): every editable field of `patient`, with `changes` applied. */
+  async updatePatient(patient: Patient, changes: Partial<PatientPayload>): Promise<Patient> {
+    const payload: PatientPayload = {
+      name: patient.name,
+      cpf: patient.cpf,
+      rg: patient.rg,
+      birth_date: patient.birth_date,
+      sex: patient.sex,
+      phone: patient.phone,
+      email: patient.email,
+      description: patient.description,
+      ...changes,
+    };
+    const res = await this.send("put", `patients/${patient.id}`, { data: payload });
+    if (res.status() !== 200) throw new Error(`PUT /patients/${patient.id} failed: ${res.status()} ${await res.text()}`);
+    return (await res.json()).data as Patient;
+  }
+
+  /** GET /patients with arbitrary query params (raw response). */
+  async list(params: Record<string, string | number>): Promise<APIResponse> {
+    return this.send("get", "patients", { params });
+  }
+
+  /** GET /patients/{id}/audits (raw response, so callers can assert 200/404 and meta). */
+  async audits(id: number, params: Record<string, string | number> = {}): Promise<APIResponse> {
+    return this.send("get", `patients/${id}/audits`, { params });
+  }
+
   async getPatient(id: number): Promise<APIResponse> {
     return this.send("get", `patients/${id}`);
   }

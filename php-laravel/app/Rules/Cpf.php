@@ -20,7 +20,7 @@ class Cpf implements ValidationRule
             return false;
         }
 
-        $cpf = preg_replace('/\D/', '', (string) $value);
+        $cpf = (string) preg_replace('/\D/', '', (string) $value);
 
         if (strlen($cpf) !== 11 || preg_match('/^(\d)\1{10}$/', $cpf)) {
             return false;

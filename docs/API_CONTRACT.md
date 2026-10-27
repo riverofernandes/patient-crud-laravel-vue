@@ -23,6 +23,8 @@ Todas as respostas são JSON. Header recomendado: `Accept: application/json`.
 
 Formatação visual (máscaras de CPF/RG/celular, data `DD/MM/AAAA`) é responsabilidade do front-end.
 
+CPF, RG e celular são armazenados **criptografados** no banco (chave da aplicação). A unicidade e a busca por CPF usam um hash determinístico (blind index); a API sempre devolve os valores em claro.
+
 Exclusão é **soft delete** (`deleted_at`). Pacientes excluídos não aparecem na listagem e retornam 404 no detalhe. Um CPF de paciente excluído pode ser reutilizado.
 
 ## Endpoints
@@ -32,12 +34,15 @@ Query params:
 
 | Param       | Default | Descrição |
 |-------------|---------|-----------|
-| `search`    | —       | Nome parcial ou CPF, com ou sem máscara |
+| `search`    | —       | Nome parcial, ou CPF **completo** (11 dígitos, com ou sem máscara). CPF parcial não é buscável, pois o CPF é armazenado criptografado |
 | `page`      | 1       | Página |
 | `per_page`  | 10      | Itens por página (1–100; inválido → 10) |
 | `sort`      | `name`  | `name` \| `birth_date` \| `created_at` (valor fora da lista → `name`) |
 | `direction` | `asc`   | `asc` \| `desc`, minúsculos (inválido → `asc`). Desempate sempre por `id` asc |
 | `trashed`   | —       | `only` lista **apenas** pacientes excluídos (lixeira) |
+| `sex`       | —       | `M` \| `F` (outro valor é ignorado) |
+| `age_min`   | —       | Idade mínima em anos completos, inteiro 0–150 (inválido é ignorado) |
+| `age_max`   | —       | Idade máxima em anos completos, inteiro 0–150 (inválido é ignorado) |
 
 Na lixeira (`trashed=only`) cada item traz `deleted_at` preenchido; nas demais respostas `deleted_at` é `null`.
 
@@ -62,6 +67,42 @@ Body: todos os campos editáveis (substituição completa). `200 { "data": Patie
 
 ### `DELETE /patients/{id}`
 Soft delete. `204` sem corpo · `404`
+
+### `GET /patients/export`
+Exporta pacientes em CSV. Aceita os mesmos filtros e ordenação da listagem (`search`, `sex`, `age_min`, `age_max`, `sort`, `direction`, `trashed`), sem paginação.
+
+- `200`, `Content-Type: text/csv; charset=UTF-8`, `Content-Disposition: attachment; filename="pacientes-AAAAMMDD-HHMM.csv"` (horário de America/Sao_Paulo).
+- UTF-8 com BOM, separador `;` (abre direto no Excel em pt-BR), quebra de linha `\r\n`.
+- Cabeçalho: `Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição` (+ `;Excluído em` quando `trashed=only`).
+- Valores formatados: CPF `000.000.000-00`, celular `(00) 00000-0000`, datas `DD/MM/AAAA`, sexo `Masculino`/`Feminino`.
+- Células que começam com `=`, `+`, `-`, `@`, tab ou CR recebem um `'` na frente (proteção contra injeção de fórmulas).
+
+### `GET /patients/{id}/audits`
+Histórico de alterações do paciente, do mais recente para o mais antigo, paginado (`page`, `per_page` como na listagem). Funciona também para pacientes na lixeira. `404` se o id não existir.
+
+```json
+200
+{
+  "data": [
+    {
+      "id": 10,
+      "event": "updated",
+      "changes": { "name": { "old": "Ana Souza", "new": "Ana Souza Lima" }, "phone": { "old": "11900000000", "new": "11911111111" } },
+      "ip": "172.18.0.1",
+      "user_agent": "Mozilla/5.0 ...",
+      "user_id": null,
+      "created_at": "2026-10-27T10:00:00-03:00"
+    }
+  ],
+  "links": { ... },
+  "meta": { ... }
+}
+```
+
+- `event`: `created` \| `updated` \| `deleted` \| `restored`.
+- `changes`: em `created`, todos os campos com `old: null`; em `updated`, só os campos alterados; em `deleted`/`restored`, `{}`. Campos: `name`, `cpf`, `rg`, `birth_date`, `sex`, `phone`, `email`, `description` (valores crus, como na API).
+- `user_id` é sempre `null` enquanto a API não tem autenticação.
+- Os valores de `changes` também são armazenados criptografados.
 
 ### `POST /patients/{id}/restore`
 Restaura um paciente da lixeira. `200 { "data": Patient }` ·

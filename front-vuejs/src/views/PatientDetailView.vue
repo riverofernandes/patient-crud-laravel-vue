@@ -27,30 +27,45 @@
     <article v-else-if="patient" class="app-card patient-detail">
       <h1 class="card-title-lg">{{ patient.name }}</h1>
 
-      <div class="patient-detail__body">
-        <dl class="patient-grid patient-grid--row1">
-          <DetailItem label="Nome completo" :value="patient.name" />
-          <DetailItem label="CPF" :value="maskCpf(patient.cpf)" />
-          <DetailItem label="RG" :value="maskRg(patient.rg)" />
-        </dl>
-        <dl class="patient-grid patient-grid--with-age">
-          <DetailItem
-            label="Data de nascimento"
-            :value="isoToBr(patient.birth_date)"
-          />
-          <DetailItem label="Idade" :value="patientAge(patient)" />
-          <DetailItem label="Sexo biológico" :value="formatSex(patient.sex)" />
-          <DetailItem label="Celular" :value="maskPhone(patient.phone)" />
-          <DetailItem label="E-mail" :value="patient.email" />
-        </dl>
-        <dl>
-          <DetailItem
-            label="Descrição"
-            :value="patient.description"
-            multiline
-          />
-        </dl>
-      </div>
+      <b-tabs
+        v-model="tabIndex"
+        class="patient-tabs"
+        nav-class="patient-tabs__nav"
+      >
+        <b-tab title="Dados" title-link-class="patient-tabs__link">
+          <div class="patient-detail__body">
+            <dl class="patient-grid patient-grid--row1">
+              <DetailItem label="Nome completo" :value="patient.name" />
+              <DetailItem label="CPF" :value="maskCpf(patient.cpf)" />
+              <DetailItem label="RG" :value="maskRg(patient.rg)" />
+            </dl>
+            <dl class="patient-grid patient-grid--with-age">
+              <DetailItem
+                label="Data de nascimento"
+                :value="isoToBr(patient.birth_date)"
+              />
+              <DetailItem label="Idade" :value="patientAge(patient)" />
+              <DetailItem
+                label="Sexo biológico"
+                :value="formatSex(patient.sex)"
+              />
+              <DetailItem label="Celular" :value="maskPhone(patient.phone)" />
+              <DetailItem label="E-mail" :value="patient.email" />
+            </dl>
+            <dl>
+              <DetailItem
+                label="Descrição"
+                :value="patient.description"
+                multiline
+              />
+            </dl>
+          </div>
+        </b-tab>
+        <b-tab title="Histórico" title-link-class="patient-tabs__link">
+          <!-- Mounted the first time the tab opens, then kept (no reloads). -->
+          <PatientHistory v-if="historyOpened" :patient-id="id" />
+        </b-tab>
+      </b-tabs>
 
       <footer class="form-footer">
         <button
@@ -81,6 +96,7 @@ import AppBreadcrumb, {
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal.vue";
 import DetailItem from "@/components/DetailItem.vue";
 import PageState from "@/components/PageState.vue";
+import PatientHistory from "@/components/PatientHistory.vue";
 import { usePatient } from "@/composables/usePatient";
 import { focusHeadingIfParked } from "@/utils/routeFocus";
 import type { Patient } from "@/services/patientService";
@@ -93,9 +109,17 @@ import {
   patientAge,
 } from "@/utils/format";
 
+const HISTORY_TAB = "historico";
+
 export default defineComponent({
   name: "PatientDetailView",
-  components: { AppBreadcrumb, ConfirmDeleteModal, DetailItem, PageState },
+  components: {
+    AppBreadcrumb,
+    ConfirmDeleteModal,
+    DetailItem,
+    PageState,
+    PatientHistory,
+  },
   props: {
     id: { type: String, required: true },
   },
@@ -103,9 +127,25 @@ export default defineComponent({
     return usePatient(toRef(props, "id"));
   },
   data() {
-    return { patientToDelete: null as Patient | null };
+    return {
+      patientToDelete: null as Patient | null,
+      historyOpened: false,
+    };
   },
   computed: {
+    /** Active tab, kept in the query (`?aba=historico`) so it can be linked. */
+    tabIndex: {
+      get(): number {
+        return this.$route.query.aba === HISTORY_TAB ? 1 : 0;
+      },
+      set(index: number): void {
+        if (index === this.tabIndex) return;
+        const query = { ...this.$route.query };
+        if (index === 1) query.aba = HISTORY_TAB;
+        else delete query.aba;
+        this.$router.replace({ query }).catch(() => undefined);
+      },
+    },
     breadcrumb(): BreadcrumbItem[] {
       return [
         { text: "Pacientes", to: { name: "patients.index" } },
@@ -114,6 +154,12 @@ export default defineComponent({
     },
   },
   watch: {
+    tabIndex: {
+      immediate: true,
+      handler(index: number) {
+        if (index === 1) this.historyOpened = true;
+      },
+    },
     patient(value: Patient | null) {
       if (!value) return;
       document.title = `${value.name} | EyeCare`;
@@ -135,6 +181,8 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+@import "@/styles/variables";
+
 .patient-detail {
   display: flex;
   flex-direction: column;
@@ -142,7 +190,7 @@ export default defineComponent({
 }
 
 .patient-detail__body {
-  padding-top: 32px;
+  padding-top: 24px;
 
   dl {
     margin: 0;
@@ -164,6 +212,45 @@ export default defineComponent({
   .patient-grid--with-age {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+// Tabs: underline style in the app's colors.
+.patient-tabs {
+  margin-top: 16px;
+}
+
+.patient-tabs ::v-deep .patient-tabs__nav {
+  gap: 8px;
+  border-bottom: 1px solid $border;
+}
+
+.patient-tabs ::v-deep .patient-tabs__link {
+  margin-bottom: -1px;
+  padding: 10px 4px;
+  color: $text-muted;
+  font-weight: 700;
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+
+  &:hover {
+    color: $navy;
+  }
+
+  &.active {
+    color: $blue;
+    border-bottom-color: $blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.patient-tabs ::v-deep .patient-tabs__nav .nav-item + .nav-item {
+  margin-left: 16px;
 }
 
 .form-footer {

@@ -3,8 +3,9 @@
 name: Pacientes
 description: |-
 
-  Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
-  exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
+  Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+  criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+  disponibilidade de CPF.
 endpoints:
   -
     httpMethods:
@@ -14,8 +15,9 @@ endpoints:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
-        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
+        Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+        criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+        disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Verificar disponibilidade de CPF'
@@ -82,14 +84,216 @@ endpoints:
     custom: []
   -
     httpMethods:
+      - GET
+    uri: api/patients/export
+    metadata:
+      groupName: Pacientes
+      groupDescription: |-
+
+        Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+        criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+        disponibilidade de CPF.
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Exportar pacientes (CSV)'
+      description: |-
+        Baixa os pacientes em CSV, com os mesmos filtros e ordenação da listagem (`search`, `sex`, `age_min`,
+        `age_max`, `sort`, `direction`, `trashed`) e sem paginação. Arquivo UTF-8 com BOM, separador `;` e
+        quebra de linha CRLF (abre direto no Excel em pt-BR), nome `pacientes-AAAAMMDD-HHMM.csv` (horário de
+        Brasília). Valores formatados: CPF `000.000.000-00`, celular `(00) 00000-0000`, datas `DD/MM/AAAA`,
+        sexo `Masculino`/`Feminino`; com `trashed=only` há a coluna extra `Excluído em` (`DD/MM/AAAA HH:MM`).
+        Células que começam com `=`, `+`, `-`, `@`, tab ou CR recebem um `'` na frente (proteção contra
+        injeção de fórmulas). O "Try it out" mostra o CSV como texto; para baixar o arquivo, abra a URL no
+        navegador.
+      authenticated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters:
+      search:
+        name: search
+        description: 'Nome parcial ou CPF completo (como na listagem).'
+        required: false
+        example: maria
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      sex:
+        name: sex
+        description: '`M` ou `F`.'
+        required: false
+        example: F
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      age_min:
+        name: age_min
+        description: 'Idade mínima (0 a 150).'
+        required: false
+        example: 18
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      age_max:
+        name: age_max
+        description: 'Idade máxima (0 a 150).'
+        required: false
+        example: 65
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      sort:
+        name: sort
+        description: '`name`, `birth_date` ou `created_at`. Padrão: `name`.'
+        required: false
+        example: name
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      direction:
+        name: direction
+        description: '`asc` ou `desc`. Padrão: `asc`.'
+        required: false
+        example: asc
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      trashed:
+        name: trashed
+        description: '`only` exporta apenas a lixeira (com a coluna `Excluído em`).'
+        required: false
+        example: only
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+    cleanQueryParameters:
+      search: maria
+      sex: F
+      age_min: 18
+      age_max: 65
+      sort: name
+      direction: asc
+      trashed: only
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição
+          Maria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;"Paciente com miopia leve; retorno anual."
+        headers: []
+        description: 'CSV (com BOM UTF-8)'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - GET
+    uri: 'api/patients/{patient_id}/audits'
+    metadata:
+      groupName: Pacientes
+      groupDescription: |-
+
+        Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+        criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+        disponibilidade de CPF.
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Histórico de alterações do paciente'
+      description: |-
+        Lista as alterações do paciente, da mais recente para a mais antiga (desempate por `id` decrescente),
+        paginadas como a listagem. Funciona também para pacientes na lixeira. `event` é `created`, `updated`,
+        `deleted` ou `restored`; `changes` traz `{campo: {old, new}}` com os valores crus (como na API): todos os
+        campos em `created`, só os alterados em `updated` e `{}` em `deleted`/`restored`. `user_id` é sempre
+        `null` enquanto a API não tem autenticação. Os valores ficam criptografados no banco.
+      authenticated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      patient_id:
+        name: patient_id
+        description: 'ID do paciente (ativo ou na lixeira).'
+        required: true
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+    cleanUrlParameters:
+      patient_id: 1
+    queryParameters:
+      page:
+        name: page
+        description: 'Página desejada. Padrão: 1.'
+        required: false
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      per_page:
+        name: per_page
+        description: 'Itens por página. Padrão: 10; máximo: 100.'
+        required: false
+        example: 10
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+    cleanQueryParameters:
+      page: 1
+      per_page: 10
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: '{"data": [{"id": 2, "event": "updated", "changes": {"name": {"old": "Maria da Silva", "new": "Maria da Silva Lima"}, "phone": {"old": "11928535718", "new": "11911111111"}}, "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64)", "user_id": null, "created_at": "2026-10-27T10:00:00-03:00"}, {"id": 1, "event": "created", "changes": {"name": {"old": null, "new": "Maria da Silva"}, "cpf": {"old": null, "new": "62518953060"}, "rg": {"old": null, "new": "35688019X"}, "birth_date": {"old": null, "new": "1996-07-20"}, "sex": {"old": null, "new": "F"}, "phone": {"old": null, "new": "11928535718"}, "email": {"old": null, "new": "maria@example.com"}, "description": {"old": null, "new": null}}, "ip": "172.18.0.1", "user_agent": "Mozilla/5.0 (X11; Linux x86_64)", "user_id": null, "created_at": "2026-10-26T15:30:00-03:00"}], "links": {"first": "http://localhost:8000/api/patients/1/audits?page=1", "last": "http://localhost:8000/api/patients/1/audits?page=1", "prev": null, "next": null}, "meta": {"current_page": 1, "from": 1, "last_page": 1, "links": [{"url": null, "label": "&laquo; Previous", "active": false}, {"url": "http://localhost:8000/api/patients/1/audits?page=1", "label": "1", "active": true}, {"url": null, "label": "Next &raquo;", "active": false}], "path": "http://localhost:8000/api/patients/1/audits", "per_page": 10, "to": 2, "total": 2}}'
+        headers: []
+        description: Sucesso
+        custom: []
+      -
+        status: 404
+        content: '{"message": "Paciente não encontrado."}'
+        headers: []
+        description: 'Paciente não encontrado'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
       - POST
     uri: 'api/patients/{patient_id}/restore'
     metadata:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
-        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
+        Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+        criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+        disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Restaurar paciente'
@@ -151,8 +355,9 @@ endpoints:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
-        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
+        Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+        criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+        disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Listar pacientes'
@@ -160,6 +365,8 @@ endpoints:
         Retorna os pacientes ativos (não excluídos), com paginação no formato padrão do Laravel. Com `trashed=only`,
         lista apenas os pacientes da lixeira (excluídos), com `deleted_at` preenchido; busca, ordenação e paginação
         continuam valendo. Cada paciente traz `age` (idade em anos completos no fuso America/Sao_Paulo).
+        Os filtros (`search`, `sex`, `age_min`, `age_max`) se combinam entre si e com a lixeira; todos os
+        parâmetros são mantidos nos links de paginação.
       authenticated: false
       custom: []
     headers:
@@ -170,10 +377,37 @@ endpoints:
     queryParameters:
       search:
         name: search
-        description: 'Busca por parte do nome ou pelo CPF (com ou sem máscara).'
+        description: 'Busca por parte do nome, ou pelo CPF **completo** (11 dígitos, com ou sem máscara). CPF parcial não é buscável: o CPF é armazenado criptografado.'
         required: false
         example: maria
         type: string
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      sex:
+        name: sex
+        description: 'Filtra por sexo: `M` ou `F` (outro valor é ignorado).'
+        required: false
+        example: F
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      age_min:
+        name: age_min
+        description: 'Idade mínima em anos completos (0 a 150; valor inválido é ignorado).'
+        required: false
+        example: 18
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+      age_max:
+        name: age_max
+        description: 'Idade máxima em anos completos (0 a 150; valor inválido é ignorado).'
+        required: false
+        example: 65
+        type: integer
         enumValues: []
         exampleWasSpecified: true
         custom: []
@@ -224,6 +458,9 @@ endpoints:
         custom: []
     cleanQueryParameters:
       search: maria
+      sex: F
+      age_min: 18
+      age_max: 65
       page: 1
       per_page: 10
       sort: name
@@ -319,8 +556,9 @@ endpoints:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
-        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
+        Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+        criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+        disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Cadastrar paciente'
@@ -448,8 +686,9 @@ endpoints:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
-        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
+        Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+        criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+        disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Detalhar paciente'
@@ -504,8 +743,9 @@ endpoints:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
-        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
+        Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+        criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+        disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Atualizar paciente'
@@ -647,8 +887,9 @@ endpoints:
       groupName: Pacientes
       groupDescription: |-
 
-        Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
-        exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.
+        Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+        criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+        disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
       title: 'Excluir paciente'

@@ -74,6 +74,12 @@
                                                     <li class="tocify-item level-2" data-unique="pacientes-GETapi-patients-cpf-availability">
                                 <a href="#pacientes-GETapi-patients-cpf-availability">Verificar disponibilidade de CPF</a>
                             </li>
+                                                                                <li class="tocify-item level-2" data-unique="pacientes-GETapi-patients-export">
+                                <a href="#pacientes-GETapi-patients-export">Exportar pacientes (CSV)</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="pacientes-GETapi-patients--patient_id--audits">
+                                <a href="#pacientes-GETapi-patients--patient_id--audits">Histórico de alterações do paciente</a>
+                            </li>
                                                                                 <li class="tocify-item level-2" data-unique="pacientes-POSTapi-patients--patient_id--restore">
                                 <a href="#pacientes-POSTapi-patients--patient_id--restore">Restaurar paciente</a>
                             </li>
@@ -128,7 +134,9 @@
 <p>Esta documentação descreve a API REST do cadastro de pacientes.</p>
 <p>Todas as respostas são JSON; envie o header <code>Accept: application/json</code>. CPF, RG e celular aceitam máscara
 na entrada e são armazenados e retornados apenas com dígitos. Datas usam o formato <code>AAAA-MM-DD</code>.
-A exclusão é lógica (soft delete): o paciente deixa de aparecer na listagem e passa a retornar 404.</p>
+A exclusão é lógica (soft delete): o paciente deixa de aparecer na listagem e passa a retornar 404.
+CPF, RG e celular são armazenados criptografados no banco (a API sempre devolve os valores em claro); por isso
+a busca por CPF exige o CPF completo. Cada alteração de paciente fica registrada no histórico (<code>/patients/{id}/audits</code>).</p>
 <aside>Os exemplos de requisição (bash e JavaScript) ficam na área escura à direita. Use o botão
 "Try it out" de cada endpoint para enviar uma requisição real à API.</aside>
 
@@ -137,8 +145,9 @@ A exclusão é lógica (soft delete): o paciente deixa de aparecer na listagem e
 
         <h1 id="pacientes">Pacientes</h1>
 
-    <p>Cadastro de pacientes: listagem com busca, ordenação e paginação, detalhe, criação, atualização,
-exclusão lógica (lixeira), restauração e verificação de disponibilidade de CPF.</p>
+    <p>Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+disponibilidade de CPF.</p>
 
                                 <h2 id="pacientes-GETapi-patients-cpf-availability">Verificar disponibilidade de CPF</h2>
 
@@ -313,6 +322,484 @@ You can check the Dev Tools console for debugging information.</code></pre>
             </div>
                 </form>
 
+                    <h2 id="pacientes-GETapi-patients-export">Exportar pacientes (CSV)</h2>
+
+<p>
+</p>
+
+<p>Baixa os pacientes em CSV, com os mesmos filtros e ordenação da listagem (<code>search</code>, <code>sex</code>, <code>age_min</code>,
+<code>age_max</code>, <code>sort</code>, <code>direction</code>, <code>trashed</code>) e sem paginação. Arquivo UTF-8 com BOM, separador <code>;</code> e
+quebra de linha CRLF (abre direto no Excel em pt-BR), nome <code>pacientes-AAAAMMDD-HHMM.csv</code> (horário de
+Brasília). Valores formatados: CPF <code>000.000.000-00</code>, celular <code>(00) 00000-0000</code>, datas <code>DD/MM/AAAA</code>,
+sexo <code>Masculino</code>/<code>Feminino</code>; com <code>trashed=only</code> há a coluna extra <code>Excluído em</code> (<code>DD/MM/AAAA HH:MM</code>).
+Células que começam com <code>=</code>, <code>+</code>, <code>-</code>, <code>@</code>, tab ou CR recebem um <code>'</code> na frente (proteção contra
+injeção de fórmulas). O &quot;Try it out&quot; mostra o CSV como texto; para baixar o arquivo, abra a URL no
+navegador.</p>
+
+<span id="example-requests-GETapi-patients-export">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/patients/export?search=maria&amp;sex=F&amp;age_min=18&amp;age_max=65&amp;sort=name&amp;direction=asc&amp;trashed=only" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/patients/export"
+);
+
+const params = {
+    "search": "maria",
+    "sex": "F",
+    "age_min": "18",
+    "age_max": "65",
+    "sort": "name",
+    "direction": "asc",
+    "trashed": "only",
+};
+Object.keys(params)
+    .forEach(key =&gt; url.searchParams.append(key, params[key]));
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-patients-export">
+            <blockquote>
+            <p>Example response (200, CSV (com BOM UTF-8)):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descri&ccedil;&atilde;o
+Maria da Silva;625.189.530-60;35688019X;20/07/1996;30;Feminino;(11) 92853-5718;maria@example.com;&quot;Paciente com miopia leve; retorno anual.&quot;</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-patients-export" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-patients-export"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-patients-export"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-patients-export" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-patients-export">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-patients-export" data-method="GET"
+      data-path="api/patients/export"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-patients-export', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-patients-export"
+                    onclick="tryItOut('GETapi-patients-export');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-patients-export"
+                    onclick="cancelTryOut('GETapi-patients-export');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-patients-export"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/patients/export</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-patients-export"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-patients-export"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                            <h4 class="fancy-heading-panel"><b>Query Parameters</b></h4>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>search</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="search"                data-endpoint="GETapi-patients-export"
+               value="maria"
+               data-component="query">
+    <br>
+<p>Nome parcial ou CPF completo (como na listagem). Example: <code>maria</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>sex</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="sex"                data-endpoint="GETapi-patients-export"
+               value="F"
+               data-component="query">
+    <br>
+<p><code>M</code> ou <code>F</code>. Example: <code>F</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>age_min</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="age_min"                data-endpoint="GETapi-patients-export"
+               value="18"
+               data-component="query">
+    <br>
+<p>Idade mínima (0 a 150). Example: <code>18</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>age_max</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="age_max"                data-endpoint="GETapi-patients-export"
+               value="65"
+               data-component="query">
+    <br>
+<p>Idade máxima (0 a 150). Example: <code>65</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>sort</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="sort"                data-endpoint="GETapi-patients-export"
+               value="name"
+               data-component="query">
+    <br>
+<p><code>name</code>, <code>birth_date</code> ou <code>created_at</code>. Padrão: <code>name</code>. Example: <code>name</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>direction</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="direction"                data-endpoint="GETapi-patients-export"
+               value="asc"
+               data-component="query">
+    <br>
+<p><code>asc</code> ou <code>desc</code>. Padrão: <code>asc</code>. Example: <code>asc</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>trashed</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="trashed"                data-endpoint="GETapi-patients-export"
+               value="only"
+               data-component="query">
+    <br>
+<p><code>only</code> exporta apenas a lixeira (com a coluna <code>Excluído em</code>). Example: <code>only</code></p>
+            </div>
+                </form>
+
+                    <h2 id="pacientes-GETapi-patients--patient_id--audits">Histórico de alterações do paciente</h2>
+
+<p>
+</p>
+
+<p>Lista as alterações do paciente, da mais recente para a mais antiga (desempate por <code>id</code> decrescente),
+paginadas como a listagem. Funciona também para pacientes na lixeira. <code>event</code> é <code>created</code>, <code>updated</code>,
+<code>deleted</code> ou <code>restored</code>; <code>changes</code> traz <code>{campo: {old, new}}</code> com os valores crus (como na API): todos os
+campos em <code>created</code>, só os alterados em <code>updated</code> e <code>{}</code> em <code>deleted</code>/<code>restored</code>. <code>user_id</code> é sempre
+<code>null</code> enquanto a API não tem autenticação. Os valores ficam criptografados no banco.</p>
+
+<span id="example-requests-GETapi-patients--patient_id--audits">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost:8000/api/patients/1/audits?page=1&amp;per_page=10" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/patients/1/audits"
+);
+
+const params = {
+    "page": "1",
+    "per_page": "10",
+};
+Object.keys(params)
+    .forEach(key =&gt; url.searchParams.append(key, params[key]));
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-patients--patient_id--audits">
+            <blockquote>
+            <p>Example response (200, Sucesso):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: [
+        {
+            &quot;id&quot;: 2,
+            &quot;event&quot;: &quot;updated&quot;,
+            &quot;changes&quot;: {
+                &quot;name&quot;: {
+                    &quot;old&quot;: &quot;Maria da Silva&quot;,
+                    &quot;new&quot;: &quot;Maria da Silva Lima&quot;
+                },
+                &quot;phone&quot;: {
+                    &quot;old&quot;: &quot;11928535718&quot;,
+                    &quot;new&quot;: &quot;11911111111&quot;
+                }
+            },
+            &quot;ip&quot;: &quot;172.18.0.1&quot;,
+            &quot;user_agent&quot;: &quot;Mozilla/5.0 (X11; Linux x86_64)&quot;,
+            &quot;user_id&quot;: null,
+            &quot;created_at&quot;: &quot;2026-10-27T10:00:00-03:00&quot;
+        },
+        {
+            &quot;id&quot;: 1,
+            &quot;event&quot;: &quot;created&quot;,
+            &quot;changes&quot;: {
+                &quot;name&quot;: {
+                    &quot;old&quot;: null,
+                    &quot;new&quot;: &quot;Maria da Silva&quot;
+                },
+                &quot;cpf&quot;: {
+                    &quot;old&quot;: null,
+                    &quot;new&quot;: &quot;62518953060&quot;
+                },
+                &quot;rg&quot;: {
+                    &quot;old&quot;: null,
+                    &quot;new&quot;: &quot;35688019X&quot;
+                },
+                &quot;birth_date&quot;: {
+                    &quot;old&quot;: null,
+                    &quot;new&quot;: &quot;1996-07-20&quot;
+                },
+                &quot;sex&quot;: {
+                    &quot;old&quot;: null,
+                    &quot;new&quot;: &quot;F&quot;
+                },
+                &quot;phone&quot;: {
+                    &quot;old&quot;: null,
+                    &quot;new&quot;: &quot;11928535718&quot;
+                },
+                &quot;email&quot;: {
+                    &quot;old&quot;: null,
+                    &quot;new&quot;: &quot;maria@example.com&quot;
+                },
+                &quot;description&quot;: {
+                    &quot;old&quot;: null,
+                    &quot;new&quot;: null
+                }
+            },
+            &quot;ip&quot;: &quot;172.18.0.1&quot;,
+            &quot;user_agent&quot;: &quot;Mozilla/5.0 (X11; Linux x86_64)&quot;,
+            &quot;user_id&quot;: null,
+            &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;
+        }
+    ],
+    &quot;links&quot;: {
+        &quot;first&quot;: &quot;http://localhost:8000/api/patients/1/audits?page=1&quot;,
+        &quot;last&quot;: &quot;http://localhost:8000/api/patients/1/audits?page=1&quot;,
+        &quot;prev&quot;: null,
+        &quot;next&quot;: null
+    },
+    &quot;meta&quot;: {
+        &quot;current_page&quot;: 1,
+        &quot;from&quot;: 1,
+        &quot;last_page&quot;: 1,
+        &quot;links&quot;: [
+            {
+                &quot;url&quot;: null,
+                &quot;label&quot;: &quot;&amp;laquo; Previous&quot;,
+                &quot;active&quot;: false
+            },
+            {
+                &quot;url&quot;: &quot;http://localhost:8000/api/patients/1/audits?page=1&quot;,
+                &quot;label&quot;: &quot;1&quot;,
+                &quot;active&quot;: true
+            },
+            {
+                &quot;url&quot;: null,
+                &quot;label&quot;: &quot;Next &amp;raquo;&quot;,
+                &quot;active&quot;: false
+            }
+        ],
+        &quot;path&quot;: &quot;http://localhost:8000/api/patients/1/audits&quot;,
+        &quot;per_page&quot;: 10,
+        &quot;to&quot;: 2,
+        &quot;total&quot;: 2
+    }
+}</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Paciente não encontrado):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Paciente n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-patients--patient_id--audits" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-patients--patient_id--audits"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-patients--patient_id--audits"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-patients--patient_id--audits" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-patients--patient_id--audits">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-patients--patient_id--audits" data-method="GET"
+      data-path="api/patients/{patient_id}/audits"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-patients--patient_id--audits', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-patients--patient_id--audits"
+                    onclick="tryItOut('GETapi-patients--patient_id--audits');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-patients--patient_id--audits"
+                    onclick="cancelTryOut('GETapi-patients--patient_id--audits');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-patients--patient_id--audits"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/patients/{patient_id}/audits</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-patients--patient_id--audits"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-patients--patient_id--audits"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>patient_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="patient_id"                data-endpoint="GETapi-patients--patient_id--audits"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do paciente (ativo ou na lixeira). Example: <code>1</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>Query Parameters</b></h4>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>page</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="page"                data-endpoint="GETapi-patients--patient_id--audits"
+               value="1"
+               data-component="query">
+    <br>
+<p>Página desejada. Padrão: 1. Example: <code>1</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>per_page</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="per_page"                data-endpoint="GETapi-patients--patient_id--audits"
+               value="10"
+               data-component="query">
+    <br>
+<p>Itens por página. Padrão: 10; máximo: 100. Example: <code>10</code></p>
+            </div>
+                </form>
+
                     <h2 id="pacientes-POSTapi-patients--patient_id--restore">Restaurar paciente</h2>
 
 <p>
@@ -482,7 +969,9 @@ You can check the Dev Tools console for debugging information.</code></pre>
 
 <p>Retorna os pacientes ativos (não excluídos), com paginação no formato padrão do Laravel. Com <code>trashed=only</code>,
 lista apenas os pacientes da lixeira (excluídos), com <code>deleted_at</code> preenchido; busca, ordenação e paginação
-continuam valendo. Cada paciente traz <code>age</code> (idade em anos completos no fuso America/Sao_Paulo).</p>
+continuam valendo. Cada paciente traz <code>age</code> (idade em anos completos no fuso America/Sao_Paulo).
+Os filtros (<code>search</code>, <code>sex</code>, <code>age_min</code>, <code>age_max</code>) se combinam entre si e com a lixeira; todos os
+parâmetros são mantidos nos links de paginação.</p>
 
 <span id="example-requests-GETapi-patients">
 <blockquote>Example request:</blockquote>
@@ -490,7 +979,7 @@ continuam valendo. Cada paciente traz <code>age</code> (idade em anos completos 
 
 <div class="bash-example">
     <pre><code class="language-bash">curl --request GET \
-    --get "http://localhost:8000/api/patients?search=maria&amp;page=1&amp;per_page=10&amp;sort=name&amp;direction=asc&amp;trashed=only" \
+    --get "http://localhost:8000/api/patients?search=maria&amp;sex=F&amp;age_min=18&amp;age_max=65&amp;page=1&amp;per_page=10&amp;sort=name&amp;direction=asc&amp;trashed=only" \
     --header "Content-Type: application/json" \
     --header "Accept: application/json"</code></pre></div>
 
@@ -502,6 +991,9 @@ continuam valendo. Cada paciente traz <code>age</code> (idade em anos completos 
 
 const params = {
     "search": "maria",
+    "sex": "F",
+    "age_min": "18",
+    "age_max": "65",
     "page": "1",
     "per_page": "10",
     "sort": "name",
@@ -676,7 +1168,40 @@ You can check the Dev Tools console for debugging information.</code></pre>
                value="maria"
                data-component="query">
     <br>
-<p>Busca por parte do nome ou pelo CPF (com ou sem máscara). Example: <code>maria</code></p>
+<p>Busca por parte do nome, ou pelo CPF <strong>completo</strong> (11 dígitos, com ou sem máscara). CPF parcial não é buscável: o CPF é armazenado criptografado. Example: <code>maria</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>sex</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="sex"                data-endpoint="GETapi-patients"
+               value="F"
+               data-component="query">
+    <br>
+<p>Filtra por sexo: <code>M</code> ou <code>F</code> (outro valor é ignorado). Example: <code>F</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>age_min</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="age_min"                data-endpoint="GETapi-patients"
+               value="18"
+               data-component="query">
+    <br>
+<p>Idade mínima em anos completos (0 a 150; valor inválido é ignorado). Example: <code>18</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>age_max</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="age_max"                data-endpoint="GETapi-patients"
+               value="65"
+               data-component="query">
+    <br>
+<p>Idade máxima em anos completos (0 a 150; valor inválido é ignorado). Example: <code>65</code></p>
             </div>
                                     <div style="padding-left: 28px; clear: unset;">
                 <b style="line-height: 2;"><code>page</code></b>&nbsp;&nbsp;

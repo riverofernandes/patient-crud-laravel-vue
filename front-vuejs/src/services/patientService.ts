@@ -1,4 +1,9 @@
+import axios from "axios";
 import { api } from "./api";
+import {
+  exportFilename,
+  filenameFromContentDisposition,
+} from "@/utils/download";
 
 export type Sex = "M" | "F";
 
@@ -51,6 +56,67 @@ export interface ListParams {
   direction?: SortDirection;
   /** "only" lists the trash (soft-deleted patients). */
   trashed?: "only";
+  sex?: Sex;
+  /** Full years, 0–150. */
+  age_min?: number;
+  age_max?: number;
+}
+
+/** Same filters/sorting as the listing, without pagination. */
+export type ExportParams = Omit<ListParams, "page" | "per_page">;
+
+export interface CsvExport {
+  blob: Blob;
+  filename: string;
+}
+
+export type AuditEvent = "created" | "updated" | "deleted" | "restored";
+
+export interface AuditChange {
+  old: string | null;
+  new: string | null;
+}
+
+export interface Audit {
+  id: number;
+  event: AuditEvent;
+  /** Raw API values (as in Patient); empty for deleted/restored. */
+  changes: Record<string, AuditChange> | [];
+  ip?: string | null;
+  user_agent?: string | null;
+  user_id?: number | null;
+  created_at: string;
+}
+
+/** Export can take longer than a page of the listing. */
+const EXPORT_TIMEOUT = 60000;
+
+/** Copies the optional filter/sort params, skipping unset ones (0 is a valid age). */
+function filterParams(params: ExportParams): ExportParams {
+  const query: ExportParams = {};
+  if (params.search) query.search = params.search;
+  if (params.sort) query.sort = params.sort;
+  if (params.direction) query.direction = params.direction;
+  if (params.trashed) query.trashed = params.trashed;
+  if (params.sex) query.sex = params.sex;
+  if (params.age_min !== undefined) query.age_min = params.age_min;
+  if (params.age_max !== undefined) query.age_max = params.age_max;
+  return query;
+}
+
+/**
+ * With `responseType: "blob"` an error body is a Blob too: turn it back into
+ * JSON so getErrorMessage() can read the API's `message`.
+ */
+async function parseBlobError(error: unknown): Promise<never> {
+  if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+    try {
+      error.response.data = JSON.parse(await error.response.data.text());
+    } catch {
+      error.response.data = undefined;
+    }
+  }
+  throw error;
 }
 
 export interface CpfAvailability {
@@ -65,11 +131,8 @@ export const patientService = {
     const query: ListParams = {
       page: params.page ?? 1,
       per_page: params.per_page ?? 10,
+      ...filterParams(params),
     };
-    if (params.search) query.search = params.search;
-    if (params.sort) query.sort = params.sort;
-    if (params.direction) query.direction = params.direction;
-    if (params.trashed) query.trashed = params.trashed;
     const { data } = await api.get<Paginated<Patient>>(RESOURCE, {
       params: query,
     });
@@ -103,6 +166,42 @@ export const patientService = {
       `${RESOURCE}/${id}/restore`
     );
     return data.data;
+  },
+
+  /**
+   * Downloads the CSV export as a Blob. The filename comes from
+   * Content-Disposition when the browser can read it (cross-origin it needs
+   * Access-Control-Expose-Headers), otherwise it is built locally.
+   */
+  async exportCsv(params: ExportParams = {}): Promise<CsvExport> {
+    const response = await api
+      .get<Blob>(`${RESOURCE}/export`, {
+        params: filterParams(params),
+        responseType: "blob",
+        headers: { Accept: "text/csv, application/json" },
+        timeout: EXPORT_TIMEOUT,
+      })
+      .catch(parseBlobError);
+    const header = response.headers?.["content-disposition"];
+    return {
+      blob: response.data,
+      filename:
+        filenameFromContentDisposition(
+          typeof header === "string" ? header : undefined
+        ) || exportFilename(),
+    };
+  },
+
+  /** Change history, newest first. */
+  async audits(
+    id: number | string,
+    params: { page?: number; per_page?: number } = {}
+  ): Promise<Paginated<Audit>> {
+    const { data } = await api.get<Paginated<Audit>>(
+      `${RESOURCE}/${id}/audits`,
+      { params: { page: params.page ?? 1, per_page: params.per_page ?? 10 } }
+    );
+    return data;
   },
 
   /** Whether a CPF can be used (`ignore` = the patient being edited). */
