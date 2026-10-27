@@ -1,18 +1,26 @@
 import AxeBuilder from "@axe-core/playwright";
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import {
+  addDaysIso,
+  agendaItems,
   deleteDialog,
   detailValue,
   expect,
   field,
+  gotoAgenda,
+  gotoConsultation,
   gotoListing,
   gotoTrash,
+  randomFutureMonday,
   rowFor,
+  statusDialog,
   test,
   trashRows,
+  waitForFadeIn,
   waitForTable,
 } from "../support/fixtures";
-import type { Patient, PatientApi } from "../support/api";
+import type { Consultation, ConsultationStatus, Patient, PatientApi } from "../support/api";
+import { professionalName } from "../support/data";
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 
@@ -25,13 +33,27 @@ async function expectNoA11yViolations(page: Page): Promise<void> {
   expect(summary, "axe violations").toEqual([]);
 }
 
-/** Waits for Bootstrap's fade-in to finish so color-contrast is measured at full opacity. */
-async function waitForFadeIn(locator: Locator): Promise<void> {
-  await expect(locator).toBeVisible();
-  await expect
-    .poll(() => locator.evaluate((el) => getComputedStyle(el.closest(".modal") ?? el).opacity))
-    .toBe("1");
+/** A consultation (far-future week) for `patient`, moved to `status`. */
+async function createConsultation(
+  api: PatientApi,
+  patient: Patient,
+  status: ConsultationStatus = "scheduled",
+  scheduledAt = `${addDaysIso(randomFutureMonday(), 1)}T14:30:00-03:00`
+): Promise<Consultation> {
+  const c = await api.createConsultation(patient.id, {
+    scheduled_at: scheduledAt,
+    professional_name: professionalName("Dra."),
+    professional_crm: "CRM-SP 12345",
+    reason: "Visão embaçada para perto.",
+  });
+  return status === "scheduled" ? c : api.setStatus(c.id, status);
 }
+
+const REFRACTION = {
+  od: { visual_acuity_sc: "20/40", spherical: -1.25, cylindrical: -0.5, axis: 180, iop: 14 },
+  oe: { spherical: -1, addition: 2, iop: 15 },
+  diagnosis: "Miopia leve com astigmatismo.",
+};
 
 for (const viewport of [
   { name: "desktop", width: 1280, height: 900 },
@@ -126,6 +148,82 @@ for (const viewport of [
       await gotoListing(page, patient.name);
       await rowFor(page, patient.name).getByRole("button", { name: `Excluir ${patient.name}` }).click();
       await waitForFadeIn(deleteDialog(page));
+      await expectNoA11yViolations(page);
+    });
+
+    test("agenda com atendimentos e modal de cancelamento", async ({ page, api }) => {
+      const patient = await createPatient(api);
+      const consultation = await createConsultation(api, patient);
+      const day = consultation.scheduled_at.slice(0, 10);
+      await createConsultation(api, patient, "cancelled", `${day}T16:00:00-03:00`); // another badge color
+      await gotoAgenda(page, { semana: day });
+      // (other tests may have rows in the same random week: count only this patient's)
+      await expect(agendaItems(page).filter({ hasText: patient.name })).toHaveCount(2);
+      await expectNoA11yViolations(page);
+
+      await page.getByRole("button", { name: `Cancelar atendimento: atendimento de ${patient.name} às 14:30` }).click();
+      await waitForFadeIn(statusDialog(page, "Cancelar atendimento"));
+      await expectNoA11yViolations(page);
+    });
+
+    test("novo atendimento com erros", async ({ page, api }) => {
+      const patient = await createPatient(api);
+      await page.goto(`/pacientes/${patient.id}/atendimentos/novo`);
+      await expect(page.getByRole("heading", { level: 1, name: "Novo atendimento" })).toBeVisible();
+      await expectNoA11yViolations(page);
+      await page.locator("#cf-date").fill("");
+      await page.getByRole("button", { name: "Agendar atendimento" }).click();
+      await expect(page.locator("#cf-professional")).toHaveAccessibleDescription("Campo obrigatório");
+      await expectNoA11yViolations(page);
+    });
+
+    test("atendimento agendado", async ({ page, api }) => {
+      const consultation = await createConsultation(api, await createPatient(api));
+      await gotoConsultation(page, consultation.id);
+      await expect(page.getByRole("button", { name: "Confirmar" })).toBeVisible();
+      await expectNoA11yViolations(page);
+      await page.getByRole("button", { name: "Editar atendimento" }).click();
+      await expect(page.locator("#cf-time")).toHaveValue("14:30");
+      await expectNoA11yViolations(page);
+    });
+
+    test("atendimento realizado: formulário do prontuário (com erros) e prontuário somente leitura", async ({
+      page,
+      api,
+    }) => {
+      const consultation = await createConsultation(api, await createPatient(api), "completed");
+      await gotoConsultation(page, consultation.id);
+      await expect(page.locator("#ee-od-spherical")).toBeVisible();
+      await expectNoA11yViolations(page);
+
+      await page.locator("#ee-od-iop").fill("99");
+      await page.getByRole("button", { name: "Salvar prontuário" }).click();
+      await expect(page.locator("#ee-od-iop-error")).toBeVisible();
+      await expectNoA11yViolations(page);
+
+      await api.saveEyeExam(consultation.id, REFRACTION);
+      await page.reload();
+      await expect(page.getByRole("button", { name: "Baixar receita (PDF)" })).toBeVisible();
+      await expectNoA11yViolations(page);
+    });
+
+    test("detalhes: abas Atendimentos e Linha do tempo", async ({ page, api }) => {
+      const patient = await createPatient(api);
+      const consultation = await createConsultation(api, patient, "completed");
+      await api.saveEyeExam(consultation.id, REFRACTION);
+
+      await page.goto(`/pacientes/${patient.id}?aba=atendimentos`);
+      const consultations = page.getByRole("tabpanel", { name: "Atendimentos" });
+      await expect(consultations.getByRole("list", { name: "Atendimentos do paciente" })).toBeVisible();
+      await expect(consultations.getByText("Prontuário registrado")).toBeVisible();
+      await waitForFadeIn(consultations);
+      await expectNoA11yViolations(page);
+
+      await page.getByRole("tab", { name: "Linha do tempo" }).click();
+      const timeline = page.getByRole("tabpanel", { name: "Linha do tempo" });
+      await expect(timeline.getByRole("list", { name: "Linha do tempo do paciente" })).toBeVisible();
+      await expect(timeline.getByText(/^Refração:/)).toBeVisible();
+      await waitForFadeIn(timeline);
       await expectNoA11yViolations(page);
     });
 

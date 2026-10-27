@@ -11,9 +11,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  // The API rate limit is shared by the browser and the API helper. A full run sends ~425 requests
-  // in under a minute, above the default 300/min: run the stack with API_RATE_LIMIT=1000 (as CI
-  // does) and keep new tests lean (create only the patients they need).
+  // The API rate limit is shared by the browser and the API helper. A full run sends ~660 requests
+  // (peak ~650 in 60 s), above the default 300/min: run the stack with API_RATE_LIMIT=1000 (as CI
+  // does) and keep new tests lean (create only the patients/consultations they need).
   workers: 2,
   reporter: isCI
     ? [["list"], ["html", { open: "never" }], ["github"]]

@@ -75,3 +75,19 @@ export function buildPatient(overrides: Partial<PatientPayload> = {}): PatientPa
     ...overrides,
   };
 }
+
+/**
+ * Unique professional name ("Dr. E2E Xqzkabcdef"). Conflict checks and the agenda filter are per
+ * professional, so a unique name isolates a test's consultations from the seed and other tests.
+ * Filter the agenda by `tokenOf(name)` (the random part), never by "E2E" (shared by every test).
+ */
+export function professionalName(title = "Dr."): string {
+  return `${title} ${uniqueTag()}`;
+}
+
+/** The random 10-letter token of a name built with `uniqueTag()`. */
+export function tokenOf(name: string): string {
+  const match = /E2E ([A-Z][a-z]{9})/.exec(name);
+  if (!match) throw new Error(`No E2E token in "${name}"`);
+  return match[1];
+}

@@ -22,11 +22,24 @@ test.describe("Edição de paciente", () => {
     const other = await api.createPatient();
     const patient = await api.createPatient();
 
+    // Pretend the CPF is free so the blur check stays quiet: the error must come from the PUT's 422.
+    await page.route("**/patients/cpf-availability**", (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ available: true }) })
+    );
     await page.goto(`/pacientes/${patient.id}/editar`);
     const cpf = field(page, "CPF");
     await expect(cpf).toHaveValue(maskCpf(patient.cpf));
     await cpf.fill(maskCpf(other.cpf));
+    await cpf.blur();
+    await expect(cpf).toHaveAccessibleDescription("");
+
+    const updated = page.waitForResponse(
+      (res) => res.request().method() === "PUT" && new URL(res.url()).pathname.endsWith(`/patients/${patient.id}`)
+    );
     await page.getByRole("button", { name: "Atualizar paciente" }).click();
+    const response = await updated;
+    expect(response.status()).toBe(422);
+    expect((await response.json()).errors.cpf).toEqual(["Já existe um paciente cadastrado com este CPF."]);
 
     await expect(cpf).toHaveAccessibleDescription("Já existe um paciente cadastrado com este CPF.");
     await expect(toast(page, "Verifique os campos destacados para salvar!")).toBeVisible();
