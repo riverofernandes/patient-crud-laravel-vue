@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -30,6 +31,7 @@ use Illuminate\Support\Str;
  * @property Carbon|null $updated_at
  * @property-read Patient|null $patient
  * @property-read EyeExam|null $eyeExam
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, ConsultationAttachment> $attachments
  *
  * @method static Builder<static> occupyingSlot(string $professionalName, CarbonInterface $start, CarbonInterface $end, int|null $ignoreId = null)
  * @method static Builder<static> startingBetween(CarbonInterface $from, CarbonInterface $until)
@@ -87,6 +89,12 @@ class Consultation extends Model
             $consultation->ends_at = $consultation->scheduled_at->copy()->addMinutes($consultation->duration_minutes);
             $consultation->professional_key = self::professionalKey($consultation->professional_name);
         });
+
+        // The database cascade fires no model events: delete the attachments one by one so their encrypted files
+        // are removed too (see ConsultationAttachment).
+        static::deleting(function (Consultation $consultation) {
+            $consultation->attachments()->get()->each(fn (ConsultationAttachment $attachment) => $attachment->delete());
+        });
     }
 
     /**
@@ -113,6 +121,14 @@ class Consultation extends Model
     public function eyeExam(): HasOne
     {
         return $this->hasOne(EyeExam::class);
+    }
+
+    /**
+     * @return HasMany<ConsultationAttachment>
+     */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ConsultationAttachment::class);
     }
 
     /**

@@ -1,9 +1,12 @@
 <?php
 
+use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\CepController;
 use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\EyeExamController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\PatientController;
+use App\Http\Controllers\PatientPhotoController;
 use App\Http\Controllers\PatientTimelineController;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Route;
@@ -69,3 +72,34 @@ Route::put('consultations/{consultation}/eye-exam', [EyeExamController::class, '
 
 Route::get('consultations/{consultation}/prescription', [EyeExamController::class, 'prescription'])
     ->name('consultations.prescription');
+
+// Sprint 5: CEP lookup, patient photo, exam attachments. A patient in the trash is a 404 on all of them.
+// {code} rather than {cep}: Scribe would rename `cep/{cep}` to `cep/{id}` in the docs.
+Route::get('cep/{code}', [CepController::class, 'show'])
+    ->name('cep.show');
+
+// Own limiter: a listing renders one avatar per row, which would otherwise exhaust the API budget
+// and make the next GET /patients fail with 429.
+Route::get('patients/{patient}/photo', [PatientPhotoController::class, 'show'])
+    ->withoutMiddleware(ThrottleRequests::class.':api')
+    ->middleware(ThrottleRequests::class.':photos')
+    ->name('patients.photo.show');
+
+Route::post('patients/{patient}/photo', [PatientPhotoController::class, 'store'])
+    ->name('patients.photo.store');
+
+Route::delete('patients/{patient}/photo', [PatientPhotoController::class, 'destroy'])
+    ->name('patients.photo.destroy');
+
+Route::get('consultations/{consultation}/attachments', [AttachmentController::class, 'index'])
+    ->name('consultations.attachments.index');
+
+Route::post('consultations/{consultation}/attachments', [AttachmentController::class, 'store'])
+    ->name('consultations.attachments.store');
+
+// {attachment} only matches numeric ids and is not found when the patient is in the trash (see ConsultationAttachment).
+Route::get('attachments/{attachment}/download', [AttachmentController::class, 'download'])
+    ->name('attachments.download');
+
+Route::delete('attachments/{attachment}', [AttachmentController::class, 'destroy'])
+    ->name('attachments.destroy');
