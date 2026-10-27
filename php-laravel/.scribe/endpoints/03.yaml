@@ -1,0 +1,74 @@
+name: Endereço
+description: |-
+
+  Consulta de CEP para preencher o endereço do paciente.
+endpoints:
+  -
+    httpMethods:
+      - GET
+    uri: 'api/cep/{code}'
+    metadata:
+      groupName: Endereço
+      groupDescription: |-
+
+        Consulta de CEP para preencher o endereço do paciente.
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Consultar CEP'
+      description: |-
+        Busca o endereço de um CEP no ViaCEP (resultado em cache por 24 horas). Aceita máscara (`01310-100`).
+        Campos vazios no ViaCEP (CEP geral de cidade pequena) voltam como texto vazio. `503` quando o ViaCEP não
+        responde: o endereço pode ser preenchido manualmente.
+      authenticated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      code:
+        name: code
+        description: 'CEP com 8 dígitos, com ou sem máscara.'
+        required: true
+        example: 01310-100
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+    cleanUrlParameters:
+      code: 01310-100
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: '{"data": {"cep": "01310100", "street": "Avenida Paulista", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}}'
+        headers: []
+        description: 'CEP encontrado'
+        custom: []
+      -
+        status: 404
+        content: '{"message": "CEP não encontrado."}'
+        headers: []
+        description: 'CEP inexistente'
+        custom: []
+      -
+        status: 422
+        content: '{"message": "O CEP deve ter 8 dígitos.", "errors": {"cep": ["O CEP deve ter 8 dígitos."]}}'
+        headers: []
+        description: 'Formato inválido'
+        custom: []
+      -
+        status: 503
+        content: '{"message": "Serviço de CEP indisponível. Preencha o endereço manualmente."}'
+        headers: []
+        description: 'ViaCEP indisponível'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []

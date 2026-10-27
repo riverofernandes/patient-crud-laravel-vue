@@ -13,7 +13,17 @@
             "created_at": "2026-10-26T15:30:00-03:00",
             "updated_at": "2026-10-26T15:30:00-03:00",
             "age": 30,
-            "deleted_at": null
+            "deleted_at": null,
+            "address": {
+                "cep": "01310100",
+                "street": "Avenida Paulista",
+                "number": "1578",
+                "complement": null,
+                "neighborhood": "Bela Vista",
+                "city": "São Paulo",
+                "state": "SP"
+            },
+            "photo_url": null
         },
         {
             "id": 2,
@@ -28,7 +38,9 @@
             "created_at": "2026-10-26T15:31:00-03:00",
             "updated_at": "2026-10-26T15:31:00-03:00",
             "age": 46,
-            "deleted_at": null
+            "deleted_at": null,
+            "address": null,
+            "photo_url": null
         }
     ],
     "links": {
