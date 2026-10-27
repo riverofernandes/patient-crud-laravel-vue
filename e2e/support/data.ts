@@ -50,6 +50,31 @@ export function uniqueTag(): string {
   return `E2E ${randomLetters(1).toUpperCase()}${randomLetters(9)}`;
 }
 
+/** Patient address (Sprint 5). `cep` is stored as 8 digits; `state` in upper case. */
+export interface Address {
+  cep: string;
+  street: string;
+  number: string;
+  complement: string | null;
+  neighborhood: string;
+  city: string;
+  state: string;
+}
+
+/** The CEP mock's address (Avenida Paulista), completed with a number and a complement. */
+export function buildAddress(overrides: Partial<Address> = {}): Address {
+  return {
+    cep: "01310100",
+    street: "Avenida Paulista",
+    number: "1578",
+    complement: "Sala 12",
+    neighborhood: "Bela Vista",
+    city: "São Paulo",
+    state: "SP",
+    ...overrides,
+  };
+}
+
 export interface PatientPayload {
   name: string;
   cpf: string;
@@ -59,6 +84,8 @@ export interface PatientPayload {
   phone: string;
   email: string | null;
   description: string | null;
+  /** Optional (Sprint 5); omitted or null = no address. */
+  address?: Address | null;
 }
 
 export function buildPatient(overrides: Partial<PatientPayload> = {}): PatientPayload {

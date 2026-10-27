@@ -11,9 +11,9 @@ import {
   waitForTable,
 } from "../support/fixtures";
 import type { Patient } from "../support/api";
-import { isoToBr, maskCpf, maskPhone, uniqueTag } from "../support/data";
+import { buildAddress, isoToBr, maskCpf, maskPhone, uniqueTag } from "../support/data";
 
-const HEADER = "Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição";
+const HEADER = "Nome;CPF;RG;Data de nascimento;Idade;Sexo;Celular;E-mail;Descrição;CEP;Endereço;Cidade;UF";
 const FILENAME = /^pacientes-(\d{8})-(\d{4})\.csv$/;
 
 interface Csv {
@@ -112,6 +112,14 @@ function rowOf(csv: Csv, name: string): string[] | undefined {
   return csv.rows.find((r) => r[0] === name || r[0] === `'${name}`);
 }
 
+/** Address columns: CEP 00000-000, "rua, número - complemento - bairro", city, UF (all empty without address). */
+function addressCells(p: Patient): string[] {
+  const a = p.address;
+  if (!a) return ["", "", "", ""];
+  const line = [`${a.street}, ${a.number}`, a.complement, a.neighborhood].filter(Boolean).join(" - ");
+  return [a.cep.replace(/^(\d{5})(\d{3})$/, "$1-$2"), line, a.city, a.state];
+}
+
 function expectedRow(p: Patient): string[] {
   return [
     p.name,
@@ -123,6 +131,7 @@ function expectedRow(p: Patient): string[] {
     maskPhone(p.phone),
     p.email ?? "",
     p.description ?? "",
+    ...addressCells(p),
   ];
 }
 
@@ -139,7 +148,9 @@ test.describe("Exportar CSV", () => {
       email: "e2e@example.com",
       // Separator and quote inside a value: the cell must be quoted.
       description: 'Miopia; retorno "anual"',
+      address: buildAddress({ number: "S/N", complement: "Bloco B; apto 3" }),
     });
+    expect(female.address?.cep).toBe("01310100");
     const male = await api.createPatient({ name: `${prefix} ab`, sex: "M", birth_date: "1985-12-31" });
     // Spreadsheet formula injection: both cells must get a leading apostrophe.
     const formula = await api.createPatient({
@@ -173,7 +184,19 @@ test.describe("Exportar CSV", () => {
       `'${formula.name}`,
       ...expectedRow(formula).slice(1, 8),
       "'@SUM(1+1)",
+      "",
+      "",
+      "",
+      "",
     ]);
+    // Address columns of the patient with an address (the ";" in the complement forces quoting).
+    expect(rowOf(csv, female.name)!.slice(9)).toEqual([
+      "01310-100",
+      "Avenida Paulista, S/N - Bloco B; apto 3 - Bela Vista",
+      "São Paulo",
+      "SP",
+    ]);
+    expect(csv.text).toContain('"Avenida Paulista, S/N - Bloco B; apto 3 - Bela Vista"');
 
     // Masculino label (same endpoint, other filter, straight from the API)
     const res = await api.list({ search: prefix, sex: "M", per_page: 1 }); // sanity: listing agrees
