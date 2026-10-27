@@ -20,6 +20,8 @@ Todas as respostas são JSON. Header recomendado: `Accept: application/json`.
 | `updated_at`  | ISO-8601             | somente leitura                                                        |
 | `age`         | int                  | somente leitura — idade em anos completos no fuso America/Sao_Paulo    |
 | `deleted_at`  | ISO-8601 \| null     | somente leitura — preenchido só para pacientes na lixeira              |
+| `address`     | `Address` \| null    | opcional (Sprint 5); ver "Endereço" |
+| `photo_url`   | string \| null       | somente leitura (Sprint 5); URL absoluta de `GET /patients/{id}/photo` com `?v=<versão>` para invalidar cache, ou `null` |
 
 Formatação visual (máscaras de CPF/RG/celular, data `DD/MM/AAAA`) é responsabilidade do front-end.
 
@@ -223,6 +225,61 @@ Linha do tempo do paciente, mais recente primeiro, paginada:
 - **Prontuário:** `PUT` é substituição completa (corpo vazio cria prontuário vazio); erros por olho usam chaves com ponto (`errors["od.axis"]`); números voltam como números JSON (`-1.0` → `-1`); Snellen sem zero à esquerda (`20/040` é inválido).
 - **Receita:** a data do nome do arquivo é a do atendimento; o `422` vem como `errors.eye_exam`; basta um valor de refração em qualquer olho (cilíndrico 0 conta).
 - **Linha do tempo:** os registros de histórico são só as alterações do cadastro do paciente; mudanças em atendimentos não geram auditoria.
+
+## Endereço, foto, anexos e logs (Sprint 5)
+
+### Recurso `Address`
+
+```json
+{ "cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP" }
+```
+
+| Campo          | Regras |
+|----------------|--------|
+| `cep`          | obrigatório, 8 dígitos (aceita máscara `00000-000`; armazenado só com dígitos) |
+| `street`       | obrigatório, até 255 |
+| `number`       | obrigatório, até 20 (aceita "S/N") |
+| `complement`   | opcional, até 100 |
+| `neighborhood` | obrigatório, até 100 |
+| `city`         | obrigatório, até 100 |
+| `state`        | obrigatório, sigla de UF válida (`SP`, `RJ`, ...; aceita minúsculas, armazenada em maiúsculas) |
+
+- `POST /patients` e `PUT /patients/{id}` aceitam `address` (objeto ou `null`). No `PUT` (substituição completa), `address` omitido ou `null` remove o endereço. Erros usam chaves com ponto (`errors["address.cep"]`).
+- `street`, `number`, `complement` e `neighborhood` são armazenados **criptografados**; `cep`, `city` e `state` ficam em claro.
+- Alterações de endereço entram no histórico do paciente (e na linha do tempo) como campos `address.<campo>`; uma requisição que muda paciente e endereço gera um único registro.
+- A exportação CSV ganha as colunas `CEP;Endereço;Cidade;UF` depois de `Descrição` (e antes de `Excluído em` na lixeira); CEP formatado `00000-000`, endereço = "rua, número - complemento - bairro".
+- A resposta `200` de `GET /cep/{cep}` pode trazer `street`/`neighborhood` vazios (CEPs de cidade inteira).
+
+### `GET /cep/{cep}`
+Consulta de CEP (proxy do ViaCEP, com cache de 24 h). Aceita máscara.
+`200 { "data": { "cep": "01310100", "street": "...", "neighborhood": "...", "city": "...", "state": "SP" } }` ·
+`404 { "message": "CEP não encontrado." }` · `422` CEP com formato inválido · `503 { "message": "Serviço de CEP indisponível. Preencha o endereço manualmente." }`.
+
+### Foto do paciente
+- `POST /patients/{id}/photo` (multipart, campo `photo`): JPEG, PNG ou WebP, até 2 MB, entre 100×100 e 4000×4000 px. A imagem é **reprocessada no servidor** (corte quadrado centralizado, máx. 512×512, JPEG), o que remove metadados EXIF (como localização). `200 { "data": Patient }` · `422`.
+- `GET /patients/{id}/photo`: `image/jpeg`, `Cache-Control: private, max-age=86400`. `404` se não houver foto.
+- `DELETE /patients/{id}/photo`: `204` · `404` se não houver foto.
+- Pacientes na lixeira: as três rotas retornam `404` (`{ "message": "Foto não encontrada." }` quando não há foto).
+- Histórico: trocar ou remover a foto gera um evento `updated` com `changes: { "photo": { "old": null, "new": "adicionada" | "alterada" | "removida" } }`, nunca o conteúdo da imagem.
+- `GET .../photo` conta no limite de requisições da API (mitigado pelo `?v=` com `max-age=86400`).
+
+### Anexos de exames (por atendimento)
+
+Recurso `Attachment`:
+```json
+{ "id": 3, "consultation_id": 12, "original_name": "topografia.pdf", "mime_type": "application/pdf", "size": 183245, "description": "Topografia de córnea", "download_url": "http://localhost:8000/api/attachments/3/download", "created_at": "2026-11-03T15:10:00-03:00" }
+```
+
+- `GET /consultations/{id}/attachments`: lista (mais recente primeiro, sem paginação).
+- `POST /consultations/{id}/attachments` (multipart): `file` obrigatório (PDF, JPEG ou PNG, até 10 MB; o tipo é conferido pelo conteúdo, não só pela extensão), `description` opcional (até 255). Qualquer status de atendimento. `201 { "data": Attachment }` · `422`.
+- `GET /attachments/{id}/download`: o arquivo original, com `Content-Disposition: attachment; filename="<nome ASCII>"; filename*=UTF-8''<nome UTF-8>`. O `original_name` é saneado e recebe a extensão do tipo detectado quando não bate (ex.: `scan.jpg` que é PNG vira `scan.jpg.png`).
+- Uploads acima de 12 MB: `413 { "message": "O arquivo enviado é grande demais." }`.
+- `DELETE /attachments/{id}`: `204`.
+- Arquivos e fotos ficam em disco **privado** (fora de `public/`) e **criptografados**; o nome no disco é aleatório. `404 { "message": "Anexo não encontrado." }`; atendimentos de pacientes na lixeira → `404`.
+
+### Logs e rastreabilidade
+- Toda resposta traz `X-Request-Id` (exposto via CORS): o valor recebido no header de mesmo nome (se for um UUID ou até 64 caracteres `[A-Za-z0-9-_.]`) ou um UUID gerado.
+- Cada requisição gera uma linha de log com `request_id`, método, **rota** (sem query string, que pode conter CPF), status e duração. Em produção os logs saem em JSON no stderr.
 
 ## Erro de validação (422)
 Formato padrão do Laravel, mensagens em pt-BR:

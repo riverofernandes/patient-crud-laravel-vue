@@ -46,8 +46,9 @@ inclua a nova origem em `CORS_ALLOWED_ORIGINS` no `php-laravel/.env` (por padrã
 `http://localhost:5173` e `http://127.0.0.1:5173`). O MySQL não é exposto no host (veja o comentário no
 `docker-compose.yml` para habilitar).
 
-A API limita a 300 requisições por minuto por cliente; `API_RATE_LIMIT` ajusta o valor (o CI usa 1000
-para a suíte E2E).
+A API limita a 300 requisições por minuto por cliente; `API_RATE_LIMIT` ajusta o valor (o CI usa 2000
+para a suíte E2E). As fotos dos pacientes têm limite próprio (`PHOTO_RATE_LIMIT`, padrão 1200/min), para
+que uma listagem cheia de avatares não esgote o limite da API.
 
 > Já tinha o projeto rodando antes desta versão? Rode `docker compose exec api composer install`
 > depois de atualizar, pois o container só instala dependências quando `vendor/` não existe.
@@ -74,8 +75,9 @@ Variáveis: `APP_KEY` (obrigatória), `API_PORT`, `WEB_PORT`, `DB_PASSWORD`, `SE
 banco na subida). O projeto de produção usa outro nome (`patients-prod`), então não conflita com o
 banco de desenvolvimento.
 
-> **Atenção à `APP_KEY` em produção:** CPF, RG e celular são gravados criptografados com essa chave.
-> Trocar a chave torna esses dados ilegíveis. Faça backup do banco antes do primeiro deploy desta versão:
+> **Atenção à `APP_KEY` em produção:** CPF, RG, celular, endereço, dados clínicos, fotos e anexos são
+> gravados criptografados com essa chave. Trocar a chave torna esses dados ilegíveis. Fotos e anexos ficam
+> no volume `api-private`: faça backup dele junto com o banco e a `APP_KEY`. Faça backup do banco antes do primeiro deploy desta versão:
 > a migration criptografa os dados existentes.
 
 ## Rodando o front-end fora do Docker (opcional)
@@ -111,11 +113,12 @@ Os testes do back-end usam SQLite em memória e nunca tocam o banco MySQL do con
 
 Testes de ponta a ponta com Playwright em [`e2e/`](e2e/README.md): listagem, busca (CPF só completo),
 filtros por sexo e idade, ordenação, paginação, cadastro, detalhes, edição, exclusão, lixeira, desfazer,
-exportação CSV, histórico de alterações, layout mobile e auditoria de acessibilidade com axe
-(WCAG 2.1 AA) em todas as telas. Cada teste cria e apaga os próprios pacientes via API.
+exportação CSV, histórico de alterações, endereço com CEP, foto, anexos, X-Request-Id, layout mobile e
+auditoria de acessibilidade com axe (WCAG 2.1 AA) em todas as telas. Cada teste cria e apaga os próprios
+pacientes via API, e a consulta de CEP é sempre simulada (`page.route`), sem chamar o ViaCEP.
 
-A suíte (98 testes, incluindo agenda, atendimentos, prontuário, receita em PDF e linha do tempo) faz
-cerca de 660 requisições por execução, acima do limite padrão da API (300/min), então suba
+A suíte (124 testes, incluindo agenda, atendimentos, prontuário, receita em PDF e linha do tempo) faz
+cerca de 860 requisições por execução (pico de ~780 por minuto), acima do limite padrão da API (300/min), então suba
 a stack com o limite maior:
 
 ```bash
@@ -152,10 +155,11 @@ conteúdo" e modal com foco preso e devolvido.
 
 Coleção: [`php-laravel/postman/patients.postman_collection.json`](php-laravel/postman/patients.postman_collection.json).
 Importe no Postman; a variável `baseUrl` aponta para `http://localhost:8000/api`. A requisição de criação
-salva o `id` em `patientId`, usado por detalhe, edição e exclusão. Também roda via linha de comando:
+salva o `id` em `patientId`, usado por detalhe, edição e exclusão. Os uploads (foto e anexos) usam os
+arquivos de `php-laravel/postman/fixtures/`, por isso o `--working-dir`. Também roda via linha de comando:
 
 ```bash
-npx newman run php-laravel/postman/patients.postman_collection.json
+npx newman run php-laravel/postman/patients.postman_collection.json --working-dir php-laravel/postman
 ```
 
 ## API
@@ -189,6 +193,10 @@ O `APP_URL` fixo mantém a URL base dos arquivos gerados estável mesmo que a st
 | PUT    | `/api/consultations/{id}/eye-exam` | Grava o prontuário oftalmológico (só em atendimento realizado) |
 | GET    | `/api/consultations/{id}/prescription` | Receita de óculos em PDF                             |
 | GET    | `/api/patients/{id}/timeline` | Linha do tempo: atendimentos e alterações do cadastro       |
+| GET    | `/api/cep/{cep}`      | Consulta de CEP (proxy do ViaCEP com cache de 24 h)              |
+| POST   | `/api/patients/{id}/photo` | Envia a foto do paciente (GET devolve, DELETE remove)       |
+| GET    | `/api/consultations/{id}/attachments` | Anexos de exames do atendimento (POST envia)     |
+| GET    | `/api/attachments/{id}/download` | Baixa um anexo (DELETE remove)                        |
 | GET    | `/api/health`         | Health check com verificação do banco (200 / 503)                |
 
 Validação via FormRequest com mensagens em pt-BR: CPF com dígitos verificadores e único entre pacientes
@@ -208,6 +216,16 @@ oftalmológico por olho (acuidade visual sem/com correção, esférico, cilíndr
 intraocular, com as regras clínicas de cada campo) e gera-se a receita de óculos em PDF (DomPDF). Queixa,
 anotações, diagnóstico e observações ficam criptografados. A agenda trabalha com dias de São Paulo, e o
 seed inclui atendimentos de demonstração na semana corrente.
+
+**Endereço, foto e anexos:** o cadastro aceita endereço opcional, com preenchimento pelo CEP (a API
+consulta o ViaCEP e guarda o resultado por 24 h). A foto do paciente é reprocessada no servidor (recorte
+quadrado, até 512 px, JPEG), o que remove metadados como a localização. Atendimentos aceitam anexos de
+exames (PDF, JPEG ou PNG até 10 MB, tipo conferido pelo conteúdo). Fotos e anexos ficam em disco privado,
+criptografados e com nome aleatório.
+
+**Logs:** toda resposta traz `X-Request-Id`, e cada requisição gera uma linha de log com método, rota,
+status e duração, sem a query string (que pode conter CPF). Em produção os logs saem em JSON no stderr;
+em desenvolvimento vão para `storage/logs/laravel.log`.
 
 **Histórico:** cada cadastro, edição (só os campos alterados, com antes e depois), exclusão e restauração
 fica registrado em `patient_audits`, também criptografado. Como a API é aberta nesta fase, o registro não
