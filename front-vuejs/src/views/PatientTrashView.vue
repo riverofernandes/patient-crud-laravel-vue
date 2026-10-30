@@ -27,7 +27,7 @@
             aria-describedby="trash-search-help"
           />
           <p id="trash-search-help" class="search-field__help">
-            CPF: informe os 11 dígitos
+            CPF: informe 3 ou mais dígitos
           </p>
         </div>
         <ExportCsvButton

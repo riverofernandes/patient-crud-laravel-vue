@@ -55,12 +55,12 @@ test.describe("Listagem de pacientes", () => {
     ).toBeVisible();
   });
 
-  test("busca por CPF: só o CPF completo encontra (com ou sem máscara); CPF parcial não", async ({ page, api }) => {
+  test("busca por CPF: completo ou qualquer trecho de 3+ dígitos (com ou sem máscara)", async ({ page, api }) => {
     const patient = await api.createPatient();
 
     await gotoListing(page);
-    // Hint under the search box (CPF is stored encrypted: only the full number is searchable)
-    await expect(searchBox(page)).toHaveAccessibleDescription("CPF: informe os 11 dígitos");
+    // Hint under the search box: a partial CPF needs at least 3 digits
+    await expect(searchBox(page)).toHaveAccessibleDescription("CPF: informe 3 ou mais dígitos");
 
     await searchBox(page).fill(patient.cpf);
     await expect.poll(() => new URL(page.url()).searchParams.get("search")).toBe(patient.cpf);
@@ -68,11 +68,13 @@ test.describe("Listagem de pacientes", () => {
     await expect(patientRows(page)).toHaveCount(1);
     await expect(rowFor(page, patient.name)).toBeVisible();
 
-    for (const partial of [maskCpf(patient.cpf).slice(0, 11), patient.cpf.slice(0, 10)]) {
+    // Partial CPF (masked prefix, unmasked middle run): other patients may share the digits, so only assert
+    // that this patient is among the results.
+    for (const partial of [maskCpf(patient.cpf).slice(0, 11), patient.cpf.slice(3, 9)]) {
       await searchBox(page).fill(partial);
       await expect.poll(() => new URL(page.url()).searchParams.get("search")).toBe(partial);
-      await expect(emptyState(page)).toBeVisible();
-      await expect(rowFor(page, patient.name)).toHaveCount(0);
+      await waitForTable(page);
+      await expect(rowFor(page, patient.name)).toBeVisible();
     }
   });
 
