@@ -91,8 +91,10 @@ class PatientApiTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'Daniela Prado');
 
-        // CPF is encrypted: only a full CPF is searchable.
-        $this->getJson('/api/patients?search=529.982')->assertJsonCount(0, 'data');
+        // A partial CPF matches too (the encrypted column is scanned in PHP).
+        $this->getJson('/api/patients?search=529.982')
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Daniela Prado');
     }
 
     public function test_name_search_with_digits_does_not_match_cpfs(): void

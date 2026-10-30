@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\CpfBlindIndex;
 use App\Support\EncryptedFiles;
 use Carbon\CarbonInterface;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property int $id
@@ -147,9 +150,13 @@ class Patient extends Model
         return $this->hasMany(PatientAudit::class);
     }
 
+    /** Shortest digit run treated as a partial CPF (fewer digits would match almost every patient). */
+    public const CPF_SEARCH_MIN_DIGITS = 3;
+
     /**
-     * Filter by partial name, or by a FULL CPF (11 digits, with or without mask) through the blind index.
-     * A partial CPF cannot be searched: the column is encrypted.
+     * Filter by partial name, or by CPF (with or without mask): a full CPF (11 digits) uses the blind index; a
+     * partial one (3–10 digits, any position) is matched by decrypting the CPFs in PHP, since the column is
+     * encrypted. That scan is O(patients) per search: fine for thousands of rows, not for hundreds of thousands.
      *
      * @param  Builder<Patient>  $query
      * @return Builder<Patient>
@@ -169,8 +176,34 @@ class Patient extends Model
 
             if (strlen($digits) === 11) {
                 $query->orWhere('cpf_hash', CpfBlindIndex::hash($digits));
+            } elseif (strlen($digits) >= self::CPF_SEARCH_MIN_DIGITS) {
+                $query->orWhereIntegerInRaw('id', self::idsWithCpfContaining($digits));
             }
         });
+    }
+
+    /**
+     * Ids of every patient (trashed included; the caller's scope narrows it) whose CPF contains the digits.
+     *
+     * @return list<int>
+     */
+    private static function idsWithCpfContaining(string $digits): array
+    {
+        $ids = [];
+
+        foreach (DB::table('patients')->select(['id', 'cpf'])->orderBy('id')->lazy(1000) as $row) {
+            try {
+                $cpf = Crypt::decryptString((string) $row->cpf);
+            } catch (DecryptException) {
+                continue; // unreadable row (e.g. encrypted with another key): never matches
+            }
+
+            if (str_contains($cpf, $digits)) {
+                $ids[] = (int) $row->id;
+            }
+        }
+
+        return $ids;
     }
 
     /**

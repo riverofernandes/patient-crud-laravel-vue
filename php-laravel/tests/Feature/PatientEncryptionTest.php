@@ -84,7 +84,7 @@ class PatientEncryptionTest extends TestCase
         $this->assertSame(CpfBlindIndex::hash('52998224725'), $patient->refresh()->cpf_hash);
     }
 
-    public function test_search_matches_only_a_full_cpf(): void
+    public function test_search_matches_full_and_partial_cpf(): void
     {
         $patient = Patient::factory()->create(['cpf' => '62518953060', 'name' => 'Carlos Alberto']);
         Patient::factory()->create(['cpf' => '52998224725', 'name' => 'Daniela Prado']);
@@ -95,9 +95,36 @@ class PatientEncryptionTest extends TestCase
                 ->assertJsonPath('data.0.id', $patient->id);
         }
 
-        foreach (['625', '625.189', '6251895306', '625189530600', '89530'] as $partial) {
-            $this->getJson('/api/patients?search='.urlencode($partial))->assertJsonCount(0, 'data');
+        // Any run of 3–10 digits, masked or not, at any position of the CPF.
+        foreach (['625', '625.189', '6251895306', '89530', '530-60', '189.530'] as $partial) {
+            $this->getJson('/api/patients?search='.urlencode($partial))
+                ->assertJsonCount(1, 'data')
+                ->assertJsonPath('data.0.id', $patient->id);
         }
+
+        // Fewer than 3 digits, digits not in any CPF, or more than 11 digits match nothing.
+        foreach (['62', '000', '625189530600'] as $term) {
+            $this->getJson('/api/patients?search='.urlencode($term))->assertJsonCount(0, 'data');
+        }
+    }
+
+    public function test_partial_cpf_search_respects_trash_and_filters(): void
+    {
+        $active = Patient::factory()->create(['cpf' => '62518953060', 'sex' => 'F']);
+        $trashed = Patient::factory()->create(['cpf' => '52998224725', 'sex' => 'F']);
+        $trashed->delete();
+
+        // "25" appears in both CPFs; only 3+ digits count, so use "625"/"982".
+        $this->getJson('/api/patients?search=982')->assertJsonCount(0, 'data');
+        $this->getJson('/api/patients?search=982&trashed=only')
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $trashed->id);
+        $this->getJson('/api/patients?search=625&sex=F')->assertJsonPath('data.0.id', $active->id);
+        $this->getJson('/api/patients?search=625&sex=M')->assertJsonCount(0, 'data');
+
+        $csv = $this->get('/api/patients/export?search=625')->streamedContent();
+        $this->assertStringContainsString('625.189.530-60', $csv);
+        $this->assertStringNotContainsString('529.982.247-25', $csv);
     }
 
     public function test_uniqueness_uses_the_blind_index(): void
