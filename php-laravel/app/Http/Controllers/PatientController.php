@@ -43,7 +43,7 @@ class PatientController extends Controller
      * Os filtros (`search`, `sex`, `age_min`, `age_max`) se combinam entre si e com a lixeira; todos os
      * parâmetros são mantidos nos links de paginação.
      *
-     * @queryParam search string Busca por parte do nome, ou pelo CPF **completo** (11 dígitos, com ou sem máscara). CPF parcial não é buscável: o CPF é armazenado criptografado. Example: maria
+     * @queryParam search string Busca por parte do nome, ou pelo CPF (com ou sem máscara): completo ou qualquer trecho de 3 ou mais dígitos. Example: maria
      * @queryParam sex string Filtra por sexo: `M` ou `F` (outro valor é ignorado). Example: F
      * @queryParam age_min integer Idade mínima em anos completos (0 a 150; valor inválido é ignorado). Example: 18
      * @queryParam age_max integer Idade máxima em anos completos (0 a 150; valor inválido é ignorado). Example: 65
@@ -76,7 +76,7 @@ class PatientController extends Controller
      * injeção de fórmulas). O "Try it out" mostra o CSV como texto; para baixar o arquivo, abra a URL no
      * navegador.
      *
-     * @queryParam search string Nome parcial ou CPF completo (como na listagem). Example: maria
+     * @queryParam search string Nome parcial ou CPF completo/parcial (como na listagem). Example: maria
      * @queryParam sex string `M` ou `F`. Example: F
      * @queryParam age_min integer Idade mínima (0 a 150). Example: 18
      * @queryParam age_max integer Idade máxima (0 a 150). Example: 65
@@ -164,8 +164,14 @@ class PatientController extends Controller
     /**
      * Atualizar paciente
      *
-     * Substituição completa (PUT): envie todos os campos. Campos opcionais omitidos (`email`, `description`) são apagados;
-     * `address` omitido ou `null` remove o endereço. A foto não muda por aqui (use as rotas `/photo`).
+     * `PUT` é substituição completa: envie todos os campos. Campos opcionais omitidos (`email`, `description`) são
+     * apagados e `address` omitido ou `null` remove o endereço.
+     *
+     * `PATCH` é atualização parcial: só os campos enviados são validados e alterados (ex.: `{"name": "Novo nome"}`).
+     * Campos omitidos ficam como estão; `address` omitido mantém o endereço e `null` o remove. Enviar um campo
+     * obrigatório vazio continua sendo erro de validação.
+     *
+     * A foto não muda por aqui (use as rotas `/photo`).
      *
      * @urlParam id integer required ID do paciente. Example: 1
      *
@@ -176,11 +182,16 @@ class PatientController extends Controller
     public function update(PatientRequest $request, Patient $patient): PatientResource
     {
         $address = $request->addressData();
+        $touchesAddress = $request->touchesAddress();
 
-        DB::transaction(function () use ($request, $patient, $address) {
+        DB::transaction(function () use ($request, $patient, $address, $touchesAddress) {
             // PUT is a full replacement: optional fields left out are cleared (an omitted address is removed).
-            $patient->fill(array_merge(['email' => null, 'description' => null], $request->patientData()));
-            $patient->pendingAuditChanges = PatientAddress::auditChanges($patient->address?->toResource(), $address);
+            // PATCH only changes what was sent.
+            $defaults = $request->isPartial() ? [] : ['email' => null, 'description' => null];
+            $patient->fill(array_merge($defaults, $request->patientData()));
+            $patient->pendingAuditChanges = $touchesAddress
+                ? PatientAddress::auditChanges($patient->address?->toResource(), $address)
+                : [];
 
             if (! $patient->isDirty() && $patient->pendingAuditChanges !== []) {
                 $patient->updateTimestamps(); // an address change also changes the patient record
@@ -190,6 +201,10 @@ class PatientController extends Controller
             // One audit per request: the address changes go with the patient's (or alone when only the address
             // changed and no "updated" event fired).
             PatientObserver::flushPending($patient);
+
+            if (! $touchesAddress) {
+                return;
+            }
 
             if ($address === null) {
                 $patient->address?->delete();
