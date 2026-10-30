@@ -211,7 +211,7 @@
       }
     },
     {
-      "name": "Buscar pacientes (nome ou CPF completo)",
+      "name": "Buscar pacientes (nome ou CPF)",
       "event": [
         {
           "listen": "test",
@@ -365,7 +365,7 @@
       }
     },
     {
-      "name": "Buscar por CPF parcial (sem resultado)",
+      "name": "Buscar por CPF parcial (trecho do meio)",
       "event": [
         {
           "listen": "test",
@@ -373,7 +373,7 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Partial CPF does not match', function () { const d = pm.response.json().data; pm.expect(d.map(x => x.id)).to.not.include(Number(pm.collectionVariables.get('patientId'))); });"
+              "pm.test('Partial CPF matches', function () { const d = pm.response.json().data; pm.expect(d.map(x => x.id)).to.include(Number(pm.collectionVariables.get('patientId'))); });"
             ]
           }
         },
@@ -382,7 +382,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.collectionVariables.set('cpfPartial', pm.collectionVariables.get('cpf').slice(0, 6));"
+              "pm.collectionVariables.set('cpfPartial', pm.collectionVariables.get('cpf').slice(3, 9));"
             ]
           }
         }
@@ -410,7 +410,7 @@
             }
           ]
         },
-        "description": "CPF parcial não é buscável (o CPF é armazenado criptografado)."
+        "description": "Qualquer trecho de 3 ou mais dígitos do CPF (com ou sem máscara) encontra o paciente; a API descriptografa os CPFs para comparar."
       }
     },
     {
@@ -717,6 +717,54 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"name\": \"Maria da Silva Souza\",\n  \"cpf\": \"{{cpf}}\",\n  \"rg\": \"35.688.019-X\",\n  \"birth_date\": \"1996-07-20\",\n  \"sex\": \"F\",\n  \"phone\": \"11987654321\",\n  \"email\": \"maria@example.com\",\n  \"description\": null,\n  \"address\": {\n    \"cep\": \"20040-020\",\n    \"street\": \"Avenida Rio Branco\",\n    \"number\": \"S/N\",\n    \"complement\": null,\n    \"neighborhood\": \"Centro\",\n    \"city\": \"Rio de Janeiro\",\n    \"state\": \"RJ\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Atualizar parcialmente (PATCH só com o nome)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Only the name changed', function () { const d = pm.response.json().data; pm.expect(d.name).to.eql('Maria da Silva Souza Lima'); pm.expect(d.phone).to.eql('11987654321'); pm.expect(d.address.cep).to.eql('20040020'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}"
+          ]
+        },
+        "description": "Atualização parcial: só os campos enviados mudam. `address` omitido mantém o endereço.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Maria da Silva Souza Lima\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -1249,12 +1297,13 @@
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
               "const j = pm.response.json();",
               "pm.test('Paginated payload', function () { pm.expect(j).to.have.keys('data', 'links', 'meta'); });",
-              "// updated entries, newest first: photo removed, photo added, name + address (Atualizar paciente).",
-              "pm.test('Newest first: restored, deleted, 3x updated, created', function () { pm.expect(j.data.map(a => a.event)).to.eql(['restored', 'deleted', 'updated', 'updated', 'updated', 'created']); });",
-              "pm.test('Update records only changed fields (address as address.<field>)', function () { const u = j.data[4]; pm.expect(u.changes).to.not.have.property('cpf'); pm.expect(u.changes.name).to.eql({ old: 'Maria da Silva', new: 'Maria da Silva Souza' }); pm.expect(u.changes['address.cep']).to.eql({ old: '01310100', new: '20040020' }); });",
-              "pm.test('Created has every field with old null, user_id null', function () { const c = j.data[5]; pm.expect(c.changes.cpf).to.eql({ old: null, new: pm.collectionVariables.get('cpf') }); pm.expect(c.user_id).to.eql(null); });",
+              "// updated entries, newest first: photo removed, photo added, name only (PATCH), name + address (PUT).",
+              "pm.test('Newest first: restored, deleted, 4x updated, created', function () { pm.expect(j.data.map(a => a.event)).to.eql(['restored', 'deleted', 'updated', 'updated', 'updated', 'updated', 'created']); });",
+              "pm.test('Update records only changed fields (address as address.<field>)', function () { const u = j.data[5]; pm.expect(u.changes).to.not.have.property('cpf'); pm.expect(u.changes.name).to.eql({ old: 'Maria da Silva', new: 'Maria da Silva Souza' }); pm.expect(u.changes['address.cep']).to.eql({ old: '01310100', new: '20040020' }); });",
+              "pm.test('Created has every field with old null, user_id null', function () { const c = j.data[6]; pm.expect(c.changes.cpf).to.eql({ old: null, new: pm.collectionVariables.get('cpf') }); pm.expect(c.user_id).to.eql(null); });",
               "pm.test('Deleted/restored have empty changes object', function () { pm.expect(j.data[0].changes).to.eql({}); pm.expect(j.data[1].changes).to.eql({}); });",
-              "pm.test('Photo changes carry markers, never the image', function () { pm.expect(j.data[3].changes).to.eql({ photo: { old: null, new: 'adicionada' } }); pm.expect(j.data[2].changes).to.eql({ photo: { old: null, new: 'removida' } }); });"
+              "pm.test('Photo changes carry markers, never the image', function () { pm.expect(j.data[3].changes).to.eql({ photo: { old: null, new: 'adicionada' } }); pm.expect(j.data[2].changes).to.eql({ photo: { old: null, new: 'removida' } }); });",
+              "pm.test('PATCH records only the sent field', function () { pm.expect(j.data[4].changes).to.eql({ name: { old: 'Maria da Silva Souza', new: 'Maria da Silva Souza Lima' } }); });"
             ]
           }
         }

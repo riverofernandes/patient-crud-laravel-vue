@@ -86,12 +86,12 @@ paths:
         -
           in: query
           name: search
-          description: 'Nome parcial ou CPF completo (como na listagem).'
+          description: 'Nome parcial ou CPF completo/parcial (como na listagem).'
           example: maria
           required: false
           schema:
             type: string
-            description: 'Nome parcial ou CPF completo (como na listagem).'
+            description: 'Nome parcial ou CPF completo/parcial (como na listagem).'
             example: maria
         -
           in: query
@@ -605,12 +605,12 @@ paths:
         -
           in: query
           name: search
-          description: 'Busca por parte do nome, ou pelo CPF **completo** (11 dígitos, com ou sem máscara). CPF parcial não é buscável: o CPF é armazenado criptografado.'
+          description: 'Busca por parte do nome, ou pelo CPF (com ou sem máscara): completo ou qualquer trecho de 3 ou mais dígitos.'
           example: maria
           required: false
           schema:
             type: string
-            description: 'Busca por parte do nome, ou pelo CPF **completo** (11 dígitos, com ou sem máscara). CPF parcial não é buscável: o CPF é armazenado criptografado.'
+            description: 'Busca por parte do nome, ou pelo CPF (com ou sem máscara): completo ou qualquer trecho de 3 ou mais dígitos.'
             example: maria
         -
           in: query
@@ -1131,7 +1131,7 @@ paths:
                   example: 'Paciente com miopia leve, retorno anual.'
                 address:
                   type: object
-                  description: 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.'
+                  description: 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço; no PATCH, omitido mantém o endereço e `null` o remove. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.'
                   example: null
                   properties:
                     cep:
@@ -1323,7 +1323,7 @@ paths:
     put:
       summary: 'Atualizar paciente'
       operationId: atualizarPaciente
-      description: "Substituição completa (PUT): envie todos os campos. Campos opcionais omitidos (`email`, `description`) são apagados;\n`address` omitido ou `null` remove o endereço. A foto não muda por aqui (use as rotas `/photo`)."
+      description: "`PUT` é substituição completa: envie todos os campos. Campos opcionais omitidos (`email`, `description`) são\napagados e `address` omitido ou `null` remove o endereço.\n\n`PATCH` é atualização parcial: só os campos enviados são validados e alterados (ex.: `{\"name\": \"Novo nome\"}`).\nCampos omitidos ficam como estão; `address` omitido mantém o endereço e `null` o remove. Enviar um campo\nobrigatório vazio continua sendo erro de validação.\n\nA foto não muda por aqui (use as rotas `/photo`)."
       parameters: []
       responses:
         200:
@@ -1516,7 +1516,7 @@ paths:
                   example: 'Paciente com miopia leve, retorno anual.'
                 address:
                   type: object
-                  description: 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.'
+                  description: 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço; no PATCH, omitido mantém o endereço e `null` o remove. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.'
                   example: null
                   properties:
                     cep:

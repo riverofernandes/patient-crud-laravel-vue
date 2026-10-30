@@ -537,7 +537,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
                value="maria"
                data-component="query">
     <br>
-<p>Nome parcial ou CPF completo (como na listagem). Example: <code>maria</code></p>
+<p>Nome parcial ou CPF completo/parcial (como na listagem). Example: <code>maria</code></p>
             </div>
                                     <div style="padding-left: 28px; clear: unset;">
                 <b style="line-height: 2;"><code>sex</code></b>&nbsp;&nbsp;
@@ -1263,7 +1263,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
                value="maria"
                data-component="query">
     <br>
-<p>Busca por parte do nome, ou pelo CPF <strong>completo</strong> (11 dígitos, com ou sem máscara). CPF parcial não é buscável: o CPF é armazenado criptografado. Example: <code>maria</code></p>
+<p>Busca por parte do nome, ou pelo CPF (com ou sem máscara): completo ou qualquer trecho de 3 ou mais dígitos. Example: <code>maria</code></p>
             </div>
                                     <div style="padding-left: 28px; clear: unset;">
                 <b style="line-height: 2;"><code>sex</code></b>&nbsp;&nbsp;
@@ -1653,7 +1653,7 @@ Must be one of:
 <small>object</small>&nbsp;
 <i>optional</i> &nbsp;
 <br>
-<p>Endereço (opcional, objeto ou <code>null</code>). No PUT, omitido ou <code>null</code> remove o endereço. Quando enviado, os subcampos (exceto <code>complement</code>) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.</p>
+<p>Endereço (opcional, objeto ou <code>null</code>). No PUT, omitido ou <code>null</code> remove o endereço; no PATCH, omitido mantém o endereço e <code>null</code> o remove. Quando enviado, os subcampos (exceto <code>complement</code>) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.</p>
             </summary>
                                                 <div style="margin-left: 14px; clear: unset;">
                         <b style="line-height: 2;"><code>cep</code></b>&nbsp;&nbsp;
@@ -1905,8 +1905,12 @@ You can check the Dev Tools console for debugging information.</code></pre>
 <p>
 </p>
 
-<p>Substituição completa (PUT): envie todos os campos. Campos opcionais omitidos (<code>email</code>, <code>description</code>) são apagados;
-<code>address</code> omitido ou <code>null</code> remove o endereço. A foto não muda por aqui (use as rotas <code>/photo</code>).</p>
+<p><code>PUT</code> é substituição completa: envie todos os campos. Campos opcionais omitidos (<code>email</code>, <code>description</code>) são
+apagados e <code>address</code> omitido ou <code>null</code> remove o endereço.</p>
+<p><code>PATCH</code> é atualização parcial: só os campos enviados são validados e alterados (ex.: <code>{"name": "Novo nome"}</code>).
+Campos omitidos ficam como estão; <code>address</code> omitido mantém o endereço e <code>null</code> o remove. Enviar um campo
+obrigatório vazio continua sendo erro de validação.</p>
+<p>A foto não muda por aqui (use as rotas <code>/photo</code>).</p>
 
 <span id="example-requests-PUTapi-patients--id-">
 <blockquote>Example request:</blockquote>
@@ -2221,7 +2225,7 @@ Must be one of:
 <small>object</small>&nbsp;
 <i>optional</i> &nbsp;
 <br>
-<p>Endereço (opcional, objeto ou <code>null</code>). No PUT, omitido ou <code>null</code> remove o endereço. Quando enviado, os subcampos (exceto <code>complement</code>) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.</p>
+<p>Endereço (opcional, objeto ou <code>null</code>). No PUT, omitido ou <code>null</code> remove o endereço; no PATCH, omitido mantém o endereço e <code>null</code> o remove. Quando enviado, os subcampos (exceto <code>complement</code>) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.</p>
             </summary>
                                                 <div style="margin-left: 14px; clear: unset;">
                         <b style="line-height: 2;"><code>cep</code></b>&nbsp;&nbsp;

@@ -36,7 +36,7 @@ Query params:
 
 | Param       | Default | Descrição |
 |-------------|---------|-----------|
-| `search`    | —       | Nome parcial, ou CPF **completo** (11 dígitos, com ou sem máscara). CPF parcial não é buscável, pois o CPF é armazenado criptografado |
+| `search`    | —       | Nome parcial, ou CPF com ou sem máscara: completo (11 dígitos, via blind index) ou **qualquer trecho de 3 a 10 dígitos** (a API descriptografa os CPFs para comparar; custo proporcional ao número de pacientes). Menos de 3 dígitos não busca no CPF |
 | `page`      | 1       | Página |
 | `per_page`  | 10      | Itens por página (1–100; inválido → 10) |
 | `sort`      | `name`  | `name` \| `birth_date` \| `created_at` (valor fora da lista → `name`) |
@@ -66,6 +66,9 @@ Body: campos editáveis. `201 { "data": Patient }` · `422` (ver abaixo)
 
 ### `PUT /patients/{id}`
 Body: todos os campos editáveis (substituição completa). `200 { "data": Patient }` · `404` · `422`
+
+### `PATCH /patients/{id}`
+Atualização **parcial**: só os campos enviados são validados (com as mesmas regras) e alterados, ex.: `{ "name": "Novo nome" }`. Campos omitidos ficam como estão; `email`/`description` só são apagados se enviados como `null`. `address` omitido mantém o endereço, `null` o remove e um objeto o substitui por inteiro. Enviar um campo obrigatório vazio continua sendo `422`. Corpo vazio não altera nada (`200`, sem registro no histórico). `200 { "data": Patient }` · `404` · `422`
 
 ### `DELETE /patients/{id}`
 Soft delete. `204` sem corpo · `404`

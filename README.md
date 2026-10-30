@@ -206,7 +206,9 @@ e-mail opcional. CPF, RG e celular aceitam máscara na entrada e são armazenado
 **Dados sensíveis:** CPF, RG e celular ficam **criptografados** no banco (casts `encrypted` do Laravel,
 com a `APP_KEY`). Para manter a unicidade e a busca por CPF sem descriptografar a tabela, a API guarda
 um hash HMAC do CPF (*blind index*), com chave definida em `CPF_HASH_KEY` (derivada da `APP_KEY` se vazia).
-Por isso a busca encontra só o **CPF completo**; a busca por nome continua parcial. Se a chave do hash
+A busca por CPF completo usa esse hash; a busca por **qualquer trecho do CPF** (3 ou mais dígitos)
+descriptografa os CPFs na API para comparar, o que tem custo proporcional ao número de pacientes (adequado
+para milhares de registros). Se a chave do hash
 mudar, rode `php artisan patients:rehash-cpf`.
 
 **Atendimentos e prontuário:** cada atendimento tem status (Agendado, Confirmado, Realizado, Faltou,
