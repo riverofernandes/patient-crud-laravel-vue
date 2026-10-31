@@ -121,6 +121,8 @@ export default defineComponent({
   name: "PatientHistory",
   props: {
     patientId: { type: [String, Number], required: true },
+    /** Bumped by the parent when the patient changes: reloads the list. */
+    refreshKey: { type: Number, default: 0 },
   },
   data() {
     return {
@@ -141,6 +143,9 @@ export default defineComponent({
   },
   watch: {
     patientId() {
+      this.load();
+    },
+    refreshKey() {
       this.load();
     },
   },

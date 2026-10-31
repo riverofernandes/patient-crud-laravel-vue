@@ -150,6 +150,105 @@ describe("PatientListView", () => {
     );
   });
 
+  it("keeps a search typed within the debounce when sorting", async () => {
+    await mountList("/?page=2");
+    await wrapper.find("#patient-search").setValue("Ana");
+    vi.advanceTimersByTime(100);
+    await th("Nome do paciente").find("button").trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.query).toEqual({
+      search: "Ana",
+      sort: "name",
+      direction: "desc",
+    });
+    expect(
+      (wrapper.find("#patient-search").element as HTMLInputElement).value
+    ).toBe("Ana");
+    expect(list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: "Ana", direction: "desc", page: 1 })
+    );
+    // The pending debounce was cancelled: no extra navigation/request later.
+    const calls = list.mock.calls.length;
+    vi.advanceTimersByTime(1000);
+    await flushPromises();
+    expect(list.mock.calls.length).toBe(calls);
+  });
+
+  it("keeps a search typed within the debounce when changing per page", async () => {
+    await mountList("/?search=Bia");
+    await wrapper.find("#patient-search").setValue("Ana ");
+    await wrapper.find("#per-page").setValue("25");
+    await flushPromises();
+    expect(router.currentRoute.query).toEqual({
+      search: "Ana",
+      per_page: "25",
+    });
+    expect(
+      (wrapper.find("#patient-search").element as HTMLInputElement).value
+    ).toBe("Ana ");
+  });
+
+  it("does not overwrite the search box from the route while typing", async () => {
+    await mountList("/");
+    await wrapper.find("#patient-search").setValue("An");
+    // A query change from elsewhere (e.g. an automatic page correction).
+    await router.replace({ query: { page: "1" } });
+    await flushPromises();
+    expect(
+      (wrapper.find("#patient-search").element as HTMLInputElement).value
+    ).toBe("An");
+    vi.advanceTimersByTime(400);
+    await flushPromises();
+    expect(router.currentRoute.query.search).toBe("An");
+  });
+
+  it("syncs the search box from the URL on Back/Forward", async () => {
+    await mountList("/?search=Ana");
+    await router.push({ query: { search: "Bia" } });
+    await flushPromises();
+    expect(
+      (wrapper.find("#patient-search").element as HTMLInputElement).value
+    ).toBe("Bia");
+    // The sync itself must not leave a pending search behind.
+    const calls = list.mock.calls.length;
+    vi.advanceTimersByTime(1000);
+    await flushPromises();
+    expect(list.mock.calls.length).toBe(calls);
+    expect(router.currentRoute.query).toEqual({ search: "Bia" });
+  });
+
+  it("keeps the table height while reloading, so the scroll position holds", async () => {
+    await mountList("/");
+    const table = wrapper.find(".patients-table").element as HTMLElement;
+    vi.spyOn(table, "offsetHeight", "get").mockReturnValue(840);
+    let resolve: (value: Awaited<ReturnType<typeof list>>) => void = () =>
+      undefined;
+    list.mockImplementationOnce(
+      () =>
+        new Promise<Awaited<ReturnType<typeof list>>>((r) => {
+          resolve = r;
+        })
+    );
+    await th("Nome do paciente").find("button").trigger("click");
+    await flushPromises();
+    expect(table.style.minHeight).toBe("840px");
+
+    resolve({
+      data: patients,
+      meta: {
+        current_page: 1,
+        last_page: 1,
+        per_page: 10,
+        total: 1,
+        from: 1,
+        to: 1,
+      },
+    });
+    await flushPromises();
+    expect(table.style.minHeight).toBe("");
+  });
+
   it("ignores an unsupported per_page in the URL", async () => {
     await mountList("/?per_page=1000");
     expect(list).toHaveBeenLastCalledWith(

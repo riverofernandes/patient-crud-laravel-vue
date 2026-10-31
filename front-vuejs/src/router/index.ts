@@ -1,6 +1,7 @@
 import Vue from "vue";
 import VueRouter from "vue-router";
 import PatientListView from "@/views/PatientListView.vue";
+import { routeTitle, scrollBehavior } from "@/utils/routeFocus";
 
 Vue.use(VueRouter);
 
@@ -67,12 +68,12 @@ const router = new VueRouter({
       meta: { title: "Página não encontrada" },
     },
   ],
-  scrollBehavior: () => ({ x: 0, y: 0 }),
+  scrollBehavior,
 });
 
-router.afterEach((to) => {
-  const title = to.meta?.title as string | undefined;
-  document.title = title ? `${title} | EyeCare` : "EyeCare";
+router.afterEach((to, from) => {
+  const title = routeTitle(to, from);
+  if (title !== null) document.title = title;
 });
 
 export default router;

@@ -71,7 +71,10 @@ describe("ConfirmDeleteModal", () => {
 
   it("Confirmar deletes, toasts with an undo action and emits deleted", async () => {
     vi.mocked(patientService.remove).mockResolvedValue();
-    vi.mocked(patientService.restore).mockResolvedValue({ id: 5 } as never);
+    vi.mocked(patientService.restore).mockResolvedValue({
+      patient: { id: 5 },
+      cancelledConsultations: [],
+    } as never);
     await open();
     button("Confirmar").click();
     await flushPromises();
@@ -92,6 +95,29 @@ describe("ConfirmDeleteModal", () => {
     expect(vi.mocked(notify).mock.calls[1].slice(1, 3)).toEqual([
       "success",
       "Paciente restaurado com sucesso!",
+    ]);
+  });
+
+  it("Desfazer mentions future consultations cancelled by the restore", async () => {
+    vi.mocked(patientService.remove).mockResolvedValue();
+    vi.mocked(patientService.restore).mockResolvedValue({
+      patient: { id: 5 },
+      cancelledConsultations: [
+        {
+          id: 42,
+          scheduled_at: "2027-05-10T10:00:00-03:00",
+          professional_name: "Dra. Helena Martins",
+        },
+      ],
+    } as never);
+    await open();
+    button("Confirmar").click();
+    await flushPromises();
+    vi.mocked(notify).mock.calls[0][3]?.action?.handler();
+    await flushPromises();
+    expect(vi.mocked(notify).mock.calls[1].slice(1, 3)).toEqual([
+      "success",
+      "Paciente restaurado com sucesso! 1 atendimento futuro foi cancelado por conflito de horário.",
     ]);
   });
 

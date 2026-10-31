@@ -97,4 +97,48 @@ describe("patientService", () => {
       params: { page: 2, per_page: 10 },
     });
   });
+
+  it("restore returns the patient and the auto-cancelled consultations", async () => {
+    const post = vi.spyOn(api, "post");
+    const cancelled = {
+      id: 42,
+      scheduled_at: "2027-05-10T10:00:00-03:00",
+      professional_name: "Dra. Helena Martins",
+    };
+    post.mockResolvedValueOnce({
+      data: { data: { id: 7 }, meta: { cancelled_consultations: [cancelled] } },
+    });
+    expect(await patientService.restore(7)).toEqual({
+      patient: { id: 7 },
+      cancelledConsultations: [cancelled],
+    });
+    expect(post).toHaveBeenCalledWith("/patients/7/restore");
+
+    // Older API (no meta): nothing cancelled.
+    post.mockResolvedValueOnce({ data: { data: { id: 7 } } });
+    expect(await patientService.restore(7)).toEqual({
+      patient: { id: 7 },
+      cancelledConsultations: [],
+    });
+    post.mockRestore();
+  });
+});
+
+describe("getErrorMessage", () => {
+  it("shows the API message of a 400 (malformed JSON)", () => {
+    const failure = new AxiosError(
+      "Request failed",
+      "ERR_BAD_REQUEST",
+      undefined,
+      undefined,
+      {
+        status: 400,
+        statusText: "",
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+        data: { message: "JSON inválido." },
+      } as never
+    );
+    expect(getErrorMessage(failure, "fallback")).toBe("JSON inválido.");
+  });
 });

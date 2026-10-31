@@ -171,6 +171,77 @@ describe("AgendaView", () => {
     expect(agenda).toHaveBeenCalledTimes(1);
   });
 
+  it("drops an item whose new status leaves the status filter, focusing the next one", async () => {
+    agenda.mockResolvedValue([
+      makeConsultation({ id: 3, scheduled_at: "2026-10-29T09:00:00-03:00" }),
+      makeConsultation({ id: 4, scheduled_at: "2026-10-29T10:00:00-03:00" }),
+    ]);
+    changeStatus.mockResolvedValue(
+      makeConsultation({
+        id: 3,
+        scheduled_at: "2026-10-29T09:00:00-03:00",
+        status: "confirmed",
+      })
+    );
+    await mountAgenda("/agenda?status=scheduled");
+    await wrapper
+      .find("#agenda-item-3 [data-action='confirmed']")
+      .trigger("click");
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find("#agenda-item-3").exists()).toBe(false);
+    expect(document.activeElement?.id).toBe("agenda-item-4");
+    expect(wrapper.find("[aria-live='polite']").text()).toBe(
+      "Atendimento de Ana Souza às 09:00 saiu da lista: o novo status não corresponde ao filtro."
+    );
+    expect(agenda).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for the status change to settle, then focuses the day heading when the day empties", async () => {
+    agenda.mockResolvedValue([
+      makeConsultation({ id: 3, scheduled_at: "2026-10-29T09:00:00-03:00" }),
+    ]);
+    await mountAgenda("/agenda?status=scheduled");
+    const actions = wrapper.findComponent({
+      name: "ConsultationStatusActions",
+    });
+    const cancelled = makeConsultation({
+      id: 3,
+      scheduled_at: "2026-10-29T09:00:00-03:00",
+      status: "cancelled",
+    });
+    // Changed while the confirmation modal is still open: kept for now.
+    actions.vm.$emit("changed", cancelled);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find("#agenda-item-3").exists()).toBe(true);
+
+    actions.vm.$emit("settled", cancelled);
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find("#agenda-item-3").exists()).toBe(false);
+    expect(document.activeElement?.id).toBe("agenda-day-2026-10-29");
+  });
+
+  it("keeps the item when no status filter is active", async () => {
+    agenda.mockResolvedValue([
+      makeConsultation({ id: 3, scheduled_at: "2026-10-29T09:00:00-03:00" }),
+    ]);
+    await mountAgenda();
+    const actions = wrapper.findComponent({
+      name: "ConsultationStatusActions",
+    });
+    const updated = makeConsultation({
+      id: 3,
+      scheduled_at: "2026-10-29T09:00:00-03:00",
+      status: "cancelled",
+    });
+    actions.vm.$emit("changed", updated);
+    actions.vm.$emit("settled", updated);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find("#agenda-item-3").exists()).toBe(true);
+  });
+
   it("shows an error with retry", async () => {
     agenda.mockRejectedValueOnce(new Error("x"));
     await mountAgenda();

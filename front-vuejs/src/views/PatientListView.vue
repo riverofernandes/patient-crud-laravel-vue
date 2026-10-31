@@ -69,11 +69,13 @@
 
       <template v-else>
         <b-table
+          ref="table"
           class="patients-table"
           aria-label="Lista de pacientes"
           :items="patients"
           :fields="fields"
           :busy="loading"
+          :style="busyStyle"
           primary-key="id"
           responsive
           show-empty
@@ -227,6 +229,7 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
+import type Vue from "vue";
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal.vue";
 import ExportCsvButton from "@/components/ExportCsvButton.vue";
 import PatientAvatar from "@/components/PatientAvatar.vue";
@@ -281,12 +284,23 @@ export default defineComponent({
       loading: false,
       error: "",
       requestId: 0,
+      /** Table height kept while reloading, so the page doesn't shrink (scroll). */
+      keptHeight: 0,
       patientToDelete: null as Patient | null,
       perPageOptions: [...PER_PAGE_OPTIONS],
       filtersOpen: false,
     };
   },
   computed: {
+    /**
+     * While reloading (sort, page, Back/Forward), the spinner replaces the rows:
+     * keep the previous height so the browser doesn't clamp the scroll position.
+     */
+    busyStyle(): Record<string, string> | undefined {
+      return this.loading && this.keptHeight
+        ? { minHeight: `${this.keptHeight}px` }
+        : undefined;
+    },
     activeSearch(): string {
       const q = this.$route.query.search;
       return typeof q === "string" ? q : "";
@@ -388,12 +402,21 @@ export default defineComponent({
     "$route.query": {
       immediate: true,
       handler() {
-        if (this.search.trim() !== this.activeSearch)
+        // Don't overwrite what the user is still typing (debounce pending).
+        if (
+          !this.applySearch.pending?.() &&
+          this.search.trim() !== this.activeSearch
+        )
           this.search = this.activeSearch;
         this.fetch();
       },
     },
     search(value: string) {
+      // Back in sync with the URL (e.g. typed back, or set from the route).
+      if (value.trim() === this.activeSearch) {
+        this.applySearch.cancel?.();
+        return;
+      }
       this.applySearch(value);
     },
   },
@@ -420,19 +443,29 @@ export default defineComponent({
     // replaced with a debounced version in created()
     applySearch: (() => undefined) as ((value: string) => void) & {
       cancel?: () => void;
+      pending?: () => boolean;
     },
     /**
      * Writes the list state to the query string (the source of truth, watched above),
      * merging with the current values and omitting defaults so plain URLs stay plain.
      * Page/sort/per-page changes use `push` so Back/Forward walk through them;
      * debounced typing and automatic corrections use `replace`.
+     * A push (user action) also applies what is typed in the search box right
+     * away, so a sort/filter/page click within the debounce never drops it.
      */
     updateQuery(
       changes: Partial<ListQuery>,
       mode: "push" | "replace" = "replace"
     ): void {
+      let search = this.activeSearch;
+      if (mode === "push") {
+        this.applySearch.cancel?.();
+        search = this.search.trim();
+        // New term: the old page numbers no longer apply.
+        if (search !== this.activeSearch) changes = { ...changes, page: 1 };
+      }
       const next: ListQuery = {
-        search: this.activeSearch,
+        search,
         page: this.currentPage,
         perPage: this.perPage,
         sort: this.sort,
@@ -474,6 +507,10 @@ export default defineComponent({
     },
     async fetch(): Promise<void> {
       const requestId = ++this.requestId;
+      const table = (this.$refs.table as Vue | undefined)?.$el as
+        | HTMLElement
+        | undefined;
+      if (!this.loading) this.keptHeight = table?.offsetHeight ?? 0;
       this.loading = true;
       this.error = "";
       try {

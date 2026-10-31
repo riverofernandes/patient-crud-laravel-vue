@@ -80,6 +80,8 @@ describe("ConsultationStatusActions", () => {
     });
     await wrapper.vm.$nextTick();
     expect(document.activeElement).toBe(heading);
+    // Settled once focus has moved (parents may now drop the item).
+    expect(wrapper.emitted("settled")?.[0][0]).toMatchObject({ id: 11 });
     heading.remove();
   });
 
@@ -115,6 +117,8 @@ describe("ConsultationStatusActions", () => {
       "Falta registrada."
     );
     expect(wrapper.emitted("changed")).toBeTruthy();
+    // Not settled while the confirmation modal is still closing.
+    expect(wrapper.emitted("settled")).toBeFalsy();
   });
 
   it("shows the API message on an invalid transition and asks for a reload", async () => {

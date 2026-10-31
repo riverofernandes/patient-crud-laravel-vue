@@ -91,7 +91,8 @@ import { notify } from "@/utils/notify";
  * Status buttons allowed by the transition table for a consultation. Cancel
  * and no-show ask for confirmation first. Performs the PATCH itself and emits
  * `changed` with the updated consultation. The clicked button usually
- * disappears afterwards, so focus moves to `focusTarget`.
+ * disappears afterwards, so focus moves to `focusTarget`; `settled` follows
+ * once the change is complete (after the confirmation modal has closed).
  */
 export default defineComponent({
   name: "ConsultationStatusActions",
@@ -161,9 +162,13 @@ export default defineComponent({
     focusAfterChange(): void {
       this.$nextTick(() => {
         const el = document.querySelector<HTMLElement>(this.focusTarget);
-        if (!el) return;
-        if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
-        el.focus({ preventScroll: true });
+        if (el) {
+          if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+          el.focus({ preventScroll: true });
+        }
+        // The change is complete (confirmation modal closed, focus moved):
+        // the parent may now remove this consultation from its list.
+        this.$emit("settled", this.consultation);
       });
     },
     async apply(action: StatusAction): Promise<boolean> {
