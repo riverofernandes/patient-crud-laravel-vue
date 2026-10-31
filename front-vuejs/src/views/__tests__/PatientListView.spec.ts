@@ -178,7 +178,7 @@ describe("PatientListView filters and export", () => {
     const input = wrapper.find("#patient-search");
     expect(input.attributes("aria-describedby")).toBe("patient-search-help");
     expect(wrapper.find("#patient-search-help").text()).toBe(
-      "CPF: informe os 11 dígitos"
+      "CPF: informe 3 ou mais dígitos"
     );
     expect(input.attributes("placeholder")).toBe(
       "Buscar por nome do paciente ou CPF"

@@ -11,7 +11,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Shared validation for creating (POST) and fully replacing (PUT) a patient.
+ * Shared validation for creating (POST), fully replacing (PUT) and partially updating (PATCH) a patient.
  */
 class PatientRequest extends FormRequest
 {
@@ -32,7 +32,7 @@ class PatientRequest extends FormRequest
         // is sent. An omitted or null address skips them (and, on PUT, removes the stored address).
         $requiredInAddress = Rule::requiredIf(fn () => is_array($this->input('address')));
 
-        return [
+        $rules = [
             'name' => ['bail', 'required', 'string', 'min:3', 'max:255'],
             'cpf' => [
                 'required',
@@ -55,6 +55,37 @@ class PatientRequest extends FormRequest
             'address.city' => [$requiredInAddress, 'string', 'max:100'],
             'address.state' => [$requiredInAddress, 'string', Rule::in(PatientAddress::STATES)],
         ];
+
+        if (! $this->isPartial()) {
+            return $rules;
+        }
+
+        // PATCH: a top-level field is validated only when sent; when sent, the same rules apply (so "name": ""
+        // still fails). Address subfields keep their rules, since a sent address is replaced as a whole.
+        foreach ($rules as $field => $fieldRules) {
+            if (! str_contains($field, '.')) {
+                $rules[$field] = ['sometimes', ...$fieldRules];
+            }
+        }
+
+        return $rules;
+    }
+
+    /**
+     * PATCH updates only the fields present in the body.
+     */
+    public function isPartial(): bool
+    {
+        return $this->isMethod('PATCH');
+    }
+
+    /**
+     * Whether this request sets the address: always on POST/PUT, and on PATCH only when the `address` key is sent
+     * (an object replaces it, `null` removes it).
+     */
+    public function touchesAddress(): bool
+    {
+        return ! $this->isPartial() || $this->exists('address');
     }
 
     /**
@@ -169,7 +200,7 @@ class PatientRequest extends FormRequest
                 'example' => 'Paciente com miopia leve, retorno anual.',
             ],
             'address' => [
-                'description' => 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.',
+                'description' => 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço; no PATCH, omitido mantém o endereço e `null` o remove. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.',
             ],
             'address.cep' => [
                 'description' => 'CEP com 8 dígitos, com ou sem máscara (`00000-000`). Armazenado só com dígitos. Obrigatório quando `address` é enviado.',

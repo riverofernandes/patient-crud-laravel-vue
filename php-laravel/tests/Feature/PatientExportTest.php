@@ -131,7 +131,7 @@ class PatientExportTest extends TestCase
 
         $this->assertSame(['Dani', 'Ana'], $names('sex=F&age_min=30&sort=name&direction=desc'));
         $this->assertSame(['Dani'], $names('search=625.189.530-60'));
-        $this->assertSame([], $names('search=625.189'));
+        $this->assertSame(['Dani'], $names('search=625.189')); // partial CPF
         $this->assertCount(16, $names('per_page=2'));
     }
 
