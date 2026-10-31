@@ -51,7 +51,7 @@ src/
 
 | Path | Screen |
 |---|---|
-| `/` | Listing with search (`?search=`, name or full CPF), filters (`?sex=M\|F&age_min=&age_max=`, 0–150), pagination (`?page=`, `?per_page=` 10/25/50), sorting (`?sort=name\|birth_date&direction=asc\|desc`), "Exportar CSV", detail/edit/delete actions |
+| `/` | Listing with search (`?search=`, name or CPF — full or 3+ digits, masked or not), filters (`?sex=M\|F&age_min=&age_max=`, 0–150), pagination (`?page=`, `?per_page=` 10/25/50), sorting (`?sort=name\|birth_date&direction=asc\|desc`), "Exportar CSV", detail/edit/delete actions |
 | `/pacientes/lixeira` | Trash ("Pacientes excluídos"): search, pagination, "Restaurar", "Exportar CSV" (`trashed=only`) |
 | `/pacientes/novo` | Create |
 | `/pacientes/:id` | Detail with tabs "Dados" / "Histórico" / "Atendimentos" / "Linha do tempo" (`?aba=historico\|atendimentos\|linha-do-tempo`) |
