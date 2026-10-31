@@ -248,7 +248,7 @@
                             }
                         ],
                         "body": null,
-                        "description": "Restaura um paciente da lixeira (desfaz a exclus\u00e3o l\u00f3gica). Falha com 409 se outro paciente ativo\nestiver usando o mesmo CPF (o CPF pode ter sido reutilizado depois da exclus\u00e3o).",
+                        "description": "Restaura um paciente da lixeira (desfaz a exclus\u00e3o l\u00f3gica). Falha com 409 se outro paciente ativo\nestiver usando o mesmo CPF (o CPF pode ter sido reutilizado depois da exclus\u00e3o).\n\nEnquanto o paciente estava na lixeira, seus atendimentos n\u00e3o bloqueavam o hor\u00e1rio do profissional. Na\nrestaura\u00e7\u00e3o, os atendimentos **futuros** do paciente (`scheduled`\/`confirmed`) que se sobrep\u00f5em a outro\natendimento ativo s\u00e3o cancelados automaticamente, com a anota\u00e7\u00e3o \"Cancelado automaticamente ao restaurar o\npaciente: o hor\u00e1rio foi ocupado por outro atendimento.\" acrescentada a `notes`. `meta.cancelled_consultations`\nlista os cancelados (`[]` quando n\u00e3o houve conflito). Atendimentos passados e finais n\u00e3o mudam.",
                         "auth": {
                             "type": "noauth"
                         }
@@ -257,7 +257,7 @@
                         {
                             "header": [],
                             "code": 200,
-                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:45:00-03:00\", \"age\": 30, \"deleted_at\": null, \"address\": {\"cep\": \"01310100\", \"street\": \"Avenida Paulista\", \"number\": \"1578\", \"complement\": \"Sala 12\", \"neighborhood\": \"Bela Vista\", \"city\": \"S\u00e3o Paulo\", \"state\": \"SP\"}, \"photo_url\": \"http:\/\/localhost:8000\/api\/patients\/1\/photo?v=1\"}}",
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:45:00-03:00\", \"age\": 30, \"deleted_at\": null, \"address\": {\"cep\": \"01310100\", \"street\": \"Avenida Paulista\", \"number\": \"1578\", \"complement\": \"Sala 12\", \"neighborhood\": \"Bela Vista\", \"city\": \"S\u00e3o Paulo\", \"state\": \"SP\"}, \"photo_url\": \"http:\/\/localhost:8000\/api\/patients\/1\/photo?v=1\"}, \"meta\": {\"cancelled_consultations\": [{\"id\": 42, \"scheduled_at\": \"2027-05-10T10:00:00-03:00\", \"professional_name\": \"Dra. Helena Martins\"}]}}",
                             "name": "Paciente restaurado"
                         },
                         {
@@ -458,64 +458,6 @@
                     ]
                 },
                 {
-                    "name": "Atualizar paciente",
-                    "request": {
-                        "url": {
-                            "host": "{{baseUrl}}",
-                            "path": "api\/patients\/:id",
-                            "query": [],
-                            "raw": "{{baseUrl}}\/api\/patients\/:id",
-                            "variable": [
-                                {
-                                    "id": "id",
-                                    "key": "id",
-                                    "value": "1",
-                                    "description": "ID do paciente."
-                                }
-                            ]
-                        },
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application\/json"
-                            },
-                            {
-                                "key": "Accept",
-                                "value": "application\/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\"name\":\"Maria da Silva\",\"cpf\":\"625.189.530-60\",\"rg\":\"35.688.019-X\",\"birth_date\":\"1996-07-20\",\"sex\":\"F\",\"phone\":\"(11) 92853-5718\",\"email\":\"maria@example.com\",\"description\":\"Paciente com miopia leve, retorno anual.\",\"address\":{\"cep\":\"01310-100\",\"street\":\"Avenida Paulista\",\"number\":\"1578\",\"complement\":\"Sala 12\",\"neighborhood\":\"Bela Vista\",\"city\":\"S\u00e3o Paulo\",\"state\":\"SP\"}}"
-                        },
-                        "description": "`PUT` \u00e9 substitui\u00e7\u00e3o completa: envie todos os campos. Campos opcionais omitidos (`email`, `description`) s\u00e3o\napagados e `address` omitido ou `null` remove o endere\u00e7o.\n\n`PATCH` \u00e9 atualiza\u00e7\u00e3o parcial: s\u00f3 os campos enviados s\u00e3o validados e alterados (ex.: `{\"name\": \"Novo nome\"}`).\nCampos omitidos ficam como est\u00e3o; `address` omitido mant\u00e9m o endere\u00e7o e `null` o remove. Enviar um campo\nobrigat\u00f3rio vazio continua sendo erro de valida\u00e7\u00e3o.\n\nA foto n\u00e3o muda por aqui (use as rotas `\/photo`).",
-                        "auth": {
-                            "type": "noauth"
-                        }
-                    },
-                    "response": [
-                        {
-                            "header": [],
-                            "code": 200,
-                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null, \"address\": {\"cep\": \"01310100\", \"street\": \"Avenida Paulista\", \"number\": \"1578\", \"complement\": \"Sala 12\", \"neighborhood\": \"Bela Vista\", \"city\": \"S\u00e3o Paulo\", \"state\": \"SP\"}, \"photo_url\": \"http:\/\/localhost:8000\/api\/patients\/1\/photo?v=1\"}}",
-                            "name": "Paciente atualizado"
-                        },
-                        {
-                            "header": [],
-                            "code": 404,
-                            "body": "{\"message\": \"Paciente n\u00e3o encontrado.\"}",
-                            "name": "Paciente n\u00e3o encontrado ou exclu\u00eddo"
-                        },
-                        {
-                            "header": [],
-                            "code": 422,
-                            "body": "{\"message\": \"O campo nome completo \u00e9 obrigat\u00f3rio. (and 1 more error)\", \"errors\": {\"name\": [\"O campo nome completo \u00e9 obrigat\u00f3rio.\"], \"cpf\": [\"O CPF informado \u00e9 inv\u00e1lido.\"]}}",
-                            "name": "Erro de valida\u00e7\u00e3o"
-                        }
-                    ]
-                },
-                {
                     "name": "Excluir paciente",
                     "request": {
                         "url": {
@@ -561,6 +503,122 @@
                             "code": 404,
                             "body": "{\"message\": \"Paciente n\u00e3o encontrado.\"}",
                             "name": "Paciente n\u00e3o encontrado ou exclu\u00eddo"
+                        }
+                    ]
+                },
+                {
+                    "name": "Atualizar paciente (substitui\u00e7\u00e3o completa)",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/patients\/:id",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/patients\/:id",
+                            "variable": [
+                                {
+                                    "id": "id",
+                                    "key": "id",
+                                    "value": "1",
+                                    "description": "ID do paciente."
+                                }
+                            ]
+                        },
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Maria da Silva\",\"cpf\":\"625.189.530-60\",\"rg\":\"35.688.019-X\",\"birth_date\":\"1996-07-20\",\"sex\":\"F\",\"phone\":\"(11) 92853-5718\",\"email\":\"maria@example.com\",\"description\":\"Paciente com miopia leve, retorno anual.\",\"address\":{\"cep\":\"01310-100\",\"street\":\"Avenida Paulista\",\"number\":\"1578\",\"complement\":\"Sala 12\",\"neighborhood\":\"Bela Vista\",\"city\":\"S\u00e3o Paulo\",\"state\":\"SP\"}}"
+                        },
+                        "description": "`PUT` \u00e9 substitui\u00e7\u00e3o completa: envie todos os campos. Campos opcionais omitidos (`email`, `description`) s\u00e3o\napagados e `address` omitido ou `null` remove o endere\u00e7o. Para alterar s\u00f3 alguns campos, use `PATCH`.\n\nA foto n\u00e3o muda por aqui (use as rotas `\/photo`).",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null, \"address\": {\"cep\": \"01310100\", \"street\": \"Avenida Paulista\", \"number\": \"1578\", \"complement\": \"Sala 12\", \"neighborhood\": \"Bela Vista\", \"city\": \"S\u00e3o Paulo\", \"state\": \"SP\"}, \"photo_url\": \"http:\/\/localhost:8000\/api\/patients\/1\/photo?v=1\"}}",
+                            "name": "Paciente atualizado"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Paciente n\u00e3o encontrado.\"}",
+                            "name": "Paciente n\u00e3o encontrado ou exclu\u00eddo"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"O campo nome completo \u00e9 obrigat\u00f3rio. (and 1 more error)\", \"errors\": {\"name\": [\"O campo nome completo \u00e9 obrigat\u00f3rio.\"], \"cpf\": [\"O CPF informado \u00e9 inv\u00e1lido.\"]}}",
+                            "name": "Erro de valida\u00e7\u00e3o"
+                        }
+                    ]
+                },
+                {
+                    "name": "Atualizar paciente parcialmente",
+                    "request": {
+                        "url": {
+                            "host": "{{baseUrl}}",
+                            "path": "api\/patients\/:id",
+                            "query": [],
+                            "raw": "{{baseUrl}}\/api\/patients\/:id",
+                            "variable": [
+                                {
+                                    "id": "id",
+                                    "key": "id",
+                                    "value": "1",
+                                    "description": "ID do paciente."
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application\/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application\/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Maria da Silva\",\"cpf\":\"625.189.530-60\",\"rg\":\"35.688.019-X\",\"birth_date\":\"1996-07-20\",\"sex\":\"F\",\"phone\":\"(11) 92853-5718\",\"email\":\"maria@example.com\",\"description\":\"Paciente com miopia leve, retorno anual.\",\"address\":{\"cep\":\"01310-100\",\"street\":\"Avenida Paulista\",\"number\":\"1578\",\"complement\":\"Sala 12\",\"neighborhood\":\"Bela Vista\",\"city\":\"S\u00e3o Paulo\",\"state\":\"SP\"}}"
+                        },
+                        "description": "`PATCH` \u00e9 atualiza\u00e7\u00e3o parcial: s\u00f3 os campos enviados s\u00e3o validados e alterados (ex.: `{\"name\": \"Novo nome\"}`);\ntodos os campos s\u00e3o opcionais. Campos omitidos ficam como est\u00e3o; `address` omitido mant\u00e9m o endere\u00e7o e `null`\no remove (`address` como texto, inclusive `\"\"`, \u00e9 erro de valida\u00e7\u00e3o). Enviar um campo obrigat\u00f3rio vazio\ncontinua sendo erro de valida\u00e7\u00e3o.\n\nA foto n\u00e3o muda por aqui (use as rotas `\/photo`).",
+                        "auth": {
+                            "type": "noauth"
+                        }
+                    },
+                    "response": [
+                        {
+                            "header": [],
+                            "code": 200,
+                            "body": "{\"data\": {\"id\": 1, \"name\": \"Maria da Silva\", \"cpf\": \"62518953060\", \"rg\": \"35688019X\", \"birth_date\": \"1996-07-20\", \"sex\": \"F\", \"phone\": \"11928535718\", \"email\": \"maria@example.com\", \"description\": \"Paciente com miopia leve, retorno anual.\", \"created_at\": \"2026-10-26T15:30:00-03:00\", \"updated_at\": \"2026-10-26T15:30:00-03:00\", \"age\": 30, \"deleted_at\": null, \"address\": {\"cep\": \"01310100\", \"street\": \"Avenida Paulista\", \"number\": \"1578\", \"complement\": \"Sala 12\", \"neighborhood\": \"Bela Vista\", \"city\": \"S\u00e3o Paulo\", \"state\": \"SP\"}, \"photo_url\": \"http:\/\/localhost:8000\/api\/patients\/1\/photo?v=1\"}}",
+                            "name": "Paciente atualizado"
+                        },
+                        {
+                            "header": [],
+                            "code": 404,
+                            "body": "{\"message\": \"Paciente n\u00e3o encontrado.\"}",
+                            "name": "Paciente n\u00e3o encontrado ou exclu\u00eddo"
+                        },
+                        {
+                            "header": [],
+                            "code": 422,
+                            "body": "{\"message\": \"O campo nome completo \u00e9 obrigat\u00f3rio. (and 1 more error)\", \"errors\": {\"name\": [\"O campo nome completo \u00e9 obrigat\u00f3rio.\"], \"cpf\": [\"O CPF informado \u00e9 inv\u00e1lido.\"]}}",
+                            "name": "Erro de valida\u00e7\u00e3o"
                         }
                     ]
                 },

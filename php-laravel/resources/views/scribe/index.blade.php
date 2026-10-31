@@ -92,11 +92,14 @@
                                                                                 <li class="tocify-item level-2" data-unique="pacientes-GETapi-patients--id-">
                                 <a href="#pacientes-GETapi-patients--id-">Detalhar paciente</a>
                             </li>
-                                                                                <li class="tocify-item level-2" data-unique="pacientes-PUTapi-patients--id-">
-                                <a href="#pacientes-PUTapi-patients--id-">Atualizar paciente</a>
-                            </li>
                                                                                 <li class="tocify-item level-2" data-unique="pacientes-DELETEapi-patients--id-">
                                 <a href="#pacientes-DELETEapi-patients--id-">Excluir paciente</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="pacientes-PUTapi-patients--id-">
+                                <a href="#pacientes-PUTapi-patients--id-">Atualizar paciente (substituição completa)</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="pacientes-PATCHapi-patients--id-">
+                                <a href="#pacientes-PATCHapi-patients--id-">Atualizar paciente parcialmente</a>
                             </li>
                                                                                 <li class="tocify-item level-2" data-unique="pacientes-GETapi-patients--patient_id--photo">
                                 <a href="#pacientes-GETapi-patients--patient_id--photo">Foto do paciente</a>
@@ -880,6 +883,11 @@ You can check the Dev Tools console for debugging information.</code></pre>
 
 <p>Restaura um paciente da lixeira (desfaz a exclusão lógica). Falha com 409 se outro paciente ativo
 estiver usando o mesmo CPF (o CPF pode ter sido reutilizado depois da exclusão).</p>
+<p>Enquanto o paciente estava na lixeira, seus atendimentos não bloqueavam o horário do profissional. Na
+restauração, os atendimentos <strong>futuros</strong> do paciente (<code>scheduled</code>/<code>confirmed</code>) que se sobrepõem a outro
+atendimento ativo são cancelados automaticamente, com a anotação &quot;Cancelado automaticamente ao restaurar o
+paciente: o horário foi ocupado por outro atendimento.&quot; acrescentada a <code>notes</code>. <code>meta.cancelled_consultations</code>
+lista os cancelados (<code>[]</code> quando não houve conflito). Atendimentos passados e finais não mudam.</p>
 
 <span id="example-requests-POSTapi-patients--patient_id--restore">
 <blockquote>Example request:</blockquote>
@@ -940,6 +948,15 @@ fetch(url, {
             &quot;state&quot;: &quot;SP&quot;
         },
         &quot;photo_url&quot;: &quot;http://localhost:8000/api/patients/1/photo?v=1&quot;
+    },
+    &quot;meta&quot;: {
+        &quot;cancelled_consultations&quot;: [
+            {
+                &quot;id&quot;: 42,
+                &quot;scheduled_at&quot;: &quot;2027-05-10T10:00:00-03:00&quot;,
+                &quot;professional_name&quot;: &quot;Dra. Helena Martins&quot;
+            }
+        ]
     }
 }</code>
  </pre>
@@ -1900,16 +1917,149 @@ You can check the Dev Tools console for debugging information.</code></pre>
             </div>
                     </form>
 
-                    <h2 id="pacientes-PUTapi-patients--id-">Atualizar paciente</h2>
+                    <h2 id="pacientes-DELETEapi-patients--id-">Excluir paciente</h2>
+
+<p>
+</p>
+
+<p>Exclusão lógica (soft delete): o registro permanece no banco com <code>deleted_at</code> preenchido, deixa de aparecer
+na listagem e passa a retornar 404. O CPF de um paciente excluído pode ser reutilizado em um novo cadastro.</p>
+
+<span id="example-requests-DELETEapi-patients--id-">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request DELETE \
+    "http://localhost:8000/api/patients/1" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost:8000/api/patients/1"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+fetch(url, {
+    method: "DELETE",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-DELETEapi-patients--id-">
+            <blockquote>
+            <p>Example response (204, Paciente excluído):</p>
+        </blockquote>
+                <pre>
+<code>Empty response</code>
+ </pre>
+            <blockquote>
+            <p>Example response (404, Paciente não encontrado ou excluído):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;Paciente n&atilde;o encontrado.&quot;
+}</code>
+ </pre>
+    </span>
+<span id="execution-results-DELETEapi-patients--id-" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-DELETEapi-patients--id-"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-DELETEapi-patients--id-"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-DELETEapi-patients--id-" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-DELETEapi-patients--id-">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-DELETEapi-patients--id-" data-method="DELETE"
+      data-path="api/patients/{id}"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('DELETEapi-patients--id-', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-DELETEapi-patients--id-"
+                    onclick="tryItOut('DELETEapi-patients--id-');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-DELETEapi-patients--id-"
+                    onclick="cancelTryOut('DELETEapi-patients--id-');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-DELETEapi-patients--id-"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-red">DELETE</small>
+            <b><code>api/patients/{id}</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="DELETEapi-patients--id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="DELETEapi-patients--id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="id"                data-endpoint="DELETEapi-patients--id-"
+               value="1"
+               data-component="url">
+    <br>
+<p>ID do paciente. Example: <code>1</code></p>
+            </div>
+                    </form>
+
+                    <h2 id="pacientes-PUTapi-patients--id-">Atualizar paciente (substituição completa)</h2>
 
 <p>
 </p>
 
 <p><code>PUT</code> é substituição completa: envie todos os campos. Campos opcionais omitidos (<code>email</code>, <code>description</code>) são
-apagados e <code>address</code> omitido ou <code>null</code> remove o endereço.</p>
-<p><code>PATCH</code> é atualização parcial: só os campos enviados são validados e alterados (ex.: <code>{"name": "Novo nome"}</code>).
-Campos omitidos ficam como estão; <code>address</code> omitido mantém o endereço e <code>null</code> o remove. Enviar um campo
-obrigatório vazio continua sendo erro de validação.</p>
+apagados e <code>address</code> omitido ou <code>null</code> remove o endereço. Para alterar só alguns campos, use <code>PATCH</code>.</p>
 <p>A foto não muda por aqui (use as rotas <code>/photo</code>).</p>
 
 <span id="example-requests-PUTapi-patients--id-">
@@ -2086,10 +2236,6 @@ You can check the Dev Tools console for debugging information.</code></pre>
             </h3>
             <p>
             <small class="badge badge-darkblue">PUT</small>
-            <b><code>api/patients/{id}</code></b>
-        </p>
-            <p>
-            <small class="badge badge-purple">PATCH</small>
             <b><code>api/patients/{id}</code></b>
         </p>
                 <h4 class="fancy-heading-panel"><b>Headers</b></h4>
@@ -2310,23 +2456,46 @@ Must be one of:
         </div>
         </form>
 
-                    <h2 id="pacientes-DELETEapi-patients--id-">Excluir paciente</h2>
+                    <h2 id="pacientes-PATCHapi-patients--id-">Atualizar paciente parcialmente</h2>
 
 <p>
 </p>
 
-<p>Exclusão lógica (soft delete): o registro permanece no banco com <code>deleted_at</code> preenchido, deixa de aparecer
-na listagem e passa a retornar 404. O CPF de um paciente excluído pode ser reutilizado em um novo cadastro.</p>
+<p><code>PATCH</code> é atualização parcial: só os campos enviados são validados e alterados (ex.: <code>{"name": "Novo nome"}</code>);
+todos os campos são opcionais. Campos omitidos ficam como estão; <code>address</code> omitido mantém o endereço e <code>null</code>
+o remove (<code>address</code> como texto, inclusive <code>""</code>, é erro de validação). Enviar um campo obrigatório vazio
+continua sendo erro de validação.</p>
+<p>A foto não muda por aqui (use as rotas <code>/photo</code>).</p>
 
-<span id="example-requests-DELETEapi-patients--id-">
+<span id="example-requests-PATCHapi-patients--id-">
 <blockquote>Example request:</blockquote>
 
 
 <div class="bash-example">
-    <pre><code class="language-bash">curl --request DELETE \
+    <pre><code class="language-bash">curl --request PATCH \
     "http://localhost:8000/api/patients/1" \
     --header "Content-Type: application/json" \
-    --header "Accept: application/json"</code></pre></div>
+    --header "Accept: application/json" \
+    --data "{
+    \"name\": \"Maria da Silva\",
+    \"cpf\": \"625.189.530-60\",
+    \"rg\": \"35.688.019-X\",
+    \"birth_date\": \"1996-07-20\",
+    \"sex\": \"F\",
+    \"phone\": \"(11) 92853-5718\",
+    \"email\": \"maria@example.com\",
+    \"description\": \"Paciente com miopia leve, retorno anual.\",
+    \"address\": {
+        \"cep\": \"01310-100\",
+        \"street\": \"Avenida Paulista\",
+        \"number\": \"1578\",
+        \"complement\": \"Sala 12\",
+        \"neighborhood\": \"Bela Vista\",
+        \"city\": \"São Paulo\",
+        \"state\": \"SP\"
+    }
+}"
+</code></pre></div>
 
 
 <div class="javascript-example">
@@ -2339,19 +2508,67 @@ const headers = {
     "Accept": "application/json",
 };
 
+let body = {
+    "name": "Maria da Silva",
+    "cpf": "625.189.530-60",
+    "rg": "35.688.019-X",
+    "birth_date": "1996-07-20",
+    "sex": "F",
+    "phone": "(11) 92853-5718",
+    "email": "maria@example.com",
+    "description": "Paciente com miopia leve, retorno anual.",
+    "address": {
+        "cep": "01310-100",
+        "street": "Avenida Paulista",
+        "number": "1578",
+        "complement": "Sala 12",
+        "neighborhood": "Bela Vista",
+        "city": "São Paulo",
+        "state": "SP"
+    }
+};
+
 fetch(url, {
-    method: "DELETE",
+    method: "PATCH",
     headers,
+    body: JSON.stringify(body),
 }).then(response =&gt; response.json());</code></pre></div>
 
 </span>
 
-<span id="example-responses-DELETEapi-patients--id-">
+<span id="example-responses-PATCHapi-patients--id-">
             <blockquote>
-            <p>Example response (204, Paciente excluído):</p>
+            <p>Example response (200, Paciente atualizado):</p>
         </blockquote>
                 <pre>
-<code>Empty response</code>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;data&quot;: {
+        &quot;id&quot;: 1,
+        &quot;name&quot;: &quot;Maria da Silva&quot;,
+        &quot;cpf&quot;: &quot;62518953060&quot;,
+        &quot;rg&quot;: &quot;35688019X&quot;,
+        &quot;birth_date&quot;: &quot;1996-07-20&quot;,
+        &quot;sex&quot;: &quot;F&quot;,
+        &quot;phone&quot;: &quot;11928535718&quot;,
+        &quot;email&quot;: &quot;maria@example.com&quot;,
+        &quot;description&quot;: &quot;Paciente com miopia leve, retorno anual.&quot;,
+        &quot;created_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
+        &quot;updated_at&quot;: &quot;2026-10-26T15:30:00-03:00&quot;,
+        &quot;age&quot;: 30,
+        &quot;deleted_at&quot;: null,
+        &quot;address&quot;: {
+            &quot;cep&quot;: &quot;01310100&quot;,
+            &quot;street&quot;: &quot;Avenida Paulista&quot;,
+            &quot;number&quot;: &quot;1578&quot;,
+            &quot;complement&quot;: &quot;Sala 12&quot;,
+            &quot;neighborhood&quot;: &quot;Bela Vista&quot;,
+            &quot;city&quot;: &quot;S&atilde;o Paulo&quot;,
+            &quot;state&quot;: &quot;SP&quot;
+        },
+        &quot;photo_url&quot;: &quot;http://localhost:8000/api/patients/1/photo?v=1&quot;
+    }
+}</code>
  </pre>
             <blockquote>
             <p>Example response (404, Paciente não encontrado ou excluído):</p>
@@ -2362,51 +2579,68 @@ fetch(url, {
     &quot;message&quot;: &quot;Paciente n&atilde;o encontrado.&quot;
 }</code>
  </pre>
+            <blockquote>
+            <p>Example response (422, Erro de validação):</p>
+        </blockquote>
+                <pre>
+
+<code class="language-json" style="max-height: 300px;">{
+    &quot;message&quot;: &quot;O campo nome completo &eacute; obrigat&oacute;rio. (and 1 more error)&quot;,
+    &quot;errors&quot;: {
+        &quot;name&quot;: [
+            &quot;O campo nome completo &eacute; obrigat&oacute;rio.&quot;
+        ],
+        &quot;cpf&quot;: [
+            &quot;O CPF informado &eacute; inv&aacute;lido.&quot;
+        ]
+    }
+}</code>
+ </pre>
     </span>
-<span id="execution-results-DELETEapi-patients--id-" hidden>
+<span id="execution-results-PATCHapi-patients--id-" hidden>
     <blockquote>Received response<span
-                id="execution-response-status-DELETEapi-patients--id-"></span>:
+                id="execution-response-status-PATCHapi-patients--id-"></span>:
     </blockquote>
-    <pre class="json"><code id="execution-response-content-DELETEapi-patients--id-"
+    <pre class="json"><code id="execution-response-content-PATCHapi-patients--id-"
       data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
 </span>
-<span id="execution-error-DELETEapi-patients--id-" hidden>
+<span id="execution-error-PATCHapi-patients--id-" hidden>
     <blockquote>Request failed with error:</blockquote>
-    <pre><code id="execution-error-message-DELETEapi-patients--id-">
+    <pre><code id="execution-error-message-PATCHapi-patients--id-">
 
 Tip: Check that you&#039;re properly connected to the network.
 If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
 You can check the Dev Tools console for debugging information.</code></pre>
 </span>
-<form id="form-DELETEapi-patients--id-" data-method="DELETE"
+<form id="form-PATCHapi-patients--id-" data-method="PATCH"
       data-path="api/patients/{id}"
       data-authed="0"
       data-hasfiles="0"
       data-isarraybody="0"
       autocomplete="off"
-      onsubmit="event.preventDefault(); executeTryOut('DELETEapi-patients--id-', this);">
+      onsubmit="event.preventDefault(); executeTryOut('PATCHapi-patients--id-', this);">
     <h3>
         Request&nbsp;&nbsp;&nbsp;
                     <button type="button"
                     style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
-                    id="btn-tryout-DELETEapi-patients--id-"
-                    onclick="tryItOut('DELETEapi-patients--id-');">Try it out ⚡
+                    id="btn-tryout-PATCHapi-patients--id-"
+                    onclick="tryItOut('PATCHapi-patients--id-');">Try it out ⚡
             </button>
             <button type="button"
                     style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
-                    id="btn-canceltryout-DELETEapi-patients--id-"
-                    onclick="cancelTryOut('DELETEapi-patients--id-');" hidden>Cancel 🛑
+                    id="btn-canceltryout-PATCHapi-patients--id-"
+                    onclick="cancelTryOut('PATCHapi-patients--id-');" hidden>Cancel 🛑
             </button>&nbsp;&nbsp;
             <button type="submit"
                     style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
-                    id="btn-executetryout-DELETEapi-patients--id-"
+                    id="btn-executetryout-PATCHapi-patients--id-"
                     data-initial-text="Send Request 💥"
                     data-loading-text="⏱ Sending..."
                     hidden>Send Request 💥
             </button>
             </h3>
             <p>
-            <small class="badge badge-red">DELETE</small>
+            <small class="badge badge-purple">PATCH</small>
             <b><code>api/patients/{id}</code></b>
         </p>
                 <h4 class="fancy-heading-panel"><b>Headers</b></h4>
@@ -2415,7 +2649,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
 &nbsp;
  &nbsp;
                 <input type="text" style="display: none"
-                              name="Content-Type"                data-endpoint="DELETEapi-patients--id-"
+                              name="Content-Type"                data-endpoint="PATCHapi-patients--id-"
                value="application/json"
                data-component="header">
     <br>
@@ -2426,7 +2660,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
 &nbsp;
  &nbsp;
                 <input type="text" style="display: none"
-                              name="Accept"                data-endpoint="DELETEapi-patients--id-"
+                              name="Accept"                data-endpoint="PATCHapi-patients--id-"
                value="application/json"
                data-component="header">
     <br>
@@ -2438,13 +2672,194 @@ You can check the Dev Tools console for debugging information.</code></pre>
 <small>integer</small>&nbsp;
  &nbsp;
                 <input type="number" style="display: none"
-               step="any"               name="id"                data-endpoint="DELETEapi-patients--id-"
+               step="any"               name="id"                data-endpoint="PATCHapi-patients--id-"
                value="1"
                data-component="url">
     <br>
 <p>ID do paciente. Example: <code>1</code></p>
             </div>
-                    </form>
+                            <h4 class="fancy-heading-panel"><b>Body Parameters</b></h4>
+        <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>name</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="name"                data-endpoint="PATCHapi-patients--id-"
+               value="Maria da Silva"
+               data-component="body">
+    <br>
+<p>Nome completo do paciente (3 a 255 caracteres). Must be at least 3 characters. Must not be greater than 255 characters. Example: <code>Maria da Silva</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>cpf</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="cpf"                data-endpoint="PATCHapi-patients--id-"
+               value="625.189.530-60"
+               data-component="body">
+    <br>
+<p>CPF válido (dígitos verificadores conferidos), com ou sem máscara. Único entre os pacientes ativos. Armazenado só com dígitos. Example: <code>625.189.530-60</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>rg</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="rg"                data-endpoint="PATCHapi-patients--id-"
+               value="35.688.019-X"
+               data-component="body">
+    <br>
+<p>RG, com ou sem máscara (até 20 caracteres). Armazenado só com dígitos e a letra X. Must not be greater than 20 characters. Example: <code>35.688.019-X</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>birth_date</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="birth_date"                data-endpoint="PATCHapi-patients--id-"
+               value="1996-07-20"
+               data-component="body">
+    <br>
+<p>Data de nascimento no formato AAAA-MM-DD; não pode ser futura. Must be a valid date in the format <code>Y-m-d</code>. Must be a date before or equal to <code>today</code>. Example: <code>1996-07-20</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>sex</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="sex"                data-endpoint="PATCHapi-patients--id-"
+               value="F"
+               data-component="body">
+    <br>
+<p>Sexo: <code>M</code> (Masculino) ou <code>F</code> (Feminino). Example: <code>F</code></p>
+Must be one of:
+<ul style="list-style-type: square;"><li><code>M</code></li> <li><code>F</code></li></ul>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>phone</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="phone"                data-endpoint="PATCHapi-patients--id-"
+               value="(11) 92853-5718"
+               data-component="body">
+    <br>
+<p>Celular com DDD, com ou sem máscara (10 ou 11 dígitos). Armazenado só com dígitos. Must be between 10 and 11 digits. Example: <code>(11) 92853-5718</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>email</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="email"                data-endpoint="PATCHapi-patients--id-"
+               value="maria@example.com"
+               data-component="body">
+    <br>
+<p>E-mail do paciente (opcional). Must be a valid email address. Must not be greater than 255 characters. Example: <code>maria@example.com</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+            <b style="line-height: 2;"><code>description</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="description"                data-endpoint="PATCHapi-patients--id-"
+               value="Paciente com miopia leve, retorno anual."
+               data-component="body">
+    <br>
+<p>Observações sobre o paciente (opcional, até 2000 caracteres). Must not be greater than 2000 characters. Example: <code>Paciente com miopia leve, retorno anual.</code></p>
+        </div>
+                <div style=" padding-left: 28px;  clear: unset;">
+        <details>
+            <summary style="padding-bottom: 10px;">
+                <b style="line-height: 2;"><code>address</code></b>&nbsp;&nbsp;
+<small>object</small>&nbsp;
+<i>optional</i> &nbsp;
+<br>
+<p>Endereço (opcional, objeto ou <code>null</code>). No PUT, omitido ou <code>null</code> remove o endereço; no PATCH, omitido mantém o endereço e <code>null</code> o remove. Quando enviado, os subcampos (exceto <code>complement</code>) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.</p>
+            </summary>
+                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>cep</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.cep"                data-endpoint="PATCHapi-patients--id-"
+               value="01310-100"
+               data-component="body">
+    <br>
+<p>CEP com 8 dígitos, com ou sem máscara (<code>00000-000</code>). Armazenado só com dígitos. Obrigatório quando <code>address</code> é enviado. Must be 8 digits. Example: <code>01310-100</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>street</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.street"                data-endpoint="PATCHapi-patients--id-"
+               value="Avenida Paulista"
+               data-component="body">
+    <br>
+<p>Logradouro (até 255). Obrigatório quando <code>address</code> é enviado. Must not be greater than 255 characters. Example: <code>Avenida Paulista</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>number</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.number"                data-endpoint="PATCHapi-patients--id-"
+               value="1578"
+               data-component="body">
+    <br>
+<p>Número (até 20; aceita &quot;S/N&quot;). Obrigatório quando <code>address</code> é enviado. Must not be greater than 20 characters. Example: <code>1578</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>complement</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.complement"                data-endpoint="PATCHapi-patients--id-"
+               value="Sala 12"
+               data-component="body">
+    <br>
+<p>Complemento (opcional, até 100). Must not be greater than 100 characters. Example: <code>Sala 12</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>neighborhood</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.neighborhood"                data-endpoint="PATCHapi-patients--id-"
+               value="Bela Vista"
+               data-component="body">
+    <br>
+<p>Bairro (até 100). Obrigatório quando <code>address</code> é enviado. Must not be greater than 100 characters. Example: <code>Bela Vista</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>city</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.city"                data-endpoint="PATCHapi-patients--id-"
+               value="São Paulo"
+               data-component="body">
+    <br>
+<p>Cidade (até 100). Obrigatório quando <code>address</code> é enviado. Must not be greater than 100 characters. Example: <code>São Paulo</code></p>
+                    </div>
+                                                                <div style="margin-left: 14px; clear: unset;">
+                        <b style="line-height: 2;"><code>state</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+                <input type="text" style="display: none"
+                              name="address.state"                data-endpoint="PATCHapi-patients--id-"
+               value="SP"
+               data-component="body">
+    <br>
+<p>UF: sigla de estado brasileiro (aceita minúsculas; armazenada em maiúsculas). Obrigatório quando <code>address</code> é enviado. Example: <code>SP</code></p>
+Must be one of:
+<ul style="list-style-type: square;"><li><code>AC</code></li> <li><code>AL</code></li> <li><code>AP</code></li> <li><code>AM</code></li> <li><code>BA</code></li> <li><code>CE</code></li> <li><code>DF</code></li> <li><code>ES</code></li> <li><code>GO</code></li> <li><code>MA</code></li> <li><code>MT</code></li> <li><code>MS</code></li> <li><code>MG</code></li> <li><code>PA</code></li> <li><code>PB</code></li> <li><code>PR</code></li> <li><code>PE</code></li> <li><code>PI</code></li> <li><code>RJ</code></li> <li><code>RN</code></li> <li><code>RS</code></li> <li><code>RO</code></li> <li><code>RR</code></li> <li><code>SC</code></li> <li><code>SP</code></li> <li><code>SE</code></li> <li><code>TO</code></li></ul>
+                    </div>
+                                    </details>
+        </div>
+        </form>
 
                     <h2 id="pacientes-GETapi-patients--patient_id--photo">Foto do paciente</h2>
 

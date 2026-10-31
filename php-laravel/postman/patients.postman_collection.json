@@ -774,6 +774,54 @@
       }
     },
     {
+      "name": "Atualizar com JSON inválido (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Invalid JSON message', function () { pm.expect(pm.response.json().message).to.eql('JSON inválido.'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/patients/{{patientId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "{{patientId}}"
+          ]
+        },
+        "description": "Atualização parcial: só os campos enviados mudam. `address` omitido mantém o endereço.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"Maria\",}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "Consultar CEP",
       "event": [
         {
@@ -1223,7 +1271,8 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Restored (deleted_at null)', function () { const d = pm.response.json().data; pm.expect(d.id).to.eql(Number(pm.collectionVariables.get('patientId'))); pm.expect(d.deleted_at).to.eql(null); });"
+              "pm.test('Restored (deleted_at null)', function () { const d = pm.response.json().data; pm.expect(d.id).to.eql(Number(pm.collectionVariables.get('patientId'))); pm.expect(d.deleted_at).to.eql(null); });",
+              "pm.test('Cancelled consultations listed in meta (none here)', function () { const m = pm.response.json().meta; pm.expect(m.cancelled_consultations).to.be.an('array').that.is.empty; });"
             ]
           }
         }
