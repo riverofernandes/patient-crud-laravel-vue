@@ -2,3 +2,4 @@
 .idea/
 .vscode/
 .playwright-mcp/
+.env.prod
