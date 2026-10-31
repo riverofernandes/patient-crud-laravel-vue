@@ -97,6 +97,11 @@ E2E_API_URL=http://localhost:8001/api npx playwright test
   (instruções no próprio arquivo; precisa de PHP com GD, como a imagem de dev da API).
 - `request-id.spec.ts` só usa a API: `X-Request-Id` gerado (UUID), ecoado quando válido e trocado quando
   inválido.
+- Regressões da auditoria: `audit-api.spec.ts` (só API: restauração que cancela atendimento futuro em
+  conflito, JSON inválido → 400, `PATCH` parcial, `address: ""`, `photo_url` na lixeira, 405/404 em pt-BR) e
+  `audit-ui.spec.ts` (busca digitada dentro do debounce, histórico/linha do tempo após foto, título, rolagem,
+  foco na lixeira e na agenda filtrada, data futura com o navegador em `Asia/Tokyo` e relógio fixo, toast da
+  restauração). Cada teste explica em comentário por que falharia no comportamento antigo.
 
 No CI (`.github/workflows/ci.yml`, job `e2e`) a stack sobe com `docker compose up -d --build` e o relatório
 é publicado como artefato `playwright-report` quando há falha.
