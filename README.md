@@ -41,9 +41,9 @@ As portas do host podem ser trocadas por variáveis de ambiente:
 API_PORT=8001 WEB_PORT=5174 docker compose up -d --build
 ```
 
-O front recebe automaticamente `VITE_API_URL=http://localhost:${API_PORT}/api`. Se mudar `WEB_PORT`,
-inclua a nova origem em `CORS_ALLOWED_ORIGINS` no `php-laravel/.env` (por padrão são liberadas
-`http://localhost:5173` e `http://127.0.0.1:5173`). O MySQL não é exposto no host (veja o comentário no
+O front recebe automaticamente `VITE_API_URL=http://localhost:${API_PORT}/api`, e o CORS da API libera
+`http://localhost:${WEB_PORT}` e `http://127.0.0.1:${WEB_PORT}` (padrão 5173). Para outras origens, defina
+`CORS_ALLOWED_ORIGINS` (separadas por vírgula) ao subir a stack. O MySQL não é exposto no host (veja o comentário no
 `docker-compose.yml` para habilitar).
 
 A API limita a 300 requisições por minuto por cliente; `API_RATE_LIMIT` ajusta o valor (o CI usa 2000
@@ -52,6 +52,9 @@ que uma listagem cheia de avatares não esgote o limite da API.
 
 > Já tinha o projeto rodando antes desta versão? Rode `docker compose exec api composer install`
 > depois de atualizar, pois o container só instala dependências quando `vendor/` não existe.
+
+> **Mudou o `php-laravel/.env`?** Rode `docker compose restart api`. O servidor de desenvolvimento lê as
+> variáveis só na subida (`artisan serve --no-reload`, para respeitar as variáveis do compose).
 
 ## Ambiente de produção (Docker)
 
@@ -62,8 +65,20 @@ que uma listagem cheia de avatares não esgote o limite da API.
 - **Front:** `front-vuejs/Dockerfile`: build do Vite servido por nginx, com fallback de rotas do SPA,
   gzip, cache longo para `/assets` e headers de segurança.
 
+Na **primeira vez**, crie o `.env.prod` (ignorado pelo git) com uma `APP_KEY` gerada uma única vez:
+
 ```bash
-APP_KEY=base64:$(openssl rand -base64 32) SEED_ON_START=true docker compose -f docker-compose.prod.yml up -d --build
+cp .env.prod.example .env.prod
+```
+
+```bash
+sed -i.bak "s|^APP_KEY=.*|APP_KEY=base64:$(openssl rand -base64 32)|" .env.prod && rm .env.prod.bak
+```
+
+Para subir, e também para **atualizar** depois (a chave continua a mesma):
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
 
 | Serviço   | URL                       |
@@ -71,8 +86,9 @@ APP_KEY=base64:$(openssl rand -base64 32) SEED_ON_START=true docker compose -f d
 | Front-end | http://localhost:8080     |
 | API       | http://localhost:8000/api |
 
-Variáveis: `APP_KEY` (obrigatória), `API_PORT`, `WEB_PORT`, `DB_PASSWORD`, `SEED_ON_START` (popula o
-banco na subida). O projeto de produção usa outro nome (`patients-prod`), então não conflita com o
+Variáveis (no `.env.prod`): `APP_KEY` (obrigatória, **nunca regenere**), `CPF_HASH_KEY` (opcional),
+`API_PORT`, `WEB_PORT`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `API_RATE_LIMIT`, `PHOTO_RATE_LIMIT`,
+`CORS_ALLOWED_ORIGINS` (padrão: a porta do front) e `SEED_ON_START` (popula o banco na subida, só para demo). O projeto de produção usa outro nome (`patients-prod`), então não conflita com o
 banco de desenvolvimento.
 
 > **Atenção à `APP_KEY` em produção:** CPF, RG, celular, endereço, dados clínicos, fotos e anexos são
@@ -111,7 +127,7 @@ Os testes do back-end usam SQLite em memória e nunca tocam o banco MySQL do con
 
 ### Testes E2E
 
-Testes de ponta a ponta com Playwright em [`e2e/`](e2e/README.md): listagem, busca (CPF só completo),
+Testes de ponta a ponta com Playwright em [`e2e/`](e2e/README.md): listagem, busca (nome ou CPF completo/parcial),
 filtros por sexo e idade, ordenação, paginação, cadastro, detalhes, edição, exclusão, lixeira, desfazer,
 exportação CSV, histórico de alterações, endereço com CEP, foto, anexos, X-Request-Id, layout mobile e
 auditoria de acessibilidade com axe (WCAG 2.1 AA) em todas as telas. Cada teste cria e apaga os próprios
@@ -183,8 +199,9 @@ O `APP_URL` fixo mantém a URL base dos arquivos gerados estável mesmo que a st
 | GET    | `/api/patients/{id}`  | Detalhe                                                          |
 | POST   | `/api/patients`       | Cria (201)                                                       |
 | PUT    | `/api/patients/{id}`  | Atualiza (substituição completa)                                 |
+| PATCH  | `/api/patients/{id}`  | Atualiza só os campos enviados (ex.: `{"name": "..."}`)          |
 | DELETE | `/api/patients/{id}`  | **Soft delete** (204) — o registro permanece com `deleted_at`    |
-| POST   | `/api/patients/{id}/restore` | Restaura um paciente da lixeira (409 se o CPF já estiver em uso) |
+| POST   | `/api/patients/{id}/restore` | Restaura da lixeira (409 se o CPF já estiver em uso; atendimentos futuros em conflito de horário são cancelados) |
 | GET    | `/api/patients/cpf-availability` | Verifica se um CPF está livre (`cpf`, `ignore`)         |
 | GET    | `/api/patients/{id}/consultations` | Atendimentos do paciente (POST cria)                 |
 | GET    | `/api/consultations`  | Agenda por período (`date_from`, `date_to`, `status`, `professional`) |
@@ -208,8 +225,17 @@ com a `APP_KEY`). Para manter a unicidade e a busca por CPF sem descriptografar 
 um hash HMAC do CPF (*blind index*), com chave definida em `CPF_HASH_KEY` (derivada da `APP_KEY` se vazia).
 A busca por CPF completo usa esse hash; a busca por **qualquer trecho do CPF** (3 ou mais dígitos)
 descriptografa os CPFs na API para comparar, o que tem custo proporcional ao número de pacientes (adequado
-para milhares de registros). Se a chave do hash
-mudar, rode `php artisan patients:rehash-cpf`.
+para milhares de registros).
+
+Para trocar a chave do hash do CPF (`CPF_HASH_KEY`), altere o valor e reinicie a API: na subida, o
+container percebe a troca e recalcula os hashes (`php artisan patients:rehash-cpf --if-key-changed`). Em
+desenvolvimento, com a variável no `.env`: `docker compose restart api`. Em produção ela vem do
+`.env.prod`, então recrie o container: `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d api`
+(`restart` não relê o compose). A `APP_KEY` não pode ser trocada assim: ela criptografa os dados e, com
+`CPF_HASH_KEY` vazio, também deriva o hash. Se a chave não descriptografar os CPFs existentes, a API não sobe
+e mostra uma mensagem clara, sem alterar nada. Em desenvolvimento isso acontece se você apagar o
+`php-laravel/.env` e mantiver o volume do banco: restaure o `.env` ou recrie o banco com
+`docker compose down -v`.
 
 **Atendimentos e prontuário:** cada atendimento tem status (Agendado, Confirmado, Realizado, Faltou,
 Cancelado) com transições validadas e impede dois horários sobrepostos para o mesmo profissional (que,

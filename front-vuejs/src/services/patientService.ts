@@ -128,6 +128,18 @@ function filterParams(params: ExportParams): ExportParams {
   return query;
 }
 
+/** Future consultation auto-cancelled on restore (slot taken meanwhile). */
+export interface CancelledConsultation {
+  id: number;
+  scheduled_at: string;
+  professional_name: string;
+}
+
+export interface RestoreResponse {
+  patient: Patient;
+  cancelledConsultations: CancelledConsultation[];
+}
+
 export interface CpfAvailability {
   available: boolean;
   message?: string;
@@ -170,11 +182,19 @@ export const patientService = {
     await api.delete(`${RESOURCE}/${id}`);
   },
 
-  async restore(id: number | string): Promise<Patient> {
-    const { data } = await api.post<{ data: Patient }>(
-      `${RESOURCE}/${id}/restore`
-    );
-    return data.data;
+  /**
+   * Restores a patient. Future consultations whose slot was taken meanwhile
+   * are cancelled by the API and listed in `cancelledConsultations`.
+   */
+  async restore(id: number | string): Promise<RestoreResponse> {
+    const { data } = await api.post<{
+      data: Patient;
+      meta?: { cancelled_consultations?: CancelledConsultation[] };
+    }>(`${RESOURCE}/${id}/restore`);
+    return {
+      patient: data.data,
+      cancelledConsultations: data.meta?.cancelled_consultations ?? [],
+    };
   },
 
   /**

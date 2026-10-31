@@ -42,7 +42,14 @@ Route::post('patients/{patient}/restore', [PatientController::class, 'restore'])
     ->withTrashed()
     ->name('patients.restore');
 
-Route::apiResource('patients', PatientController::class);
+// PUT and PATCH are separate routes (instead of the resource's PUT|PATCH one) so the API docs list both operations.
+Route::apiResource('patients', PatientController::class)->except('update');
+
+Route::put('patients/{patient}', [PatientController::class, 'update'])
+    ->name('patients.update');
+
+Route::patch('patients/{patient}', [PatientController::class, 'partialUpdate'])
+    ->name('patients.partial-update');
 
 // Atendimentos (Sprint 4). Nested patient routes do not use withTrashed(): a patient in the trash is a 404.
 Route::get('patients/{patient}/consultations', [ConsultationController::class, 'index'])

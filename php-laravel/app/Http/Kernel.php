@@ -44,6 +44,8 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\ForceJsonResponse::class,
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+            // Before route model binding and validation; after the throttle so malformed bodies still count.
+            \App\Http\Middleware\RejectMalformedJson::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];

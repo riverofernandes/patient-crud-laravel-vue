@@ -21,6 +21,15 @@ final class CpfBlindIndex
         return hash_hmac('sha256', (string) preg_replace('/\D/', '', $cpf), self::key());
     }
 
+    /**
+     * Non-secret identifier of the HMAC key in use (a hash of the key, never the key): lets the container start-up
+     * notice a key change and recompute the hashes (see patients:rehash-cpf --if-key-changed).
+     */
+    public static function fingerprint(): string
+    {
+        return hash('sha256', 'fingerprint:'.self::key());
+    }
+
     private static function key(): string
     {
         $configured = config('patients.cpf_hash_key');

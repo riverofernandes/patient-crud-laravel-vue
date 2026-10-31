@@ -62,6 +62,13 @@ class ConsultationRequest extends FormRequest
                 }
 
                 $data = $this->consultationData();
+
+                // Same slot as stored (time, duration and professional): nothing to re-check. Lets a consultation
+                // that already overlaps another one (e.g. data from before the restore rule) still be edited.
+                if ($consultation !== null && self::keepsSlot($data, $consultation)) {
+                    return;
+                }
+
                 $start = $data['scheduled_at'];
                 $end = $start->copy()->addMinutes($data['duration_minutes']);
 
@@ -180,6 +187,16 @@ class ConsultationRequest extends FormRequest
         foreach (array_keys(array_filter($changed)) as $field) {
             $validator->errors()->add($field, str_replace(':attribute', $attributes[$field], self::FINAL_STATUS_MESSAGE));
         }
+    }
+
+    /**
+     * @param  array{scheduled_at: \Illuminate\Support\Carbon, duration_minutes: int, professional_name: string}  $data
+     */
+    private static function keepsSlot(array $data, Consultation $consultation): bool
+    {
+        return $data['scheduled_at']->equalTo($consultation->scheduled_at)
+            && $data['duration_minutes'] === $consultation->duration_minutes
+            && Consultation::professionalKey($data['professional_name']) === Consultation::professionalKey($consultation->professional_name);
     }
 
     private static function nullableString(mixed $value): ?string

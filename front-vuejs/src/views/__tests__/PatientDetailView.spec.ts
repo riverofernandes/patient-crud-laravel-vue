@@ -154,6 +154,23 @@ describe("PatientDetailView clinical tabs", () => {
     expect(router.currentRoute.query).toEqual({});
   });
 
+  it("reloads opened Histórico and Linha do tempo after a photo change", async () => {
+    await mountDetail("/pacientes/7?aba=historico");
+    await tab("Linha do tempo").trigger("click");
+    await flushPromises();
+    expect(patientService.audits).toHaveBeenCalledTimes(1);
+    expect(consultationService.timeline).toHaveBeenCalledTimes(1);
+
+    wrapper
+      .findComponent({ name: "PatientPhoto" })
+      .vm.$emit("updated", { ...patient, photo_url: null });
+    await flushPromises();
+    expect(patientService.audits).toHaveBeenCalledTimes(2);
+    expect(consultationService.timeline).toHaveBeenCalledTimes(2);
+    // Atendimentos was never opened: still not loaded.
+    expect(consultationService.listByPatient).not.toHaveBeenCalled();
+  });
+
   it("ignores an unknown ?aba", async () => {
     await mountDetail("/pacientes/7?aba=xyz");
     expect(tab("Dados").attributes("aria-selected")).toBe("true");

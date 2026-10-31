@@ -6,6 +6,18 @@ import { notify } from "./notify";
 /** Emitted on the root instance after a patient comes back from the trash. */
 export const PATIENT_RESTORED_EVENT = "patient:restored";
 
+/**
+ * "Paciente restaurado com sucesso!", plus how many future consultations the
+ * API cancelled because their slot was taken while the patient was in the trash.
+ */
+export function restoreSuccessMessage(cancelled: number): string {
+  const base = "Paciente restaurado com sucesso!";
+  if (cancelled <= 0) return base;
+  return cancelled === 1
+    ? `${base} 1 atendimento futuro foi cancelado por conflito de horário.`
+    : `${base} ${cancelled} atendimentos futuros foram cancelados por conflito de horário.`;
+}
+
 export type RestoreResult = "restored" | "not-found" | "failed";
 
 /**
@@ -18,8 +30,13 @@ export async function restorePatient(
 ): Promise<RestoreResult> {
   const root = rootInstance as Vue;
   try {
-    const restored = await patientService.restore(patient.id);
-    notify(root, "success", "Paciente restaurado com sucesso!");
+    const { patient: restored, cancelledConsultations } =
+      await patientService.restore(patient.id);
+    notify(
+      root,
+      "success",
+      restoreSuccessMessage(cancelledConsultations.length)
+    );
     root.$emit(PATIENT_RESTORED_EVENT, restored);
     return "restored";
   } catch (error) {

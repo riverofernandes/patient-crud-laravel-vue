@@ -30,7 +30,8 @@ class PatientResource extends JsonResource
             'age' => $this->ageOn(),
             'deleted_at' => $this->deleted_at?->toIso8601String(),
             'address' => $this->address?->toResource(),
-            'photo_url' => $this->photoUrl(),
+            // The photo routes are a 404 for patients in the trash, so no URL that would not load.
+            'photo_url' => $this->trashed() ? null : $this->photoUrl(),
         ];
     }
 }

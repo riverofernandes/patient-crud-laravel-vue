@@ -172,6 +172,7 @@
                   :context="`de ${patientNameOf(item)} às ${startOf(item)}`"
                   :focus-target="`#agenda-item-${item.id}`"
                   @changed="onChanged"
+                  @settled="onSettled"
                   @stale="fetch"
                 />
               </li>
@@ -365,6 +366,39 @@ export default defineComponent({
       this.items = this.items.map((item) =>
         item.id === updated.id ? { ...item, ...updated } : item
       );
+    },
+    /** True when a status filter is active and the status is not in it. */
+    isFilteredOut(item: Consultation): boolean {
+      return this.statuses.length > 0 && !this.statuses.includes(item.status);
+    },
+    /**
+     * After a status change completes: a consultation whose new status no
+     * longer matches the status filter leaves the list (removed only now, so
+     * its confirmation modal has closed). Focus moves to the next item of the
+     * day, else the previous one, else the day heading; the change is announced.
+     */
+    onSettled(changed: Consultation): void {
+      const item = this.items.find((i) => i.id === changed.id);
+      if (!item || !this.isFilteredOut(item)) return;
+      const day = this.days.find((d) => d.items.some((i) => i.id === item.id));
+      const siblings = day ? day.items : [];
+      const index = siblings.findIndex((i) => i.id === item.id);
+      const neighbour = siblings[index + 1] ?? siblings[index - 1];
+      const name = this.patientNameOf(item);
+      const start = this.startOf(item);
+      this.items = this.items.filter((i) => i.id !== item.id);
+      this.announcement = `Atendimento de ${name} às ${start} saiu da lista: o novo status não corresponde ao filtro.`;
+      this.$nextTick(() => {
+        const selector = neighbour
+          ? `#agenda-item-${neighbour.id}`
+          : day
+          ? `#agenda-day-${day.date}`
+          : "#main-content h1";
+        const el = document.querySelector<HTMLElement>(selector);
+        if (!el) return;
+        if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+        el.focus({ preventScroll: true });
+      });
     },
     async fetch(): Promise<void> {
       const id = ++this.requestId;

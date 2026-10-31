@@ -4,7 +4,7 @@
  * Dates are always handled as plain strings (YYYY-MM-DD <-> DD/MM/AAAA) to
  * avoid timezone shifts caused by `new Date('YYYY-MM-DD')` (parsed as UTC).
  */
-import { splitDateTime } from "./datetime";
+import { splitDateTime, todayInSaoPaulo } from "./datetime";
 
 export function onlyDigits(value: string | null | undefined): string {
   return (value ?? "").replace(/\D/g, "");
@@ -89,18 +89,18 @@ export function isValidBrDate(value: string | null | undefined): boolean {
   return day <= daysInMonth;
 }
 
-/** True when the DD/MM/AAAA date is after today (local time). */
+/** True when the DD/MM/AAAA date is after today (São Paulo). */
 export function isFutureBrDate(value: string | null | undefined): boolean {
   const iso = brToIso(value);
   return iso !== "" && iso > todayIso();
 }
 
-/** Today's date in local time as YYYY-MM-DD. */
+/**
+ * Today's date in São Paulo as YYYY-MM-DD (the clinic's calendar, whatever
+ * the browser's time zone; same day the API uses for "future" checks).
+ */
 export function todayIso(): string {
-  const now = new Date();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${mm}-${dd}`;
+  return todayInSaoPaulo();
 }
 
 export const SEX_LABELS: Record<string, string> = {
@@ -112,7 +112,7 @@ export function formatSex(value: string | null | undefined): string {
   return value ? SEX_LABELS[value] ?? value : "";
 }
 
-/** Full years between a YYYY-MM-DD birth date and today (local time), by string math. */
+/** Full years between a YYYY-MM-DD birth date and today (São Paulo), by string math. */
 export function ageFromBirthDate(
   birthDate: string | null | undefined,
   today: string = todayIso()

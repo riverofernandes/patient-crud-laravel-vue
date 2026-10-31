@@ -114,6 +114,14 @@ Restaura um paciente da lixeira. `200 { "data": Patient }` ·
 `404` se o id não existir ou o paciente não estiver excluído ·
 `409 { "message": "Já existe um paciente ativo com este CPF." }` se outro paciente ativo usar o mesmo CPF.
 
+Enquanto o paciente estava na lixeira, seus atendimentos não bloqueavam horário, então outro paciente pode ter agendado o mesmo horário com o mesmo profissional. Na restauração, os atendimentos **futuros** do paciente (`scheduled`/`confirmed`) que se sobrepõem a outro atendimento ativo são **cancelados automaticamente**, com a anotação "Cancelado automaticamente ao restaurar o paciente: o horário foi ocupado por outro atendimento." acrescentada a `notes`. A resposta informa quais foram cancelados:
+
+```json
+{ "data": Patient, "meta": { "cancelled_consultations": [ { "id": 42, "scheduled_at": "2027-05-10T10:00:00-03:00", "professional_name": "Dra. Helena Martins" } ] } }
+```
+
+`meta.cancelled_consultations` é `[]` quando não houve conflito. Atendimentos passados e finais não mudam.
+
 ### `GET /patients/cpf-availability?cpf={cpf}&ignore={id}`
 Verifica se um CPF pode ser usado (aceita máscara; `ignore` opcional, id inteiro do paciente em edição — valor não inteiro → `422`).
 `200 { "available": true }` ou `200 { "available": false, "message": "Já existe um paciente cadastrado com este CPF." }` ·
@@ -264,7 +272,7 @@ Consulta de CEP (proxy do ViaCEP, com cache de 24 h). Aceita máscara.
 - `DELETE /patients/{id}/photo`: `204` · `404` se não houver foto.
 - Pacientes na lixeira: as três rotas retornam `404` (`{ "message": "Foto não encontrada." }` quando não há foto).
 - Histórico: trocar ou remover a foto gera um evento `updated` com `changes: { "photo": { "old": null, "new": "adicionada" | "alterada" | "removida" } }`, nunca o conteúdo da imagem.
-- `GET .../photo` conta no limite de requisições da API (mitigado pelo `?v=` com `max-age=86400`).
+- `GET .../photo` tem limite de requisições próprio (`PHOTO_RATE_LIMIT`, padrão 1200/min), separado do limite da API, para que uma listagem com muitos avatares não esgote o limite geral.
 
 ### Anexos de exames (por atendimento)
 
@@ -276,13 +284,21 @@ Recurso `Attachment`:
 - `GET /consultations/{id}/attachments`: lista (mais recente primeiro, sem paginação).
 - `POST /consultations/{id}/attachments` (multipart): `file` obrigatório (PDF, JPEG ou PNG, até 10 MB; o tipo é conferido pelo conteúdo, não só pela extensão), `description` opcional (até 255). Qualquer status de atendimento. `201 { "data": Attachment }` · `422`.
 - `GET /attachments/{id}/download`: o arquivo original, com `Content-Disposition: attachment; filename="<nome ASCII>"; filename*=UTF-8''<nome UTF-8>`. O `original_name` é saneado e recebe a extensão do tipo detectado quando não bate (ex.: `scan.jpg` que é PNG vira `scan.jpg.png`).
-- Uploads acima de 12 MB: `413 { "message": "O arquivo enviado é grande demais." }`.
+- Uploads acima de 12 MB: `413 { "message": "O arquivo enviado é grande demais." }` (em produção, acima de 13 MB a mesma resposta vem do nginx).
 - `DELETE /attachments/{id}`: `204`.
 - Arquivos e fotos ficam em disco **privado** (fora de `public/`) e **criptografados**; o nome no disco é aleatório. `404 { "message": "Anexo não encontrado." }`; atendimentos de pacientes na lixeira → `404`.
 
 ### Logs e rastreabilidade
 - Toda resposta traz `X-Request-Id` (exposto via CORS): o valor recebido no header de mesmo nome (se for um UUID ou até 64 caracteres `[A-Za-z0-9-_.]`) ou um UUID gerado.
 - Cada requisição gera uma linha de log com `request_id`, método, **rota** (sem query string, que pode conter CPF), status e duração. Em produção os logs saem em JSON no stderr.
+
+## Erros gerais
+
+- **JSON inválido:** corpo com `Content-Type: application/json` que não é JSON válido → `400 { "message": "JSON inválido." }` (antes era tratado como corpo vazio).
+- **Método não permitido:** `405 { "message": "Método não permitido." }` com o header `Allow`.
+- **Rota inexistente:** `404 { "message": "Recurso não encontrado." }`; id fora do padrão numérico em rota de paciente/atendimento/anexo → mesma mensagem do recurso (ex.: "Paciente não encontrado.").
+- **`address` como texto** (inclusive `""`) → `422` ("deve ser um objeto"); só `null` remove o endereço.
+- **Pacientes na lixeira** têm `photo_url: null` (as rotas de foto retornam `404` para eles).
 
 ## Erro de validação (422)
 Formato padrão do Laravel, mensagens em pt-BR:

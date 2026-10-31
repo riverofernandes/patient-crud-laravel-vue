@@ -48,6 +48,9 @@ class Consultation extends Model
 
     public const MAX_DURATION = 240;
 
+    /** Appended to `notes` when restoring a patient cancels a consultation whose slot was taken meanwhile. */
+    public const RESTORE_CANCELLATION_NOTE = 'Cancelado automaticamente ao restaurar o paciente: o horário foi ocupado por outro atendimento.';
+
     /** Fields replaced by PUT (same as POST). */
     public const EDITABLE = ['scheduled_at', 'duration_minutes', 'professional_name', 'professional_crm', 'reason', 'notes'];
 
@@ -167,6 +170,30 @@ class Consultation extends Model
             ->whereIn('status', ConsultationStatus::blockingValues())
             ->whereHas('patient')
             ->when($ignoreId !== null, fn (Builder $query) => $query->whereKeyNot($ignoreId));
+    }
+
+    /**
+     * Whether another consultation occupies this one's slot (same rule as the create/update check: see
+     * scopeOccupyingSlot()).
+     */
+    public function overlapsAnotherConsultation(): bool
+    {
+        return self::occupyingSlot(
+            $this->professional_name,
+            $this->scheduled_at,
+            $this->scheduled_at->copy()->addMinutes($this->duration_minutes),
+            $this->id
+        )->exists();
+    }
+
+    /**
+     * Cancels the consultation and appends a note explaining why (kept after any existing notes).
+     */
+    public function cancelWithNote(string $note): void
+    {
+        $this->status = ConsultationStatus::Cancelled;
+        $this->notes = $this->notes === null || $this->notes === '' ? $note : $this->notes."\n\n".$note;
+        $this->save();
     }
 
     /**

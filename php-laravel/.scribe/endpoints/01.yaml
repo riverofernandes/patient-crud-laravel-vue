@@ -300,6 +300,12 @@ endpoints:
       description: |-
         Restaura um paciente da lixeira (desfaz a exclusão lógica). Falha com 409 se outro paciente ativo
         estiver usando o mesmo CPF (o CPF pode ter sido reutilizado depois da exclusão).
+
+        Enquanto o paciente estava na lixeira, seus atendimentos não bloqueavam o horário do profissional. Na
+        restauração, os atendimentos **futuros** do paciente (`scheduled`/`confirmed`) que se sobrepõem a outro
+        atendimento ativo são cancelados automaticamente, com a anotação "Cancelado automaticamente ao restaurar o
+        paciente: o horário foi ocupado por outro atendimento." acrescentada a `notes`. `meta.cancelled_consultations`
+        lista os cancelados (`[]` quando não houve conflito). Atendimentos passados e finais não mudam.
       authenticated: false
       custom: []
     headers:
@@ -325,7 +331,7 @@ endpoints:
     responses:
       -
         status: 200
-        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:45:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}'
+        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:45:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}, "meta": {"cancelled_consultations": [{"id": 42, "scheduled_at": "2027-05-10T10:00:00-03:00", "professional_name": "Dra. Helena Martins"}]}}'
         headers: []
         description: 'Paciente restaurado'
         custom: []
@@ -857,8 +863,7 @@ endpoints:
     custom: []
   -
     httpMethods:
-      - PUT
-      - PATCH
+      - DELETE
     uri: 'api/patients/{id}'
     metadata:
       groupName: Pacientes
@@ -869,14 +874,68 @@ endpoints:
         disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
-      title: 'Atualizar paciente'
+      title: 'Excluir paciente'
+      description: |-
+        Exclusão lógica (soft delete): o registro permanece no banco com `deleted_at` preenchido, deixa de aparecer
+        na listagem e passa a retornar 404. O CPF de um paciente excluído pode ser reutilizado em um novo cadastro.
+      authenticated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      id:
+        name: id
+        description: 'ID do paciente.'
+        required: true
+        example: 1
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        custom: []
+    cleanUrlParameters:
+      id: 1
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 204
+        content: ''
+        headers: []
+        description: 'Paciente excluído'
+        custom: []
+      -
+        status: 404
+        content: '{"message": "Paciente não encontrado."}'
+        headers: []
+        description: 'Paciente não encontrado ou excluído'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - PUT
+    uri: 'api/patients/{id}'
+    metadata:
+      groupName: Pacientes
+      groupDescription: |-
+
+        Cadastro de pacientes: listagem com busca, filtros, ordenação e paginação, exportação em CSV, detalhe,
+        criação, atualização, exclusão lógica (lixeira), restauração, histórico de alterações e verificação de
+        disponibilidade de CPF.
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Atualizar paciente (substituição completa)'
       description: |-
         `PUT` é substituição completa: envie todos os campos. Campos opcionais omitidos (`email`, `description`) são
-        apagados e `address` omitido ou `null` remove o endereço.
-
-        `PATCH` é atualização parcial: só os campos enviados são validados e alterados (ex.: `{"name": "Novo nome"}`).
-        Campos omitidos ficam como estão; `address` omitido mantém o endereço e `null` o remove. Enviar um campo
-        obrigatório vazio continua sendo erro de validação.
+        apagados e `address` omitido ou `null` remove o endereço. Para alterar só alguns campos, use `PATCH`.
 
         A foto não muda por aqui (use as rotas `/photo`).
       authenticated: false
@@ -1117,7 +1176,7 @@ endpoints:
     custom: []
   -
     httpMethods:
-      - DELETE
+      - PATCH
     uri: 'api/patients/{id}'
     metadata:
       groupName: Pacientes
@@ -1128,10 +1187,14 @@ endpoints:
         disponibilidade de CPF.
       subgroup: ''
       subgroupDescription: ''
-      title: 'Excluir paciente'
+      title: 'Atualizar paciente parcialmente'
       description: |-
-        Exclusão lógica (soft delete): o registro permanece no banco com `deleted_at` preenchido, deixa de aparecer
-        na listagem e passa a retornar 404. O CPF de um paciente excluído pode ser reutilizado em um novo cadastro.
+        `PATCH` é atualização parcial: só os campos enviados são validados e alterados (ex.: `{"name": "Novo nome"}`);
+        todos os campos são opcionais. Campos omitidos ficam como estão; `address` omitido mantém o endereço e `null`
+        o remove (`address` como texto, inclusive `""`, é erro de validação). Enviar um campo obrigatório vazio
+        continua sendo erro de validação.
+
+        A foto não muda por aqui (use as rotas `/photo`).
       authenticated: false
       custom: []
     headers:
@@ -1151,21 +1214,216 @@ endpoints:
       id: 1
     queryParameters: []
     cleanQueryParameters: []
-    bodyParameters: []
-    cleanBodyParameters: []
+    bodyParameters:
+      name:
+        name: name
+        description: 'Nome completo do paciente (3 a 255 caracteres). Must be at least 3 characters. Must not be greater than 255 characters.'
+        required: false
+        example: 'Maria da Silva'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      cpf:
+        name: cpf
+        description: 'CPF válido (dígitos verificadores conferidos), com ou sem máscara. Único entre os pacientes ativos. Armazenado só com dígitos.'
+        required: false
+        example: 625.189.530-60
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      rg:
+        name: rg
+        description: 'RG, com ou sem máscara (até 20 caracteres). Armazenado só com dígitos e a letra X. Must not be greater than 20 characters.'
+        required: false
+        example: 35.688.019-X
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      birth_date:
+        name: birth_date
+        description: 'Data de nascimento no formato AAAA-MM-DD; não pode ser futura. Must be a valid date in the format <code>Y-m-d</code>. Must be a date before or equal to <code>today</code>.'
+        required: false
+        example: '1996-07-20'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      sex:
+        name: sex
+        description: 'Sexo: `M` (Masculino) ou `F` (Feminino).'
+        required: false
+        example: F
+        type: string
+        enumValues:
+          - M
+          - F
+        exampleWasSpecified: false
+        custom: []
+      phone:
+        name: phone
+        description: 'Celular com DDD, com ou sem máscara (10 ou 11 dígitos). Armazenado só com dígitos. Must be between 10 and 11 digits.'
+        required: false
+        example: '(11) 92853-5718'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      email:
+        name: email
+        description: 'E-mail do paciente (opcional). Must be a valid email address. Must not be greater than 255 characters.'
+        required: false
+        example: maria@example.com
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      description:
+        name: description
+        description: 'Observações sobre o paciente (opcional, até 2000 caracteres). Must not be greater than 2000 characters.'
+        required: false
+        example: 'Paciente com miopia leve, retorno anual.'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address:
+        name: address
+        description: 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço; no PATCH, omitido mantém o endereço e `null` o remove. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.'
+        required: false
+        example: null
+        type: object
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.cep:
+        name: address.cep
+        description: 'CEP com 8 dígitos, com ou sem máscara (`00000-000`). Armazenado só com dígitos. Obrigatório quando `address` é enviado. Must be 8 digits.'
+        required: false
+        example: 01310-100
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.street:
+        name: address.street
+        description: 'Logradouro (até 255). Obrigatório quando `address` é enviado. Must not be greater than 255 characters.'
+        required: false
+        example: 'Avenida Paulista'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.number:
+        name: address.number
+        description: 'Número (até 20; aceita "S/N"). Obrigatório quando `address` é enviado. Must not be greater than 20 characters.'
+        required: false
+        example: '1578'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.complement:
+        name: address.complement
+        description: 'Complemento (opcional, até 100). Must not be greater than 100 characters.'
+        required: false
+        example: 'Sala 12'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.neighborhood:
+        name: address.neighborhood
+        description: 'Bairro (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+        required: false
+        example: 'Bela Vista'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.city:
+        name: address.city
+        description: 'Cidade (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+        required: false
+        example: 'São Paulo'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        custom: []
+      address.state:
+        name: address.state
+        description: 'UF: sigla de estado brasileiro (aceita minúsculas; armazenada em maiúsculas). Obrigatório quando `address` é enviado.'
+        required: false
+        example: SP
+        type: string
+        enumValues:
+          - AC
+          - AL
+          - AP
+          - AM
+          - BA
+          - CE
+          - DF
+          - ES
+          - GO
+          - MA
+          - MT
+          - MS
+          - MG
+          - PA
+          - PB
+          - PR
+          - PE
+          - PI
+          - RJ
+          - RN
+          - RS
+          - RO
+          - RR
+          - SC
+          - SP
+          - SE
+          - TO
+        exampleWasSpecified: false
+        custom: []
+    cleanBodyParameters:
+      name: 'Maria da Silva'
+      cpf: 625.189.530-60
+      rg: 35.688.019-X
+      birth_date: '1996-07-20'
+      sex: F
+      phone: '(11) 92853-5718'
+      email: maria@example.com
+      description: 'Paciente com miopia leve, retorno anual.'
+      address:
+        cep: 01310-100
+        street: 'Avenida Paulista'
+        number: '1578'
+        complement: 'Sala 12'
+        neighborhood: 'Bela Vista'
+        city: 'São Paulo'
+        state: SP
     fileParameters: []
     responses:
       -
-        status: 204
-        content: ''
+        status: 200
+        content: '{"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}'
         headers: []
-        description: 'Paciente excluído'
+        description: 'Paciente atualizado'
         custom: []
       -
         status: 404
         content: '{"message": "Paciente não encontrado."}'
         headers: []
         description: 'Paciente não encontrado ou excluído'
+        custom: []
+      -
+        status: 422
+        content: '{"message": "O campo nome completo é obrigatório. (and 1 more error)", "errors": {"name": ["O campo nome completo é obrigatório."], "cpf": ["O CPF informado é inválido."]}}'
+        headers: []
+        description: 'Erro de validação'
         custom: []
     responseFields: []
     auth: []

@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ConsultationStatus;
 use App\Http\Requests\CpfAvailabilityRequest;
+use App\Http\Requests\PatientPatchRequest;
 use App\Http\Requests\PatientRequest;
 use App\Http\Resources\AuditResource;
 use App\Http\Resources\PatientResource;
+use App\Models\Consultation;
 use App\Models\Patient;
 use App\Models\PatientAddress;
 use App\Observers\PatientObserver;
@@ -13,6 +16,7 @@ use App\Rules\UniqueActiveCpf;
 use App\Support\PatientCsv;
 use App\Support\PerPage;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -162,14 +166,10 @@ class PatientController extends Controller
     }
 
     /**
-     * Atualizar paciente
+     * Atualizar paciente (substituição completa)
      *
      * `PUT` é substituição completa: envie todos os campos. Campos opcionais omitidos (`email`, `description`) são
-     * apagados e `address` omitido ou `null` remove o endereço.
-     *
-     * `PATCH` é atualização parcial: só os campos enviados são validados e alterados (ex.: `{"name": "Novo nome"}`).
-     * Campos omitidos ficam como estão; `address` omitido mantém o endereço e `null` o remove. Enviar um campo
-     * obrigatório vazio continua sendo erro de validação.
+     * apagados e `address` omitido ou `null` remove o endereço. Para alterar só alguns campos, use `PATCH`.
      *
      * A foto não muda por aqui (use as rotas `/photo`).
      *
@@ -219,6 +219,27 @@ class PatientController extends Controller
     }
 
     /**
+     * Atualizar paciente parcialmente
+     *
+     * `PATCH` é atualização parcial: só os campos enviados são validados e alterados (ex.: `{"name": "Novo nome"}`);
+     * todos os campos são opcionais. Campos omitidos ficam como estão; `address` omitido mantém o endereço e `null`
+     * o remove (`address` como texto, inclusive `""`, é erro de validação). Enviar um campo obrigatório vazio
+     * continua sendo erro de validação.
+     *
+     * A foto não muda por aqui (use as rotas `/photo`).
+     *
+     * @urlParam id integer required ID do paciente. Example: 1
+     *
+     * @response 200 scenario="Paciente atualizado" {"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:30:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}
+     * @response 404 scenario="Paciente não encontrado ou excluído" {"message": "Paciente não encontrado."}
+     * @response 422 scenario="Erro de validação" {"message": "O campo nome completo é obrigatório. (and 1 more error)", "errors": {"name": ["O campo nome completo é obrigatório."], "cpf": ["O CPF informado é inválido."]}}
+     */
+    public function partialUpdate(PatientPatchRequest $request, Patient $patient): PatientResource
+    {
+        return $this->update($request, $patient);
+    }
+
+    /**
      * Excluir paciente
      *
      * Exclusão lógica (soft delete): o registro permanece no banco com `deleted_at` preenchido, deixa de aparecer
@@ -242,9 +263,15 @@ class PatientController extends Controller
      * Restaura um paciente da lixeira (desfaz a exclusão lógica). Falha com 409 se outro paciente ativo
      * estiver usando o mesmo CPF (o CPF pode ter sido reutilizado depois da exclusão).
      *
+     * Enquanto o paciente estava na lixeira, seus atendimentos não bloqueavam o horário do profissional. Na
+     * restauração, os atendimentos **futuros** do paciente (`scheduled`/`confirmed`) que se sobrepõem a outro
+     * atendimento ativo são cancelados automaticamente, com a anotação "Cancelado automaticamente ao restaurar o
+     * paciente: o horário foi ocupado por outro atendimento." acrescentada a `notes`. `meta.cancelled_consultations`
+     * lista os cancelados (`[]` quando não houve conflito). Atendimentos passados e finais não mudam.
+     *
      * @urlParam patient_id integer required ID do paciente excluído. Example: 1
      *
-     * @response 200 scenario="Paciente restaurado" {"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:45:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}}
+     * @response 200 scenario="Paciente restaurado" {"data": {"id": 1, "name": "Maria da Silva", "cpf": "62518953060", "rg": "35688019X", "birth_date": "1996-07-20", "sex": "F", "phone": "11928535718", "email": "maria@example.com", "description": "Paciente com miopia leve, retorno anual.", "created_at": "2026-10-26T15:30:00-03:00", "updated_at": "2026-10-26T15:45:00-03:00", "age": 30, "deleted_at": null, "address": {"cep": "01310100", "street": "Avenida Paulista", "number": "1578", "complement": "Sala 12", "neighborhood": "Bela Vista", "city": "São Paulo", "state": "SP"}, "photo_url": "http://localhost:8000/api/patients/1/photo?v=1"}, "meta": {"cancelled_consultations": [{"id": 42, "scheduled_at": "2027-05-10T10:00:00-03:00", "professional_name": "Dra. Helena Martins"}]}}
      * @response 404 scenario="Paciente não encontrado ou não excluído" {"message": "Paciente não encontrado."}
      * @response 409 scenario="CPF em uso por outro paciente ativo" {"message": "Já existe um paciente ativo com este CPF."}
      */
@@ -259,9 +286,19 @@ class PatientController extends Controller
             return response()->json(['message' => 'Já existe um paciente ativo com este CPF.'], Response::HTTP_CONFLICT);
         }
 
-        $patient->restore();
+        $cancelled = DB::transaction(function () use ($patient) {
+            $patient->restore();
 
-        return new PatientResource($patient);
+            return $this->cancelDoubleBookedConsultations($patient);
+        });
+
+        return (new PatientResource($patient))->additional(['meta' => [
+            'cancelled_consultations' => $cancelled->map(fn (Consultation $consultation) => [
+                'id' => $consultation->id,
+                'scheduled_at' => $consultation->scheduled_at->toIso8601String(),
+                'professional_name' => $consultation->professional_name,
+            ])->values()->all(),
+        ]]);
     }
 
     /**
@@ -312,6 +349,35 @@ class PatientController extends Controller
             ->withQueryString();
 
         return AuditResource::collection($audits);
+    }
+
+    /**
+     * While a patient is in the trash their consultations do not block the professional's slot, so another
+     * patient may have booked it. After restoring, each FUTURE scheduled/confirmed consultation of the patient that
+     * now overlaps another active one is cancelled (with a note): the other booking wins, as it was made while
+     * this one was invisible. Past and final consultations are left alone.
+     *
+     * @return Collection<int, Consultation>
+     */
+    private function cancelDoubleBookedConsultations(Patient $patient): Collection
+    {
+        return $patient->consultations()
+            ->whereIn('status', [ConsultationStatus::Scheduled->value, ConsultationStatus::Confirmed->value])
+            ->where('scheduled_at', '>', Carbon::now(config('app.timezone'))->format('Y-m-d H:i:s'))
+            ->orderBy('scheduled_at')
+            ->orderBy('id')
+            ->get()
+            // One at a time: a consultation cancelled here no longer blocks the next ones.
+            ->filter(function (Consultation $consultation) {
+                if (! $consultation->overlapsAnotherConsultation()) {
+                    return false;
+                }
+
+                $consultation->cancelWithNote(Consultation::RESTORE_CANCELLATION_NOTE);
+
+                return true;
+            })
+            ->values();
     }
 
     /**

@@ -53,6 +53,7 @@
           :items="patients"
           :fields="fields"
           :busy="loading"
+          :style="busyStyle"
           primary-key="id"
           responsive
           show-empty
@@ -143,6 +144,7 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
+import type Vue from "vue";
 import AppBreadcrumb from "@/components/AppBreadcrumb.vue";
 import ExportCsvButton from "@/components/ExportCsvButton.vue";
 import {
@@ -170,6 +172,8 @@ export default defineComponent({
       loading: false,
       error: "",
       requestId: 0,
+      /** Table height kept while reloading, so the page doesn't shrink (scroll). */
+      keptHeight: 0,
       restoringId: null as number | null,
       breadcrumb: [
         { text: "Pacientes", to: { name: "patients.index" } },
@@ -193,6 +197,15 @@ export default defineComponent({
     };
   },
   computed: {
+    /**
+     * While reloading (sort, page, Back/Forward), the spinner replaces the rows:
+     * keep the previous height so the browser doesn't clamp the scroll position.
+     */
+    busyStyle(): Record<string, string> | undefined {
+      return this.loading && this.keptHeight
+        ? { minHeight: `${this.keptHeight}px` }
+        : undefined;
+    },
     activeSearch(): string {
       const q = this.$route.query.search;
       return typeof q === "string" ? q : "";
@@ -213,12 +226,21 @@ export default defineComponent({
     "$route.query": {
       immediate: true,
       handler() {
-        if (this.search.trim() !== this.activeSearch)
+        // Don't overwrite what the user is still typing (debounce pending).
+        if (
+          !this.applySearch.pending?.() &&
+          this.search.trim() !== this.activeSearch
+        )
           this.search = this.activeSearch;
         this.fetch();
       },
     },
     search(value: string) {
+      // Back in sync with the URL (e.g. typed back, or set from the route).
+      if (value.trim() === this.activeSearch) {
+        this.applySearch.cancel?.();
+        return;
+      }
       this.applySearch(value);
     },
   },
@@ -229,11 +251,11 @@ export default defineComponent({
       this.updateQuery({ search: term, page: 1 });
     }, 400);
     // A "Desfazer" toast can restore a patient while this page is open.
-    this.$root.$on(PATIENT_RESTORED_EVENT, this.fetch);
+    this.$root.$on(PATIENT_RESTORED_EVENT, this.onPatientRestored);
   },
   beforeDestroy() {
     this.applySearch.cancel?.();
-    this.$root.$off(PATIENT_RESTORED_EVENT, this.fetch);
+    this.$root.$off(PATIENT_RESTORED_EVENT, this.onPatientRestored);
   },
   methods: {
     maskCpf,
@@ -241,13 +263,24 @@ export default defineComponent({
     // replaced with a debounced version in created()
     applySearch: (() => undefined) as ((value: string) => void) & {
       cancel?: () => void;
+      pending?: () => boolean;
     },
+    /**
+     * A push (user action, e.g. pagination) also applies what is typed in the
+     * search box right away, so it is never dropped within the debounce.
+     */
     updateQuery(
       { search, page }: { search?: string; page?: number },
       mode: "push" | "replace" = "replace"
     ): void {
-      const term = search ?? this.activeSearch;
-      const nextPage = page ?? this.currentPage;
+      let term = search ?? this.activeSearch;
+      let nextPage = page ?? this.currentPage;
+      if (mode === "push" && search === undefined) {
+        this.applySearch.cancel?.();
+        term = this.search.trim();
+        // New term: the old page numbers no longer apply.
+        if (term !== this.activeSearch) nextPage = 1;
+      }
       const query: Record<string, string> = {};
       if (term) query.search = term;
       if (nextPage > 1) query.page = String(nextPage);
@@ -258,6 +291,10 @@ export default defineComponent({
     },
     async fetch(): Promise<void> {
       const requestId = ++this.requestId;
+      const table = (this.$refs.table as Vue | undefined)?.$el as
+        | HTMLElement
+        | undefined;
+      if (!this.loading) this.keptHeight = table?.offsetHeight ?? 0;
       this.loading = true;
       this.error = "";
       try {
@@ -286,6 +323,15 @@ export default defineComponent({
       } finally {
         if (requestId === this.requestId) this.loading = false;
       }
+    },
+    /**
+     * Restores made elsewhere ("Desfazer" toast) reload the list. Restores made
+     * here (the event fires while `restoringId` is set) are handled in place by
+     * restore(), so the row's focus can move to the next "Restaurar" button.
+     */
+    onPatientRestored(patient?: Pick<Patient, "id">): void {
+      if (patient && patient.id === this.restoringId) return;
+      this.fetch();
     },
     async restore(patient: Patient): Promise<void> {
       if (this.restoringId !== null) return;

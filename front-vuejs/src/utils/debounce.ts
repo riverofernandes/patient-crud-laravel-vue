@@ -7,13 +7,19 @@ export function debounce<T extends (...args: any[]) => void>(
 
   const debounced = (...args: Parameters<T>): void => {
     if (timer) clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), wait);
+    timer = setTimeout(() => {
+      timer = undefined;
+      fn(...args);
+    }, wait);
   };
 
   debounced.cancel = (): void => {
     if (timer) clearTimeout(timer);
     timer = undefined;
   };
+
+  /** True while a call is waiting for the delay to pass. */
+  debounced.pending = (): boolean => timer !== undefined;
 
   return debounced;
 }

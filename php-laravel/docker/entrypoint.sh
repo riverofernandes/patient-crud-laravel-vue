@@ -3,7 +3,9 @@
 #   dev  (APP_ENV unset/local): source is bind-mounted; installs Composer deps, creates .env + APP_KEY if missing.
 #   prod (APP_ENV=production, baked into the prod target): code and vendor are in the image; configuration comes
 #        only from environment variables (no .env), APP_KEY is required, config/route/view caches are built here.
-# Both: wait for the database, run migrations. Seeding:
+# Both: wait for the database, run migrations, then recompute the CPF blind index if its key changed (CPF_HASH_KEY,
+#   or APP_KEY when it is empty): `patients:rehash-cpf --if-key-changed` compares a fingerprint of the key (a hash,
+#   never the key) stored in storage/app/private/, so changing the key and restarting the api is enough. Seeding:
 #   dev  -> on by default (the seeder only fills an empty table); SEED_ON_START=false disables it.
 #   prod -> only when SEED_ON_START=true (e.g. a public demo).
 set -e
@@ -36,6 +38,7 @@ if [ "${APP_ENV:-}" = "production" ]; then
 
     wait_for_database
     php artisan migrate --force
+    php artisan patients:rehash-cpf --if-key-changed
 
     if [ "${SEED_ON_START:-false}" = "true" ]; then
         php artisan db:seed --force
@@ -61,6 +64,7 @@ else
 
     wait_for_database
     php artisan migrate --force
+    php artisan patients:rehash-cpf --if-key-changed
 
     if [ "${SEED_ON_START:-true}" != "false" ]; then
         php artisan db:seed --force

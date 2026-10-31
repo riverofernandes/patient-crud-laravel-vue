@@ -76,13 +76,21 @@
         </b-tab>
         <b-tab title="Histórico" title-link-class="patient-tabs__link">
           <!-- Mounted the first time the tab opens, then kept (no reloads). -->
-          <PatientHistory v-if="opened.historico" :patient-id="id" />
+          <PatientHistory
+            v-if="opened.historico"
+            :patient-id="id"
+            :refresh-key="refreshKey"
+          />
         </b-tab>
         <b-tab title="Atendimentos" title-link-class="patient-tabs__link">
           <PatientConsultations v-if="opened.atendimentos" :patient-id="id" />
         </b-tab>
         <b-tab title="Linha do tempo" title-link-class="patient-tabs__link">
-          <PatientTimeline v-if="opened['linha-do-tempo']" :patient-id="id" />
+          <PatientTimeline
+            v-if="opened['linha-do-tempo']"
+            :patient-id="id"
+            :refresh-key="refreshKey"
+          />
         </b-tab>
       </b-tabs>
 
@@ -160,6 +168,8 @@ export default defineComponent({
       patientToDelete: null as Patient | null,
       /** Tabs mounted so far (each loads the first time it opens, then stays). */
       opened: {} as Record<string, boolean>,
+      /** Bumped after a change made on this page: reloads history/timeline. */
+      refreshKey: 0,
     };
   },
   computed: {
@@ -212,6 +222,7 @@ export default defineComponent({
     patientAge,
     onPhotoUpdated(updated: Patient): void {
       if (this.patient) this.patient = { ...this.patient, ...updated };
+      this.refreshKey++;
     },
     onDeleted(): void {
       this.$router.push({ name: "patients.index" });

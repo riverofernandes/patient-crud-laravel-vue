@@ -457,7 +457,7 @@ paths:
     post:
       summary: 'Restaurar paciente'
       operationId: restaurarPaciente
-      description: "Restaura um paciente da lixeira (desfaz a exclusão lógica). Falha com 409 se outro paciente ativo\nestiver usando o mesmo CPF (o CPF pode ter sido reutilizado depois da exclusão)."
+      description: "Restaura um paciente da lixeira (desfaz a exclusão lógica). Falha com 409 se outro paciente ativo\nestiver usando o mesmo CPF (o CPF pode ter sido reutilizado depois da exclusão).\n\nEnquanto o paciente estava na lixeira, seus atendimentos não bloqueavam o horário do profissional. Na\nrestauração, os atendimentos **futuros** do paciente (`scheduled`/`confirmed`) que se sobrepõem a outro\natendimento ativo são cancelados automaticamente, com a anotação \"Cancelado automaticamente ao restaurar o\npaciente: o horário foi ocupado por outro atendimento.\" acrescentada a `notes`. `meta.cancelled_consultations`\nlista os cancelados (`[]` quando não houve conflito). Atendimentos passados e finais não mudam."
       parameters: []
       responses:
         200:
@@ -490,6 +490,12 @@ paths:
                       city: 'São Paulo'
                       state: SP
                     photo_url: 'http://localhost:8000/api/patients/1/photo?v=1'
+                  meta:
+                    cancelled_consultations:
+                      -
+                        id: 42
+                        scheduled_at: '2027-05-10T10:00:00-03:00'
+                        professional_name: 'Dra. Helena Martins'
                 properties:
                   data:
                     type: object
@@ -560,6 +566,28 @@ paths:
                       photo_url:
                         type: string
                         example: 'http://localhost:8000/api/patients/1/photo?v=1'
+                  meta:
+                    type: object
+                    properties:
+                      cancelled_consultations:
+                        type: array
+                        example:
+                          -
+                            id: 42
+                            scheduled_at: '2027-05-10T10:00:00-03:00'
+                            professional_name: 'Dra. Helena Martins'
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 42
+                            scheduled_at:
+                              type: string
+                              example: '2027-05-10T10:00:00-03:00'
+                            professional_name:
+                              type: string
+                              example: 'Dra. Helena Martins'
         404:
           description: 'Paciente não encontrado ou não excluído'
           content:
@@ -1320,10 +1348,33 @@ paths:
       tags:
         - Pacientes
       security: []
+    delete:
+      summary: 'Excluir paciente'
+      operationId: excluirPaciente
+      description: "Exclusão lógica (soft delete): o registro permanece no banco com `deleted_at` preenchido, deixa de aparecer\nna listagem e passa a retornar 404. O CPF de um paciente excluído pode ser reutilizado em um novo cadastro."
+      parameters: []
+      responses:
+        204:
+          description: 'Paciente excluído'
+        404:
+          description: 'Paciente não encontrado ou excluído'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Paciente não encontrado.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Paciente não encontrado.'
+      tags:
+        - Pacientes
+      security: []
     put:
-      summary: 'Atualizar paciente'
-      operationId: atualizarPaciente
-      description: "`PUT` é substituição completa: envie todos os campos. Campos opcionais omitidos (`email`, `description`) são\napagados e `address` omitido ou `null` remove o endereço.\n\n`PATCH` é atualização parcial: só os campos enviados são validados e alterados (ex.: `{\"name\": \"Novo nome\"}`).\nCampos omitidos ficam como estão; `address` omitido mantém o endereço e `null` o remove. Enviar um campo\nobrigatório vazio continua sendo erro de validação.\n\nA foto não muda por aqui (use as rotas `/photo`)."
+      summary: 'Atualizar paciente (substituição completa)'
+      operationId: atualizarPacientesubstituioCompleta
+      description: "`PUT` é substituição completa: envie todos os campos. Campos opcionais omitidos (`email`, `description`) são\napagados e `address` omitido ou `null` remove o endereço. Para alterar só alguns campos, use `PATCH`.\n\nA foto não muda por aqui (use as rotas `/photo`)."
       parameters: []
       responses:
         200:
@@ -1583,14 +1634,112 @@ paths:
                 - sex
                 - phone
       security: []
-    delete:
-      summary: 'Excluir paciente'
-      operationId: excluirPaciente
-      description: "Exclusão lógica (soft delete): o registro permanece no banco com `deleted_at` preenchido, deixa de aparecer\nna listagem e passa a retornar 404. O CPF de um paciente excluído pode ser reutilizado em um novo cadastro."
+    patch:
+      summary: 'Atualizar paciente parcialmente'
+      operationId: atualizarPacienteParcialmente
+      description: "`PATCH` é atualização parcial: só os campos enviados são validados e alterados (ex.: `{\"name\": \"Novo nome\"}`);\ntodos os campos são opcionais. Campos omitidos ficam como estão; `address` omitido mantém o endereço e `null`\no remove (`address` como texto, inclusive `\"\"`, é erro de validação). Enviar um campo obrigatório vazio\ncontinua sendo erro de validação.\n\nA foto não muda por aqui (use as rotas `/photo`)."
       parameters: []
       responses:
-        204:
-          description: 'Paciente excluído'
+        200:
+          description: 'Paciente atualizado'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    id: 1
+                    name: 'Maria da Silva'
+                    cpf: '62518953060'
+                    rg: 35688019X
+                    birth_date: '1996-07-20'
+                    sex: F
+                    phone: '11928535718'
+                    email: maria@example.com
+                    description: 'Paciente com miopia leve, retorno anual.'
+                    created_at: '2026-10-26T15:30:00-03:00'
+                    updated_at: '2026-10-26T15:30:00-03:00'
+                    age: 30
+                    deleted_at: null
+                    address:
+                      cep: '01310100'
+                      street: 'Avenida Paulista'
+                      number: '1578'
+                      complement: 'Sala 12'
+                      neighborhood: 'Bela Vista'
+                      city: 'São Paulo'
+                      state: SP
+                    photo_url: 'http://localhost:8000/api/patients/1/photo?v=1'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: 'Maria da Silva'
+                      cpf:
+                        type: string
+                        example: '62518953060'
+                      rg:
+                        type: string
+                        example: 35688019X
+                      birth_date:
+                        type: string
+                        example: '1996-07-20'
+                      sex:
+                        type: string
+                        example: F
+                      phone:
+                        type: string
+                        example: '11928535718'
+                      email:
+                        type: string
+                        example: maria@example.com
+                      description:
+                        type: string
+                        example: 'Paciente com miopia leve, retorno anual.'
+                      created_at:
+                        type: string
+                        example: '2026-10-26T15:30:00-03:00'
+                      updated_at:
+                        type: string
+                        example: '2026-10-26T15:30:00-03:00'
+                      age:
+                        type: integer
+                        example: 30
+                      deleted_at:
+                        type: string
+                        example: null
+                      address:
+                        type: object
+                        properties:
+                          cep:
+                            type: string
+                            example: '01310100'
+                          street:
+                            type: string
+                            example: 'Avenida Paulista'
+                          number:
+                            type: string
+                            example: '1578'
+                          complement:
+                            type: string
+                            example: 'Sala 12'
+                          neighborhood:
+                            type: string
+                            example: 'Bela Vista'
+                          city:
+                            type: string
+                            example: 'São Paulo'
+                          state:
+                            type: string
+                            example: SP
+                      photo_url:
+                        type: string
+                        example: 'http://localhost:8000/api/patients/1/photo?v=1'
         404:
           description: 'Paciente não encontrado ou excluído'
           content:
@@ -1603,8 +1752,143 @@ paths:
                   message:
                     type: string
                     example: 'Paciente não encontrado.'
+        422:
+          description: 'Erro de validação'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'O campo nome completo é obrigatório. (and 1 more error)'
+                  errors:
+                    name:
+                      - 'O campo nome completo é obrigatório.'
+                    cpf:
+                      - 'O CPF informado é inválido.'
+                properties:
+                  message:
+                    type: string
+                    example: 'O campo nome completo é obrigatório. (and 1 more error)'
+                  errors:
+                    type: object
+                    properties:
+                      name:
+                        type: array
+                        example:
+                          - 'O campo nome completo é obrigatório.'
+                        items:
+                          type: string
+                      cpf:
+                        type: array
+                        example:
+                          - 'O CPF informado é inválido.'
+                        items:
+                          type: string
       tags:
         - Pacientes
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Nome completo do paciente (3 a 255 caracteres). Must be at least 3 characters. Must not be greater than 255 characters.'
+                  example: 'Maria da Silva'
+                cpf:
+                  type: string
+                  description: 'CPF válido (dígitos verificadores conferidos), com ou sem máscara. Único entre os pacientes ativos. Armazenado só com dígitos.'
+                  example: 625.189.530-60
+                rg:
+                  type: string
+                  description: 'RG, com ou sem máscara (até 20 caracteres). Armazenado só com dígitos e a letra X. Must not be greater than 20 characters.'
+                  example: 35.688.019-X
+                birth_date:
+                  type: string
+                  description: 'Data de nascimento no formato AAAA-MM-DD; não pode ser futura. Must be a valid date in the format <code>Y-m-d</code>. Must be a date before or equal to <code>today</code>.'
+                  example: '1996-07-20'
+                sex:
+                  type: string
+                  description: 'Sexo: `M` (Masculino) ou `F` (Feminino).'
+                  example: F
+                  enum:
+                    - M
+                    - F
+                phone:
+                  type: string
+                  description: 'Celular com DDD, com ou sem máscara (10 ou 11 dígitos). Armazenado só com dígitos. Must be between 10 and 11 digits.'
+                  example: '(11) 92853-5718'
+                email:
+                  type: string
+                  description: 'E-mail do paciente (opcional). Must be a valid email address. Must not be greater than 255 characters.'
+                  example: maria@example.com
+                description:
+                  type: string
+                  description: 'Observações sobre o paciente (opcional, até 2000 caracteres). Must not be greater than 2000 characters.'
+                  example: 'Paciente com miopia leve, retorno anual.'
+                address:
+                  type: object
+                  description: 'Endereço (opcional, objeto ou `null`). No PUT, omitido ou `null` remove o endereço; no PATCH, omitido mantém o endereço e `null` o remove. Quando enviado, os subcampos (exceto `complement`) são obrigatórios. Logradouro, número, complemento e bairro são armazenados criptografados.'
+                  example: null
+                  properties:
+                    cep:
+                      type: string
+                      description: 'CEP com 8 dígitos, com ou sem máscara (`00000-000`). Armazenado só com dígitos. Obrigatório quando `address` é enviado. Must be 8 digits.'
+                      example: 01310-100
+                    street:
+                      type: string
+                      description: 'Logradouro (até 255). Obrigatório quando `address` é enviado. Must not be greater than 255 characters.'
+                      example: 'Avenida Paulista'
+                    number:
+                      type: string
+                      description: 'Número (até 20; aceita "S/N"). Obrigatório quando `address` é enviado. Must not be greater than 20 characters.'
+                      example: '1578'
+                    complement:
+                      type: string
+                      description: 'Complemento (opcional, até 100). Must not be greater than 100 characters.'
+                      example: 'Sala 12'
+                    neighborhood:
+                      type: string
+                      description: 'Bairro (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+                      example: 'Bela Vista'
+                    city:
+                      type: string
+                      description: 'Cidade (até 100). Obrigatório quando `address` é enviado. Must not be greater than 100 characters.'
+                      example: 'São Paulo'
+                    state:
+                      type: string
+                      description: 'UF: sigla de estado brasileiro (aceita minúsculas; armazenada em maiúsculas). Obrigatório quando `address` é enviado.'
+                      example: SP
+                      enum:
+                        - AC
+                        - AL
+                        - AP
+                        - AM
+                        - BA
+                        - CE
+                        - DF
+                        - ES
+                        - GO
+                        - MA
+                        - MT
+                        - MS
+                        - MG
+                        - PA
+                        - PB
+                        - PR
+                        - PE
+                        - PI
+                        - RJ
+                        - RN
+                        - RS
+                        - RO
+                        - RR
+                        - SC
+                        - SP
+                        - SE
+                        - TO
       security: []
     parameters:
       -

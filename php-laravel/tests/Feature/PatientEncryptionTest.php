@@ -2,12 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Console\Commands\RehashPatientCpfs;
 use App\Models\Patient;
 use App\Support\CpfBlindIndex;
+use App\Support\EncryptedFiles;
 use Illuminate\Encryption\MissingAppKeyException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\PendingCommand;
 use Tests\TestCase;
 
@@ -153,6 +156,7 @@ class PatientEncryptionTest extends TestCase
 
     public function test_rehash_command_recomputes_hashes_after_a_key_change(): void
     {
+        Storage::fake(EncryptedFiles::DISK);
         $active = Patient::factory()->create(['cpf' => '62518953060']);
         $trashed = Patient::factory()->create(['cpf' => '52998224725']);
         $trashed->delete();
@@ -169,5 +173,62 @@ class PatientEncryptionTest extends TestCase
         $this->assertSame(CpfBlindIndex::hash('52998224725'), Patient::withTrashed()->findOrFail($trashed->id)->cpf_hash);
         $this->assertEquals($updatedAt, $active->refresh()->updated_at);
         $this->assertSame(0, $active->audits()->where('event', 'updated')->count());
+    }
+
+    public function test_rehash_if_key_changed_runs_only_when_the_fingerprint_differs(): void
+    {
+        Storage::fake(EncryptedFiles::DISK);
+        $patient = Patient::factory()->create(['cpf' => '62518953060']);
+
+        // No fingerprint yet (first start after deploy): rehash and store it.
+        $this->runRehash(['--if-key-changed' => true], '1 paciente(s) atualizado(s).');
+        $stored = Storage::disk(EncryptedFiles::DISK)->get(RehashPatientCpfs::FINGERPRINT_FILE);
+        $this->assertSame(CpfBlindIndex::fingerprint(), $stored);
+        $this->assertStringNotContainsString((string) config('app.key'), (string) $stored);
+
+        // Same key: nothing to do.
+        $this->runRehash(['--if-key-changed' => true], 'Chave do hash do CPF inalterada; nada a recalcular.');
+
+        // Key changed: hashes are recomputed and the new fingerprint is stored.
+        config(['patients.cpf_hash_key' => 'rotated-secret']);
+        $this->assertNotSame(CpfBlindIndex::hash('62518953060'), $patient->refresh()->cpf_hash);
+        $this->runRehash(['--if-key-changed' => true], '1 paciente(s) atualizado(s).');
+        $this->assertSame(CpfBlindIndex::hash('62518953060'), $patient->refresh()->cpf_hash);
+        $this->assertSame(CpfBlindIndex::fingerprint(), Storage::disk(EncryptedFiles::DISK)->get(RehashPatientCpfs::FINGERPRINT_FILE));
+        $this->getJson('/api/patients?search=62518953060')->assertJsonCount(1, 'data');
+
+        // Without the option it always runs.
+        $this->runRehash([], '1 paciente(s) atualizado(s).');
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    private function runRehash(array $options, string $output): void
+    {
+        /** @var PendingCommand $command */
+        $command = $this->artisan('patients:rehash-cpf', $options);
+        $command->expectsOutput($output)->assertSuccessful()->run();
+    }
+
+    public function test_rehash_fails_cleanly_when_the_app_key_no_longer_decrypts_the_cpfs(): void
+    {
+        Storage::fake(EncryptedFiles::DISK);
+        $patient = Patient::factory()->create(['cpf' => '62518953060']);
+        $hash = $patient->refresh()->cpf_hash;
+
+        // APP_KEY replaced (CPF_HASH_KEY empty): the fingerprint changes and the CPFs cannot be decrypted.
+        config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+        $this->app->forgetInstance('encrypter');
+        Crypt::clearResolvedInstance('encrypter');
+
+        /** @var PendingCommand $command */
+        $command = $this->artisan('patients:rehash-cpf', ['--if-key-changed' => true]);
+        $command->expectsOutputToContain('Não foi possível descriptografar os CPFs com a APP_KEY atual.')
+            ->assertFailed()
+            ->run();
+
+        $this->assertSame($hash, DB::table('patients')->where('id', $patient->id)->value('cpf_hash'));
+        $this->assertFalse(Storage::disk(EncryptedFiles::DISK)->exists(RehashPatientCpfs::FINGERPRINT_FILE));
     }
 }

@@ -9,6 +9,7 @@ use App\Rules\Cpf;
 use App\Rules\UniqueActiveCpf;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * Shared validation for creating (POST), fully replacing (PUT) and partially updating (PATCH) a patient.
@@ -16,6 +17,8 @@ use Illuminate\Validation\Rule;
 class PatientRequest extends FormRequest
 {
     use NormalizesPatientInput;
+
+    private const ADDRESS_NOT_OBJECT = 'O campo :attribute deve ser um objeto.';
 
     public function authorize(): bool
     {
@@ -61,14 +64,47 @@ class PatientRequest extends FormRequest
         }
 
         // PATCH: a top-level field is validated only when sent; when sent, the same rules apply (so "name": ""
-        // still fails). Address subfields keep their rules, since a sent address is replaced as a whole.
+        // still fails). `filled` is `required` for a field that is present (same message); written this way so the
+        // API docs list the PATCH fields as optional. Address subfields keep their rules, since a sent address is
+        // replaced as a whole.
         foreach ($rules as $field => $fieldRules) {
             if (! str_contains($field, '.')) {
-                $rules[$field] = ['sometimes', ...$fieldRules];
+                $rules[$field] = ['sometimes', ...array_map(fn ($rule) => $rule === 'required' ? 'filled' : $rule, $fieldRules)];
             }
         }
 
         return $rules;
+    }
+
+    /**
+     * `address` sent as a string is an error, including `""`: ConvertEmptyStringsToNull turns `""` into null (which
+     * would silently remove the address) and validation skips non-implicit rules on blank values, so the raw JSON
+     * body is checked. Only `null` removes the address.
+     *
+     * @return array<int, callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator) {
+                if ($this->rawAddressIsString() && ! $validator->errors()->has('address')) {
+                    $validator->errors()->add('address', str_replace(':attribute', 'endereço', self::ADDRESS_NOT_OBJECT));
+                }
+            },
+        ];
+    }
+
+    private function rawAddressIsString(): bool
+    {
+        // Form and multipart bodies cannot carry a real null: any scalar `address` there (ConvertEmptyStringsToNull
+        // has already turned "" into null) is text, never a removal.
+        if (! $this->isJson()) {
+            return $this->exists('address') && ! is_array($this->input('address'));
+        }
+
+        $raw = json_decode($this->getContent(), true);
+
+        return is_array($raw) && array_key_exists('address', $raw) && is_string($raw['address']);
     }
 
     /**
@@ -130,6 +166,7 @@ class PatientRequest extends FormRequest
     public function messages(): array
     {
         return $this->sharedMessages() + [
+            'filled' => 'O campo :attribute é obrigatório.',
             'name.min' => 'O campo :attribute deve ter pelo menos :min caracteres.',
             'name.max' => 'O campo :attribute não pode ter mais de :max caracteres.',
             'rg.max' => 'O campo :attribute não pode ter mais de :max caracteres.',
@@ -140,7 +177,7 @@ class PatientRequest extends FormRequest
             'email.email' => 'O campo :attribute deve ser um endereço de e-mail válido.',
             'email.max' => 'O campo :attribute não pode ter mais de :max caracteres.',
             'description.max' => 'O campo :attribute não pode ter mais de :max caracteres.',
-            'address.array' => 'O campo :attribute deve ser um objeto.',
+            'address.array' => self::ADDRESS_NOT_OBJECT,
             'address.cep.digits' => 'O campo :attribute deve ter 8 dígitos.',
             'address.street.max' => 'O campo :attribute não pode ter mais de :max caracteres.',
             'address.number.max' => 'O campo :attribute não pode ter mais de :max caracteres.',
