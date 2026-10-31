@@ -44,6 +44,11 @@ class ConsultationStatusRequest extends FormRequest
 
                 $target = $this->targetStatus();
 
+                // No overlap check here on purpose: every allowed transition starts from a status that already
+                // blocks the slot (scheduled/confirmed), and cancelled/no_show are final, so a status change never
+                // makes a consultation start occupying a slot. Overlaps can only come from creating or moving a
+                // consultation (checked in ConsultationRequest) or from restoring a patient (which cancels the
+                // conflicting future consultations, see PatientController::restore).
                 if (! $consultation->status->canTransitionTo($target)) {
                     $validator->errors()->add('status', sprintf(
                         'Não é possível alterar o status de "%s" para "%s".',

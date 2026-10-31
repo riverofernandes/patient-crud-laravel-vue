@@ -205,7 +205,7 @@ class ConsultationApiTest extends TestCase
                 ->assertExactJson(['message' => 'Atendimento não encontrado.']);
         }
 
-        $this->getJson('/api/consultations/abc')->assertNotFound()->assertExactJson(['message' => 'Recurso não encontrado.']);
+        $this->getJson('/api/consultations/abc')->assertNotFound()->assertExactJson(['message' => 'Atendimento não encontrado.']);
         $this->getJson('/api/consultations/01')->assertNotFound();
     }
 
