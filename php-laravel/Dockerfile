@@ -10,7 +10,7 @@
 # ---------------------------------------------------------------------------
 # prod-base: runtime shared by the prod build and the final prod image
 # ---------------------------------------------------------------------------
-FROM php:8.2-fpm-alpine AS prod-base
+FROM php:8.3-fpm-alpine AS prod-base
 
 # GD (JPEG/PNG/WebP) reprocesses patient photos; exif reads the camera orientation before it is stripped.
 # The -dev packages are only needed to compile the extensions; the runtime libraries stay.
@@ -78,7 +78,7 @@ CMD ["supervisord", "-c", "/etc/supervisord.conf"]
 # ---------------------------------------------------------------------------
 # dev: default target (must stay the LAST stage so `build: ./php-laravel` keeps building it)
 # ---------------------------------------------------------------------------
-FROM php:8.2-cli AS dev
+FROM php:8.3-cli AS dev
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git unzip libzip-dev libsqlite3-dev default-mysql-client \
